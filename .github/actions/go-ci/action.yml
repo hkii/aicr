@@ -64,6 +64,7 @@ runs:
         flags: unit
         fail_ci_if_error: false
         verbose: true
+        slug: ${{ github.repository }}
         use_oidc: ${{ inputs.codecov_token == '' }}
         token: ${{ inputs.codecov_token }}
 
