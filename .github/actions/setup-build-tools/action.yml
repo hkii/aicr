@@ -42,7 +42,11 @@ runs:
   steps:
     - name: Install ko
       if: inputs.install_ko == 'true'
-      uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d  # v0.9
+      shell: bash
+      run: |
+        set -euo pipefail
+        go install github.com/google/ko@latest
+        echo "ko installed: $(ko version 2>&1 || echo 'latest')"
 
     - name: Install Syft
       if: inputs.install_syft == 'true'
