@@ -1,0 +1,73 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Prometheus Adapter Helm values
+# Enables Kubernetes HPA to scale workloads based on custom metrics from Prometheus
+
+# Prometheus connection configuration
+prometheus:
+  # URL of the Prometheus service deployed by kube-prometheus-stack
+  # Format: http://<release-name>-kube-prometheus-prometheus.<namespace>.svc
+  url: http://prometheus-kube-prometheus-prometheus
+  port: 9090
+
+# Custom metrics rules for GPU-based autoscaling
+# These rules expose DCGM exporter metrics to the Kubernetes custom metrics API
+rules:
+  default: false
+  custom:
+    # GPU Utilization - scale based on GPU usage percentage
+    - seriesQuery: 'DCGM_FI_DEV_GPU_UTIL{namespace!="",pod!=""}'
+      metricsQuery: 'avg_over_time(<<.Series>>[2m])'
+      name:
+        matches: "DCGM_FI_DEV_GPU_UTIL"
+        as: "gpu_utilization"
+      resources:
+        overrides:
+          namespace: {resource: "namespace"}
+          pod: {resource: "pod"}
+
+    # GPU Memory Usage - scale based on GPU memory consumption
+    - seriesQuery: 'DCGM_FI_DEV_FB_USED{namespace!="",pod!=""}'
+      metricsQuery: 'avg_over_time(<<.Series>>[2m])'
+      name:
+        matches: "DCGM_FI_DEV_FB_USED"
+        as: "gpu_memory_used"
+      resources:
+        overrides:
+          namespace: {resource: "namespace"}
+          pod: {resource: "pod"}
+
+    # GPU Power Usage - scale based on power consumption
+    - seriesQuery: 'DCGM_FI_DEV_POWER_USAGE{namespace!="",pod!=""}'
+      metricsQuery: 'avg_over_time(<<.Series>>[2m])'
+      name:
+        matches: "DCGM_FI_DEV_POWER_USAGE"
+        as: "gpu_power_usage"
+      resources:
+        overrides:
+          namespace: {resource: "namespace"}
+          pod: {resource: "pod"}
+
+# Resource configuration for the adapter
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+# Replica count for high availability
+replicas: 1

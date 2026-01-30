@@ -1,3 +1,4 @@
+** linguist-detectable=true
 demos/** filter=lfs diff=lfs merge=lfs -text
 examples/demos/** filter=lfs diff=lfs merge=lfs -text
 docs/demos/** filter=lfs diff=lfs merge=lfs -text

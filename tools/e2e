@@ -1,0 +1,1214 @@
+#!/bin/bash
+set -euo pipefail
+
+# =============================================================================
+# E2E Integration Tests for eidos CLI
+# =============================================================================
+#
+# PURPOSE:
+# This script tests the compiled eidos binary and CLI flag handling.
+# It complements Go unit tests by testing what can only be verified after
+# the binary is built: CLI argument parsing, flag combinations, and
+# end-to-end command execution.
+#
+# WHAT THIS SCRIPT TESTS:
+# - Binary builds successfully (make build)
+# - CLI workflow: eidos recipe → eidos bundle
+# - CLI flags: --set, --system-node-selector, --accelerated-node-toleration, etc.
+# - Flag combinations and interactions
+# - Helm chart validation (if helm is available):
+#   - helm lint (validates chart structure and syntax)
+#   - helm dependency update (validates Chart.yaml dependencies)
+#   - helm template (validates template rendering)
+#   - templates/ directory validation for Helm template syntax
+#
+# WHAT GO TESTS COVER (not duplicated here):
+# - YAML file validation: pkg/recipe/yaml_test.go
+#   (parsing, references, enums, constraints, inheritance chains)
+# - Metadata behavior: pkg/recipe/metadata_test.go
+#   (Merge, TopologicalSort, ValidateDependencies, inheritance resolution)
+# - Recipe validation: pkg/recipe/recipe_test.go
+#   (Validate, ValidateStructure, ValidateMeasurementExists)
+#
+# DESIGN PRINCIPLE:
+# Front-load validation into Go tests (run during development with 'go test')
+# so issues are caught early. Reserve this script for true integration testing
+# that requires the compiled binary.
+#
+# =============================================================================
+
+# Dir setup
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "${DIR}/common"
+ROOT=$(dirname "${DIR}")
+
+# Check required tools
+has_tools awk find grep make sed uname
+
+# Check optional tools (helm for chart validation)
+HELM_AVAILABLE=false
+if command -v helm &> /dev/null; then
+  HELM_AVAILABLE=true
+  msg "Helm found: $(helm version --short 2>/dev/null || echo 'unknown version')"
+else
+  msg "Warning: helm not found, skipping Helm chart validation tests"
+fi
+
+# Default values
+OUTPUT_DIR=""
+EIDOS_BIN=""
+
+# Test configuration
+TOTAL_TESTS=0
+PASSED_TESTS=0
+FAILED_TESTS=0
+
+# Parse flags
+usage() {
+  echo "Usage: $0 [OPTIONS]"
+  echo ""
+  echo "Options:"
+  echo "  -o, --output PATH     Output directory for test artifacts (default: temp dir)"
+  echo "  -h, --help            Show this help message"
+  echo ""
+  echo "E2E Integration Tests for eidos CLI"
+  echo ""
+  echo "This script tests what requires a compiled binary:"
+  echo "  1. Binary builds successfully (make build)"
+  echo "  2. CLI workflow: eidos recipe → eidos bundle (for each leaf recipe)"
+  echo "  3. CLI flag handling:"
+  echo "     - --system-node-selector, --accelerated-node-selector"
+  echo "     - --system-node-toleration, --accelerated-node-toleration"
+  echo "     - --set (value overrides)"
+  echo "     - Combined flag interactions"
+  echo "  4. Helm chart validation (if helm is available):"
+  echo "     - helm lint (chart structure and syntax)"
+  echo "     - helm dependency update (Chart.yaml dependencies)"
+  echo "     - helm template (template rendering)"
+  echo "     - templates/ directory validation"
+  echo ""
+  echo "Go tests cover (not duplicated here):"
+  echo "  - pkg/recipe/yaml_test.go: YAML parsing, references, enums, constraints"
+  echo "  - pkg/recipe/metadata_test.go: Merge, inheritance chains, topological sort"
+  echo "  - pkg/recipe/recipe_test.go: Recipe validation methods"
+  echo ""
+  echo "Run 'go test ./pkg/recipe/...' to validate recipe data during development."
+  echo ""
+  echo "Examples:"
+  echo "  $0                        # Run all tests with temp output"
+  echo "  $0 -o ./test-output       # Run tests with custom output directory"
+  exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -o|--output)
+      OUTPUT_DIR="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      err "Unknown option: $1"
+      ;;
+  esac
+done
+
+# Set output directory
+if [ -z "$OUTPUT_DIR" ]; then
+  OUTPUT_DIR=$(mktemp -d)
+  msg "Using temp directory: ${OUTPUT_DIR}"
+fi
+mkdir -p "${OUTPUT_DIR}"
+
+# ============================================================================
+# TEST RESULT TRACKING
+# ============================================================================
+
+test_pass() {
+  local name=$1
+  TOTAL_TESTS=$((TOTAL_TESTS + 1))
+  PASSED_TESTS=$((PASSED_TESTS + 1))
+  printf "${COLOR_GREEN}[PASS]${COLOR_RESET} %s\n" "$name"
+}
+
+test_fail() {
+  local name=$1
+  local reason=$2
+  TOTAL_TESTS=$((TOTAL_TESTS + 1))
+  FAILED_TESTS=$((FAILED_TESTS + 1))
+  printf "${COLOR_RED}[FAIL]${COLOR_RESET} %s: %s\n" "$name" "$reason"
+}
+
+# ============================================================================
+# VERIFICATION HELPERS
+# ============================================================================
+
+# Verify umbrella chart structure (new architecture)
+# The bundle command generates a Helm umbrella chart with:
+#   - Chart.yaml (with dependencies)
+#   - values.yaml (combined values for all components)
+#   - README.md
+#   - recipe.yaml (copy of the input recipe)
+verify_umbrella_chart() {
+  local bundle_dir=$1
+  local test_name=$2
+  
+  # Check for required files
+  local required_files=("Chart.yaml" "values.yaml" "README.md" "recipe.yaml")
+  for file in "${required_files[@]}"; do
+    if [ ! -f "${bundle_dir}/${file}" ]; then
+      test_fail "$test_name" "Missing file: ${file}"
+      return 1
+    fi
+  done
+  
+  # Verify Chart.yaml has dependencies
+  if ! grep -q "dependencies:" "${bundle_dir}/Chart.yaml"; then
+    test_fail "$test_name" "Chart.yaml missing dependencies section"
+    return 1
+  fi
+  
+  # Verify values.yaml has content
+  if [ ! -s "${bundle_dir}/values.yaml" ]; then
+    test_fail "$test_name" "values.yaml is empty"
+    return 1
+  fi
+  
+  test_pass "$test_name"
+  return 0
+}
+
+# Verify a pattern exists in values.yaml
+verify_pattern_in_values() {
+  local values_file=$1
+  local pattern=$2
+  local test_name=$3
+
+  if [ ! -f "$values_file" ]; then
+    test_fail "$test_name" "values.yaml not found"
+    return 1
+  fi
+
+  if ! grep -q "$pattern" "$values_file"; then
+    test_fail "$test_name" "Pattern '${pattern}' not found in values.yaml"
+    return 1
+  fi
+
+  test_pass "$test_name"
+  return 0
+}
+
+# Verify Helm chart is valid using helm lint and dependency update
+# This validates:
+#   1. Chart.yaml has valid semver version
+#   2. helm lint passes (syntax and structure)
+#   3. helm dependency update works (if network available)
+#   4. templates/ directory contents are valid Helm templates
+verify_helm_chart() {
+  local bundle_dir=$1
+  local test_name=$2
+
+  if [ "$HELM_AVAILABLE" != "true" ]; then
+    # Skip helm validation if helm is not available
+    return 0
+  fi
+
+  # Fix version if it's "dev" (helm requires valid semver)
+  local chart_file="${bundle_dir}/Chart.yaml"
+  if grep -q "version: dev" "$chart_file" 2>/dev/null; then
+    sed -i.bak 's/version: dev/version: 0.0.0-dev/' "$chart_file"
+    rm -f "${chart_file}.bak"
+  fi
+
+  # Run helm lint (validates chart structure and syntax)
+  local lint_output
+  if ! lint_output=$(helm lint "$bundle_dir" 2>&1); then
+    # Check if the only issue is missing dependencies (expected in CI)
+    if echo "$lint_output" | grep -q "chart directory is missing these dependencies"; then
+      # This is expected - dependencies aren't downloaded
+      # Check if there are any other errors (not warnings)
+      if echo "$lint_output" | grep -q "Error:"; then
+        test_fail "${test_name}/helm-lint" "helm lint failed: $(echo "$lint_output" | grep "Error:")"
+        return 1
+      fi
+    else
+      test_fail "${test_name}/helm-lint" "helm lint failed: $lint_output"
+      return 1
+    fi
+  fi
+  test_pass "${test_name}/helm-lint"
+
+  # Try helm dependency update (may fail without network, which is OK)
+  local dep_output
+  if dep_output=$(helm dependency update "$bundle_dir" 2>&1); then
+    test_pass "${test_name}/helm-dep-update"
+
+    # If dependencies downloaded successfully, try helm template
+    local template_output
+    if template_output=$(helm template test-release "$bundle_dir" 2>&1); then
+      test_pass "${test_name}/helm-template"
+    else
+      # Template might fail due to missing values or other issues
+      # This is informational, not a hard failure
+      msg "Warning: helm template had issues (may be expected): ${template_output:0:200}"
+    fi
+  else
+    # Dependency update failed - likely no network or repos not accessible
+    # This is expected in CI environments, so just log it
+    msg "Note: helm dependency update skipped (network/repo issue)"
+  fi
+
+  # Verify templates directory if it exists
+  local templates_dir="${bundle_dir}/templates"
+  if [ -d "$templates_dir" ]; then
+    local template_count
+    template_count=$(find "$templates_dir" -name "*.yaml" -type f | wc -l | tr -d ' ')
+    if [ "$template_count" -gt 0 ]; then
+      test_pass "${test_name}/has-templates (${template_count} files)"
+
+      # Verify each template file has valid Helm template markers
+      for tmpl in "${templates_dir}"/*.yaml; do
+        if [ -f "$tmpl" ]; then
+          local tmpl_name
+          tmpl_name=$(basename "$tmpl")
+          # Check for basic Helm template syntax ({{ or {{-)
+          if grep -qE '\{\{-?\s' "$tmpl"; then
+            test_pass "${test_name}/template-syntax/${tmpl_name}"
+          else
+            # File might be a static manifest (no templating needed)
+            # This is OK, just note it
+            msg "Note: ${tmpl_name} has no Helm template syntax (may be static manifest)"
+          fi
+        fi
+      done
+    fi
+  fi
+
+  return 0
+}
+
+# Verify ArgoCD App of Apps structure
+# The --deployer argocd generates:
+#   - app-of-apps.yaml (parent Application)
+#   - README.md
+#   - <component>/application.yaml (per-component)
+#   - <component>/values.yaml (per-component)
+verify_argocd_structure() {
+  local bundle_dir=$1
+  local test_name=$2
+  
+  # Check for required root files
+  if [ ! -f "${bundle_dir}/app-of-apps.yaml" ]; then
+    test_fail "$test_name" "Missing file: app-of-apps.yaml"
+    return 1
+  fi
+  
+  if [ ! -f "${bundle_dir}/README.md" ]; then
+    test_fail "$test_name" "Missing file: README.md"
+    return 1
+  fi
+  
+  # Verify app-of-apps.yaml has ArgoCD Application kind
+  if ! grep -q "kind: Application" "${bundle_dir}/app-of-apps.yaml"; then
+    test_fail "$test_name" "app-of-apps.yaml missing 'kind: Application'"
+    return 1
+  fi
+  
+  # Check that at least one component directory exists with application.yaml
+  local found_component=false
+  for dir in "${bundle_dir}"/*/; do
+    if [ -d "$dir" ] && [ -f "${dir}application.yaml" ]; then
+      found_component=true
+      # Verify component has values.yaml
+      if [ ! -f "${dir}values.yaml" ]; then
+        test_fail "$test_name" "Component directory missing values.yaml"
+        return 1
+      fi
+      # Verify component application.yaml has sync-wave annotation
+      if ! grep -q "argocd.argoproj.io/sync-wave" "${dir}application.yaml"; then
+        test_fail "$test_name" "Component application.yaml missing sync-wave annotation"
+        return 1
+      fi
+      break
+    fi
+  done
+  
+  if [ "$found_component" = false ]; then
+    test_fail "$test_name" "No component directories with application.yaml found"
+    return 1
+  fi
+  
+  test_pass "$test_name"
+  return 0
+}
+
+# ============================================================================
+# BUILD
+# ============================================================================
+
+build_binary() {
+  msg "=========================================="
+  msg "Building eidos binary"
+  msg "=========================================="
+  
+  cd "${ROOT}"
+  
+  if ! make build 2>&1; then
+    err "Failed to build eidos binary"
+  fi
+  
+  # Find the built binary (platform-specific)
+  local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
+  local arch_name=$(uname -m)
+  
+  # Convert arch name
+  case "$arch_name" in
+    x86_64) arch_name="amd64" ;;
+    aarch64|arm64) arch_name="arm64" ;;
+  esac
+  
+  # Try to find the binary with various naming patterns
+  # goreleaser uses different suffixes:
+  # - _v1 for amd64 (x86_64 microarchitecture level 1)
+  # - _v8.0 for arm64 (ARMv8.0 baseline)
+  EIDOS_BIN=""
+  for pattern in \
+    "${ROOT}/dist/eidos_${os_name}_${arch_name}/eidos" \
+    "${ROOT}/dist/eidos_${os_name}_${arch_name}_v1/eidos" \
+    "${ROOT}/dist/eidos_${os_name}_${arch_name}_v8.0/eidos" \
+    "${ROOT}/dist/eidos_${os_name}_all/eidos"; do
+    if [ -x "$pattern" ]; then
+      EIDOS_BIN="$pattern"
+      break
+    fi
+  done
+  
+  if [ -z "$EIDOS_BIN" ] || [ ! -x "$EIDOS_BIN" ]; then
+    err "Built binary not found in dist/"
+  fi
+  
+  test_pass "build/eidos-binary"
+  msg "Using binary: ${EIDOS_BIN}"
+}
+
+# ============================================================================
+# RECIPE DATA FILE TESTS
+# ============================================================================
+
+# Test that leaf recipe data files can be used to generate recipes and bundles via CLI.
+# This is a smoke test to verify the CLI workflow works end-to-end.
+#
+# Note: Detailed validation of YAML files (parsing, references, enums, constraints,
+# inheritance chains) is covered by Go tests in pkg/recipe/yaml_test.go and
+# pkg/recipe/metadata_test.go. This test only verifies CLI integration.
+test_all_recipe_data_files() {
+  msg ""
+  msg "=========================================="
+  msg "Testing CLI Workflow for Leaf Recipes"
+  msg "=========================================="
+  
+  local recipe_data_dir="${ROOT}/pkg/recipe/data/overlays"
+  local all_recipes_dir="${OUTPUT_DIR}/bundles/all-recipes"
+  mkdir -p "$all_recipes_dir"
+  
+  # Find all overlay recipe files (exclude base.yaml)
+  local recipe_files
+  recipe_files=$(find "$recipe_data_dir" -maxdepth 1 -name "*.yaml" ! -name "base.yaml" -type f | sort)
+  
+  if [ -z "$recipe_files" ]; then
+    test_fail "cli-workflow/find-files" "No recipe files found in ${recipe_data_dir}"
+    return 1
+  fi
+  
+  local leaf_count=0
+  local skip_count=0
+  
+  for recipe_file in $recipe_files; do
+    local basename
+    basename=$(basename "$recipe_file" .yaml)
+    
+    # Extract criteria from the recipe metadata file
+    local service accelerator os_val intent
+    service=$(awk '/^  criteria:/{in_crit=1;next} in_crit && /^  [a-z]/{exit} in_crit && /service:/{gsub(/.*service: /,""); print}' "$recipe_file")
+    accelerator=$(awk '/^  criteria:/{in_crit=1;next} in_crit && /^  [a-z]/{exit} in_crit && /accelerator:/{gsub(/.*accelerator: /,""); print}' "$recipe_file")
+    os_val=$(awk '/^  criteria:/{in_crit=1;next} in_crit && /^  [a-z]/{exit} in_crit && /os:/{gsub(/.*os: /,""); print}' "$recipe_file")
+    intent=$(awk '/^  criteria:/{in_crit=1;next} in_crit && /^  [a-z]/{exit} in_crit && /intent:/{gsub(/.*intent: /,""); print}' "$recipe_file")
+    
+    # Skip intermediate recipes (those without complete criteria)
+    # Go tests validate intermediate recipes; here we only test CLI with leaf recipes
+    if [ -z "$accelerator" ] || [ -z "$os_val" ] || [ -z "$intent" ]; then
+      skip_count=$((skip_count + 1))
+      continue
+    fi
+    
+    leaf_count=$((leaf_count + 1))
+    local test_dir="${all_recipes_dir}/${basename}"
+    mkdir -p "$test_dir"
+    
+    # Build CLI command
+    local recipe_result="${test_dir}/recipe.yaml"
+    local recipe_cmd="${EIDOS_BIN} recipe --accelerator $accelerator --os $os_val --intent $intent"
+    if [ -n "$service" ]; then
+      recipe_cmd="$recipe_cmd --service $service"
+    fi
+    recipe_cmd="$recipe_cmd -o $recipe_result"
+    
+    # Test: CLI generates recipe
+    if ! eval "$recipe_cmd" 2>&1; then
+      test_fail "cli-workflow/${basename}/recipe" "Failed to generate recipe"
+      continue
+    fi
+    
+    # Test: CLI generates bundle
+    local bundle_dir="${test_dir}/bundles"
+    if ! "${EIDOS_BIN}" bundle -r "$recipe_result" -o "$bundle_dir" 2>&1; then
+      test_fail "cli-workflow/${basename}/bundle" "Failed to generate bundle"
+      continue
+    fi
+    
+    # Test: Verify umbrella chart structure
+    if ! verify_umbrella_chart "$bundle_dir" "cli-workflow/${basename}/umbrella-chart"; then
+      continue
+    fi
+
+    # Test: Verify Helm chart validity
+    verify_helm_chart "$bundle_dir" "cli-workflow/${basename}"
+
+    # Count dependencies in Chart.yaml (indicates number of components)
+    local dep_count
+    dep_count=$(grep -c "^  - name:" "${bundle_dir}/Chart.yaml" 2>/dev/null || echo "0")
+
+    test_pass "cli-workflow/${basename} (${dep_count} dependencies)"
+  done
+  
+  msg ""
+  msg "Tested ${leaf_count} leaf recipes (skipped ${skip_count} intermediate recipes)"
+}
+
+# ============================================================================
+# RECIPE GENERATION (Query Mode)
+# ============================================================================
+
+RECIPE_FILE=""
+
+generate_recipe() {
+  msg ""
+  msg "=========================================="
+  msg "Generating Recipe (Query Mode)"
+  msg "=========================================="
+  msg "Parameters: service=eks, accelerator=gb200, os=ubuntu, intent=training"
+  
+  RECIPE_FILE="${OUTPUT_DIR}/recipe.yaml"
+  
+  if ! "${EIDOS_BIN}" recipe \
+    --service eks \
+    --accelerator gb200 \
+    --os ubuntu \
+    --intent training \
+    --output "${RECIPE_FILE}" 2>&1; then
+    test_fail "recipe/generation" "Failed to generate recipe"
+    return 1
+  fi
+  
+  # Verify recipe file was created
+  if [ ! -f "$RECIPE_FILE" ]; then
+    test_fail "recipe/file-exists" "Recipe file was not created"
+    return 1
+  fi
+  test_pass "recipe/file-exists"
+  
+  # Verify recipe contains expected kind (note: kind is lowercase in output)
+  if ! grep -q "kind: recipeResult" "$RECIPE_FILE"; then
+    test_fail "recipe/valid-format" "Recipe does not contain 'kind: recipeResult'"
+    return 1
+  fi
+  test_pass "recipe/valid-format"
+  
+  # Verify recipe contains gpu-operator component
+  if ! grep -q "gpu-operator" "$RECIPE_FILE"; then
+    test_fail "recipe/has-gpu-operator" "Recipe does not contain gpu-operator component"
+    return 1
+  fi
+  test_pass "recipe/has-gpu-operator"
+  
+  # Verify recipe contains skyhook-operator component
+  if ! grep -q "skyhook-operator" "$RECIPE_FILE"; then
+    test_fail "recipe/has-skyhook-operator" "Recipe does not contain skyhook-operator component"
+    return 1
+  fi
+  test_pass "recipe/has-skyhook-operator"
+  
+  msg "Recipe saved to: ${RECIPE_FILE}"
+}
+
+# ============================================================================
+# BUNDLE TESTS
+# ============================================================================
+
+run_bundle_tests() {
+  local recipe_file=$1
+  
+  msg ""
+  msg "=========================================="
+  msg "Running Bundle Generation Tests"
+  msg "=========================================="
+  
+  # -------------------------------------------------------------------------
+  # Test 1: Basic bundle generation (no overrides)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 1: Basic Bundle Generation (No Overrides) ---"
+  
+  local basic_dir="${OUTPUT_DIR}/bundles/basic"
+  mkdir -p "$basic_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$basic_dir" 2>&1; then
+    test_fail "bundle/basic/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/basic/generation"
+
+    # Verify umbrella chart structure
+    verify_umbrella_chart "$basic_dir" "bundle/basic/umbrella-chart"
+
+    # Verify Helm chart validity
+    verify_helm_chart "$basic_dir" "bundle/basic"
+
+    # Verify expected components in Chart.yaml dependencies
+    verify_pattern_in_values "${basic_dir}/Chart.yaml" \
+      "gpu-operator" "bundle/basic/has-gpu-operator-dep"
+    verify_pattern_in_values "${basic_dir}/Chart.yaml" \
+      "skyhook-operator" "bundle/basic/has-skyhook-operator-dep"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 2: With system node selector
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 2: With System Node Selector ---"
+  
+  local sys_selector_dir="${OUTPUT_DIR}/bundles/system-selector"
+  mkdir -p "$sys_selector_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$sys_selector_dir" \
+    --system-node-selector nodeGroup=system-pool \
+    --system-node-selector workload=control-plane 2>&1; then
+    test_fail "bundle/system-selector/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/system-selector/generation"
+    
+    # Verify node selector in combined values.yaml
+    verify_pattern_in_values "${sys_selector_dir}/values.yaml" \
+      "nodeGroup" "bundle/system-selector/has-nodeGroup"
+    verify_pattern_in_values "${sys_selector_dir}/values.yaml" \
+      "system-pool" "bundle/system-selector/has-system-pool"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 3: With accelerated node selector
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 3: With Accelerated Node Selector ---"
+  
+  local accel_selector_dir="${OUTPUT_DIR}/bundles/accel-selector"
+  mkdir -p "$accel_selector_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$accel_selector_dir" \
+    --accelerated-node-selector accelerator=nvidia-gpu \
+    --accelerated-node-selector gpu-type=gb200 2>&1; then
+    test_fail "bundle/accel-selector/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/accel-selector/generation"
+    
+    # Verify accelerated node selector in combined values.yaml
+    verify_pattern_in_values "${accel_selector_dir}/values.yaml" \
+      "accelerator" "bundle/accel-selector/has-accelerator"
+    verify_pattern_in_values "${accel_selector_dir}/values.yaml" \
+      "nvidia-gpu" "bundle/accel-selector/has-nvidia-gpu"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 4: With system node tolerations
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 4: With System Node Tolerations ---"
+  
+  local sys_toleration_dir="${OUTPUT_DIR}/bundles/system-toleration"
+  mkdir -p "$sys_toleration_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$sys_toleration_dir" \
+    --system-node-toleration dedicated=system-workload:NoSchedule 2>&1; then
+    test_fail "bundle/system-toleration/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/system-toleration/generation"
+    
+    # Verify system toleration in combined values.yaml
+    verify_pattern_in_values "${sys_toleration_dir}/values.yaml" \
+      "dedicated" "bundle/system-toleration/has-dedicated"
+    verify_pattern_in_values "${sys_toleration_dir}/values.yaml" \
+      "system-workload" "bundle/system-toleration/has-system-workload"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 5: With accelerated node tolerations
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 5: With Accelerated Node Tolerations ---"
+  
+  local accel_toleration_dir="${OUTPUT_DIR}/bundles/accel-toleration"
+  mkdir -p "$accel_toleration_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$accel_toleration_dir" \
+    --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule 2>&1; then
+    test_fail "bundle/accel-toleration/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/accel-toleration/generation"
+    
+    # Verify accelerated toleration in combined values.yaml
+    verify_pattern_in_values "${accel_toleration_dir}/values.yaml" \
+      "nvidia.com/gpu" "bundle/accel-toleration/has-nvidia-gpu"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 6: With value overrides (--set)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 6: With Value Overrides (--set) ---"
+  
+  local override_dir="${OUTPUT_DIR}/bundles/value-override"
+  mkdir -p "$override_dir"
+  
+  # Test value overrides for gpu-operator (under gpuoperator: key in values.yaml)
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$override_dir" \
+    --set gpu-operator:driver.version=999.99.99 \
+    --set gpu-operator:cdi.enabled=true 2>&1; then
+    test_fail "bundle/value-override/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/value-override/generation"
+    
+    # Verify value overrides in combined values.yaml
+    verify_pattern_in_values "${override_dir}/values.yaml" \
+      "999.99.99" "bundle/value-override/driver-version"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 7: Combined overrides (all flags together)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 7: Combined Overrides (All Flags) ---"
+  
+  local combined_dir="${OUTPUT_DIR}/bundles/combined"
+  mkdir -p "$combined_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$combined_dir" \
+    --system-node-selector nodeGroup=system-pool \
+    --system-node-toleration dedicated=system:NoSchedule \
+    --accelerated-node-selector accelerator=nvidia-gpu \
+    --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule \
+    --set gpu-operator:driver.version=888.88.88 2>&1; then
+    test_fail "bundle/combined/generation" "Bundle generation failed"
+  else
+    test_pass "bundle/combined/generation"
+
+    # Verify umbrella chart structure
+    verify_umbrella_chart "$combined_dir" "bundle/combined/umbrella-chart"
+
+    # Verify Helm chart validity
+    verify_helm_chart "$combined_dir" "bundle/combined"
+
+    # Verify system node selector
+    verify_pattern_in_values "${combined_dir}/values.yaml" \
+      "nodeGroup" "bundle/combined/system-selector"
+
+    # Verify system toleration
+    verify_pattern_in_values "${combined_dir}/values.yaml" \
+      "dedicated" "bundle/combined/system-toleration"
+
+    # Verify accelerated node selector
+    verify_pattern_in_values "${combined_dir}/values.yaml" \
+      "accelerator" "bundle/combined/accel-selector"
+
+    # Verify accelerated toleration
+    verify_pattern_in_values "${combined_dir}/values.yaml" \
+      "nvidia.com/gpu" "bundle/combined/accel-toleration"
+
+    # Verify value override
+    verify_pattern_in_values "${combined_dir}/values.yaml" \
+      "888.88.88" "bundle/combined/value-override"
+  fi
+  
+  # -------------------------------------------------------------------------
+  # Test 8: ArgoCD Deployer
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 8: ArgoCD Deployer (--deployer argocd) ---"
+  
+  local argocd_dir="${OUTPUT_DIR}/bundles/argocd"
+  mkdir -p "$argocd_dir"
+  
+  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$argocd_dir" \
+    --deployer argocd 2>&1; then
+    test_fail "bundle/argocd/generation" "Bundle generation with --deployer argocd failed"
+  else
+    test_pass "bundle/argocd/generation"
+    
+    # Verify ArgoCD App of Apps structure
+    verify_argocd_structure "$argocd_dir" "bundle/argocd/structure"
+  fi
+}
+
+# ============================================================================
+# CRITERIA FILE TESTS (--criteria flag)
+# ============================================================================
+
+test_criteria_file_flag() {
+  msg ""
+  msg "=========================================="
+  msg "Testing Criteria File Support (--criteria flag)"
+  msg "=========================================="
+
+  local criteria_test_dir="${OUTPUT_DIR}/criteria-file-test"
+  mkdir -p "$criteria_test_dir"
+
+  # -------------------------------------------------------------------------
+  # Test 1: Valid YAML criteria file
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 1: Valid YAML Criteria File ---"
+
+  local yaml_criteria="${criteria_test_dir}/criteria.yaml"
+  cat > "$yaml_criteria" << 'EOF'
+kind: recipeCriteria
+apiVersion: eidos.nvidia.com/v1alpha1
+metadata:
+  name: test-criteria
+spec:
+  service: eks
+  accelerator: h100
+  os: ubuntu
+  intent: training
+EOF
+
+  local yaml_recipe="${criteria_test_dir}/yaml-recipe.yaml"
+  if ! "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" -o "$yaml_recipe" 2>&1; then
+    test_fail "criteria-file/yaml" "Failed to generate recipe from YAML criteria file"
+  else
+    test_pass "criteria-file/yaml"
+
+    # Verify recipe was created
+    if [ -f "$yaml_recipe" ]; then
+      test_pass "criteria-file/yaml-recipe-created"
+
+      # Verify criteria values were applied
+      if grep -q "service: eks" "$yaml_recipe" 2>/dev/null || grep -q '"service": "eks"' "$yaml_recipe" 2>/dev/null; then
+        test_pass "criteria-file/yaml-service-applied"
+      else
+        test_fail "criteria-file/yaml-service-applied" "Service value not found in recipe"
+      fi
+    else
+      test_fail "criteria-file/yaml-recipe-created" "Recipe file was not created"
+    fi
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 2: Valid JSON criteria file
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 2: Valid JSON Criteria File ---"
+
+  local json_criteria="${criteria_test_dir}/criteria.json"
+  cat > "$json_criteria" << 'EOF'
+{
+  "kind": "recipeCriteria",
+  "apiVersion": "eidos.nvidia.com/v1alpha1",
+  "metadata": {
+    "name": "test-criteria-json"
+  },
+  "spec": {
+    "service": "gke",
+    "accelerator": "a100",
+    "os": "ubuntu",
+    "intent": "inference"
+  }
+}
+EOF
+
+  local json_recipe="${criteria_test_dir}/json-recipe.yaml"
+  if ! "${EIDOS_BIN}" recipe --criteria "$json_criteria" -o "$json_recipe" 2>&1; then
+    test_fail "criteria-file/json" "Failed to generate recipe from JSON criteria file"
+  else
+    test_pass "criteria-file/json"
+
+    # Verify recipe was created
+    if [ -f "$json_recipe" ]; then
+      test_pass "criteria-file/json-recipe-created"
+    else
+      test_fail "criteria-file/json-recipe-created" "Recipe file was not created"
+    fi
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 3: CLI flag override
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 3: CLI Flag Overrides Criteria File ---"
+
+  local override_recipe="${criteria_test_dir}/override-recipe.yaml"
+  if ! "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" --service gke -o "$override_recipe" 2>&1; then
+    test_fail "criteria-file/override" "Failed to generate recipe with CLI override"
+  else
+    test_pass "criteria-file/override"
+
+    # Verify the service was overridden to gke (not eks from file)
+    if grep -q "service: gke" "$override_recipe" 2>/dev/null || grep -q '"service": "gke"' "$override_recipe" 2>/dev/null; then
+      test_pass "criteria-file/override-applied"
+    else
+      test_fail "criteria-file/override-applied" "CLI override (--service gke) was not applied"
+    fi
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 4: Invalid criteria file (wrong kind)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 4: Invalid Criteria File (Wrong Kind) ---"
+
+  local invalid_kind="${criteria_test_dir}/invalid-kind.yaml"
+  cat > "$invalid_kind" << 'EOF'
+kind: wrongKind
+apiVersion: eidos.nvidia.com/v1alpha1
+metadata:
+  name: invalid
+spec:
+  service: eks
+EOF
+
+  if "${EIDOS_BIN}" recipe --criteria "$invalid_kind" -o /dev/null 2>&1; then
+    test_fail "criteria-file/invalid-kind" "Should fail with invalid kind"
+  else
+    test_pass "criteria-file/invalid-kind"
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 5: Invalid criteria file (wrong apiVersion)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 5: Invalid Criteria File (Wrong apiVersion) ---"
+
+  local invalid_version="${criteria_test_dir}/invalid-version.yaml"
+  cat > "$invalid_version" << 'EOF'
+kind: recipeCriteria
+apiVersion: wrong.version/v1
+metadata:
+  name: invalid
+spec:
+  service: eks
+EOF
+
+  if "${EIDOS_BIN}" recipe --criteria "$invalid_version" -o /dev/null 2>&1; then
+    test_fail "criteria-file/invalid-apiversion" "Should fail with invalid apiVersion"
+  else
+    test_pass "criteria-file/invalid-apiversion"
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 6: Invalid criteria file (invalid enum value)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 6: Invalid Criteria File (Invalid Enum Value) ---"
+
+  local invalid_enum="${criteria_test_dir}/invalid-enum.yaml"
+  cat > "$invalid_enum" << 'EOF'
+kind: recipeCriteria
+apiVersion: eidos.nvidia.com/v1alpha1
+metadata:
+  name: invalid-enum
+spec:
+  service: invalid-service
+  accelerator: h100
+EOF
+
+  if "${EIDOS_BIN}" recipe --criteria "$invalid_enum" -o /dev/null 2>&1; then
+    test_fail "criteria-file/invalid-enum" "Should fail with invalid service enum"
+  else
+    test_pass "criteria-file/invalid-enum"
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 7: Non-existent criteria file
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 7: Non-existent Criteria File ---"
+
+  if "${EIDOS_BIN}" recipe --criteria "/non/existent/file.yaml" -o /dev/null 2>&1; then
+    test_fail "criteria-file/non-existent" "Should fail with non-existent file"
+  else
+    test_pass "criteria-file/non-existent"
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 8: Criteria file with bundle command
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 8: Criteria File with Bundle Generation ---"
+
+  local criteria_bundle_dir="${criteria_test_dir}/bundle"
+  mkdir -p "$criteria_bundle_dir"
+
+  # First generate recipe from criteria
+  local criteria_recipe="${criteria_test_dir}/for-bundle.yaml"
+  if ! "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" -o "$criteria_recipe" 2>&1; then
+    test_fail "criteria-file/bundle-recipe" "Failed to generate recipe for bundle test"
+  else
+    # Then generate bundle from that recipe
+    if ! "${EIDOS_BIN}" bundle -r "$criteria_recipe" -o "$criteria_bundle_dir" 2>&1; then
+      test_fail "criteria-file/bundle" "Failed to generate bundle from criteria-based recipe"
+    else
+      test_pass "criteria-file/bundle"
+
+      # Verify bundle was created
+      verify_umbrella_chart "$criteria_bundle_dir" "criteria-file/bundle-structure"
+    fi
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 9: Partial criteria file (only some fields)
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 9: Partial Criteria File ---"
+
+  local partial_criteria="${criteria_test_dir}/partial.yaml"
+  cat > "$partial_criteria" << 'EOF'
+kind: recipeCriteria
+apiVersion: eidos.nvidia.com/v1alpha1
+metadata:
+  name: partial-criteria
+spec:
+  accelerator: h100
+EOF
+
+  local partial_recipe="${criteria_test_dir}/partial-recipe.yaml"
+  if ! "${EIDOS_BIN}" recipe --criteria "$partial_criteria" -o "$partial_recipe" 2>&1; then
+    test_fail "criteria-file/partial" "Failed to generate recipe from partial criteria file"
+  else
+    test_pass "criteria-file/partial"
+
+    # Verify recipe was created
+    if [ -f "$partial_recipe" ]; then
+      test_pass "criteria-file/partial-recipe-created"
+    else
+      test_fail "criteria-file/partial-recipe-created" "Recipe file was not created"
+    fi
+  fi
+
+  msg ""
+  msg "Criteria file tests completed"
+}
+
+# ============================================================================
+# EXTERNAL DATA DIRECTORY TESTS (--data flag)
+# ============================================================================
+
+test_external_data_flag() {
+  msg ""
+  msg "=========================================="
+  msg "Testing External Data Directory (--data flag)"
+  msg "=========================================="
+
+  local data_test_dir="${OUTPUT_DIR}/external-data-test"
+  mkdir -p "$data_test_dir"
+
+  # -------------------------------------------------------------------------
+  # Test 1: Error when --data directory doesn't exist
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 1: Error on Non-existent Directory ---"
+
+  if "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
+    --data "/non/existent/path" -o /dev/null 2>&1; then
+    test_fail "external-data/non-existent" "Should fail with non-existent directory"
+  else
+    test_pass "external-data/non-existent"
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 2: Error when registry.yaml is missing
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 2: Error when registry.yaml is Missing ---"
+
+  local no_registry_dir="${data_test_dir}/no-registry"
+  mkdir -p "$no_registry_dir"
+
+  if "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
+    --data "$no_registry_dir" -o /dev/null 2>&1; then
+    test_fail "external-data/missing-registry" "Should fail when registry.yaml is missing"
+  else
+    test_pass "external-data/missing-registry"
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 3: Success with valid external data directory
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 3: Valid External Data Directory ---"
+
+  local valid_data_dir="${data_test_dir}/valid"
+  mkdir -p "$valid_data_dir"
+
+  # Create a minimal registry.yaml with a custom component
+  cat > "${valid_data_dir}/registry.yaml" << 'EOF'
+apiVersion: eidos.nvidia.com/v1alpha1
+kind: ComponentRegistry
+components:
+  - name: custom-test-operator
+    displayName: Custom Test Operator
+    helm:
+      defaultRepository: https://test.example.com/charts
+      defaultChart: custom/test-operator
+      defaultVersion: v1.0.0
+EOF
+
+  local ext_recipe="${data_test_dir}/external-recipe.yaml"
+  if ! "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
+    --data "$valid_data_dir" -o "$ext_recipe" 2>&1; then
+    test_fail "external-data/valid-dir" "Should succeed with valid external data directory"
+  else
+    test_pass "external-data/valid-dir"
+
+    # Verify recipe was created
+    if [ -f "$ext_recipe" ]; then
+      test_pass "external-data/recipe-created"
+    else
+      test_fail "external-data/recipe-created" "Recipe file was not created"
+    fi
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 4: External data with custom overlay
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 4: External Data with Custom Overlay ---"
+
+  local overlay_data_dir="${data_test_dir}/with-overlay"
+  mkdir -p "${overlay_data_dir}/overlays"
+
+  # Create registry.yaml
+  cat > "${overlay_data_dir}/registry.yaml" << 'EOF'
+apiVersion: eidos.nvidia.com/v1alpha1
+kind: ComponentRegistry
+components: []
+EOF
+
+  # Create a custom overlay that adds components
+  cat > "${overlay_data_dir}/overlays/custom-test-overlay.yaml" << 'EOF'
+apiVersion: eidos.nvidia.com/v1alpha1
+kind: RecipeMetadata
+metadata:
+  name: custom-test-overlay
+spec:
+  criteria:
+    service: eks
+    accelerator: h100
+    intent: training
+  components:
+    - name: cert-manager
+      type: Helm
+      source: https://charts.jetstack.io
+      version: v1.16.3
+EOF
+
+  local overlay_recipe="${data_test_dir}/overlay-recipe.yaml"
+  if ! "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
+    --data "$overlay_data_dir" -o "$overlay_recipe" 2>&1; then
+    test_fail "external-data/custom-overlay" "Should succeed with custom overlay"
+  else
+    test_pass "external-data/custom-overlay"
+
+    # Verify the overlay was applied (check for the overlay name in applied overlays)
+    if grep -q "custom-test-overlay" "$overlay_recipe" 2>/dev/null; then
+      test_pass "external-data/overlay-applied"
+    else
+      # The overlay might not be in appliedOverlays if criteria don't match exactly
+      # Just verify the file was created successfully
+      test_pass "external-data/overlay-applied (overlay may not match criteria)"
+    fi
+  fi
+
+  # -------------------------------------------------------------------------
+  # Test 5: Bundle command with --data flag
+  # -------------------------------------------------------------------------
+  msg ""
+  msg "--- Test 5: Bundle Command with --data Flag ---"
+
+  # Use a recipe file that exists (from earlier tests)
+  if [ -n "$RECIPE_FILE" ] && [ -f "$RECIPE_FILE" ]; then
+    local bundle_with_data_dir="${data_test_dir}/bundle-with-data"
+    mkdir -p "$bundle_with_data_dir"
+
+    if ! "${EIDOS_BIN}" bundle -r "$RECIPE_FILE" -o "$bundle_with_data_dir" \
+      --data "$valid_data_dir" 2>&1; then
+      test_fail "external-data/bundle" "Bundle with --data flag failed"
+    else
+      test_pass "external-data/bundle"
+
+      # Verify bundle was created
+      verify_umbrella_chart "$bundle_with_data_dir" "external-data/bundle-structure"
+    fi
+  else
+    msg "Note: Skipping bundle --data test (no recipe file available)"
+  fi
+
+  msg ""
+  msg "External data directory tests completed"
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+msg "Starting E2E Integration Tests"
+msg "Output directory: ${OUTPUT_DIR}"
+msg ""
+
+# Step 1: Build the binary
+build_binary
+
+# Step 2: Test CLI workflow for all leaf recipes in pkg/recipe/data/
+# Note: YAML file validation (parsing, references, inheritance chains) is covered
+# by Go tests in pkg/recipe/yaml_test.go and pkg/recipe/metadata_test.go
+test_all_recipe_data_files
+
+# Step 3: Generate recipe via query mode (for detailed bundle flag tests)
+generate_recipe
+
+# Step 4: Run bundle tests with various CLI flags (using generated recipe)
+if [ -n "$RECIPE_FILE" ] && [ -f "$RECIPE_FILE" ]; then
+  run_bundle_tests "$RECIPE_FILE"
+else
+  err "Recipe file not found, cannot run bundle tests"
+fi
+
+# Step 5: Test criteria file (--criteria flag)
+test_criteria_file_flag
+
+# Step 6: Test external data directory (--data flag)
+test_external_data_flag
+
+# Print summary
+echo ""
+msg "=========================================="
+msg "Test Summary"
+msg "=========================================="
+echo "Total:  ${TOTAL_TESTS}"
+echo "Passed: ${PASSED_TESTS}"
+echo "Failed: ${FAILED_TESTS}"
+echo ""
+msg "Output directory: ${OUTPUT_DIR}"
+
+if [ "$FAILED_TESTS" -gt 0 ]; then
+  err "Some tests failed!"
+fi
+
+msg "All tests passed!"

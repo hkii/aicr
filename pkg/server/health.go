@@ -1,0 +1,74 @@
+// Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package server
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/NVIDIA/eidos/pkg/serializer"
+)
+
+// HealthResponse represents health check response
+type HealthResponse struct {
+	Status    string    `json:"status" yaml:"status"`
+	Timestamp time.Time `json:"timestamp" yaml:"timestamp"`
+	Reason    string    `json:"reason,omitempty" yaml:"reason,omitempty"`
+}
+
+// handleHealth handles GET /health
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	resp := HealthResponse{
+		Status:    "healthy",
+		Timestamp: time.Now(),
+	}
+
+	serializer.RespondJSON(w, http.StatusOK, resp)
+}
+
+// handleReady handles GET /ready
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	ready := s.ready
+	s.mu.RUnlock()
+
+	if !ready {
+		resp := HealthResponse{
+			Status:    "not_ready",
+			Timestamp: time.Now(),
+			Reason:    "service is initializing",
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+		serializer.RespondJSON(w, http.StatusServiceUnavailable, resp)
+		return
+	}
+
+	resp := HealthResponse{
+		Status:    "ready",
+		Timestamp: time.Now(),
+	}
+
+	serializer.RespondJSON(w, http.StatusOK, resp)
+}

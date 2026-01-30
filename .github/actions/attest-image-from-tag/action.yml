@@ -1,0 +1,76 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Resolve digest and attest image'
+description: 'Resolves an image digest from a tag and generates SBOM + provenance attestations'
+
+inputs:
+  image_name:
+    description: 'Full image name (without tag or digest), e.g. ghcr.io/org/image'
+    required: true
+  tag:
+    description: 'Image tag to resolve (e.g. v1.2.3)'
+    required: true
+  crane_version:
+    description: 'crane version to install (e.g. v0.20.6)'
+    required: false
+    default: 'v0.20.6'
+
+outputs:
+  image_digest:
+    description: 'Resolved image digest (sha256:...)'
+    value: ${{ steps.digest.outputs.image_digest }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -z "${{ inputs.image_name }}" ]]; then
+          echo "::error::image_name is required"
+          exit 1
+        fi
+        if [[ -z "${{ inputs.tag }}" ]]; then
+          echo "::error::tag is required"
+          exit 1
+        fi
+
+    - name: Authenticate to registry
+      uses: ./.github/actions/ghcr-login
+
+    - name: Setup crane
+      uses: ./.github/actions/setup-build-tools
+      with:
+        install_crane: 'true'
+        crane_version: ${{ inputs.crane_version }}
+
+    - name: Resolve image digest
+      id: digest
+      shell: bash
+      run: |
+        set -euo pipefail
+        DIGEST="$(crane digest "${{ inputs.image_name }}:${{ inputs.tag }}")"
+        if [[ ! "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+          echo "::error::unexpected digest format: $DIGEST"
+          exit 1
+        fi
+        echo "image_digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+    - name: Generate SBOM and attestations
+      uses: ./.github/actions/sbom-and-attest
+      with:
+        image_name: ${{ inputs.image_name }}
+        image_digest: ${{ steps.digest.outputs.image_digest }}

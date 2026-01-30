@@ -1,0 +1,128 @@
+# ArgoCD Deployment Bundle
+
+Bundler Version: {{ .BundlerVersion }}
+Recipe Version: {{ .RecipeVersion }}
+
+## Overview
+
+This bundle contains ArgoCD Application manifests for deploying NVIDIA Cloud Native Stack components using the App of Apps pattern.
+
+## Components
+
+The following components are included in deployment order:
+
+| Component | Version | Sync Wave | Namespace |
+|-----------|---------|-----------|-----------|
+{{- range .Components }}
+| {{ .Name }} | {{ .Version }} | {{ .SyncWave }} | {{ .Namespace }} |
+{{- end }}
+
+## Prerequisites
+
+- Kubernetes cluster with ArgoCD installed
+- ArgoCD CLI (`argocd`) configured
+- Git repository for storing these manifests
+- kubectl configured with cluster access
+
+## Deployment Steps
+
+### 1. Prepare Git Repository
+
+Push this bundle to your GitOps repository:
+
+```bash
+cd <bundle-directory>
+git init
+git add .
+git commit -m "Add NVIDIA Cloud Native Stack manifests"
+git remote add origin YOUR_REPO_URL
+git push -u origin main
+```
+
+### 2. Update Repository URL
+
+Edit `app-of-apps.yaml` and replace the placeholder URL:
+
+```bash
+# Update the repoURL in app-of-apps.yaml
+sed -i 's|https://github.com/YOUR-ORG/YOUR-REPO.git|YOUR_ACTUAL_REPO_URL|g' app-of-apps.yaml
+```
+
+### 3. Apply App of Apps
+
+```bash
+kubectl apply -f app-of-apps.yaml
+```
+
+### 4. Monitor Deployment
+
+```bash
+# Watch application sync status
+argocd app list
+
+# Get detailed status for a specific application
+argocd app get nvidia-stack
+
+# Watch sync progress
+argocd app sync nvidia-stack --watch
+```
+
+## Directory Structure
+
+```
+<bundle-directory>/
+├── app-of-apps.yaml           # Parent application
+├── README.md                  # This file
+{{- range .Components }}
+├── {{ .Name }}/
+│   ├── application.yaml       # ArgoCD Application (sync-wave: {{ .SyncWave }})
+│   └── values.yaml            # Helm values
+{{- end }}
+```
+
+## Sync Waves
+
+Components are deployed in order using ArgoCD sync-waves:
+
+{{- range .Components }}
+- **Wave {{ .SyncWave }}**: {{ .Name }}
+{{- end }}
+
+## Customization
+
+### Modifying Values
+
+Edit the `values.yaml` file in each component directory to customize the deployment.
+
+### Changing Deployment Order
+
+Modify the `sync-wave` annotation in each `application.yaml` to change deployment order.
+
+## Troubleshooting
+
+### Application Not Syncing
+
+```bash
+# Check application status
+argocd app get <app-name>
+
+# Force sync
+argocd app sync <app-name> --force
+
+# View application logs
+argocd app logs <app-name>
+```
+
+### Resource Conflicts
+
+If resources already exist, you may need to adopt them:
+
+```bash
+argocd app sync <app-name> --replace
+```
+
+## References
+
+- [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
+- [App of Apps Pattern](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/)
+- [Sync Waves](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-waves/)

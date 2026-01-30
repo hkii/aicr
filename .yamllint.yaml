@@ -1,0 +1,98 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+yaml-files:
+  - '*.yaml'
+  - '*.yml'
+
+ignore: |
+  # Build and vendor directories
+  vendor/
+  dist/
+  node_modules/
+
+  # Examples (generated/reference files with varying styles)
+  examples/
+
+  # Helm templates (contain Go template syntax, not valid YAML)
+  pkg/recipe/data/components/*/manifests/
+
+  # Git directory
+  .git/
+
+rules:
+  # Formatting
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: 1
+  commas:
+    max-spaces-before: 0
+    min-spaces-after: 1
+    max-spaces-after: 1
+  hyphens:
+    max-spaces-after: 1
+
+  # Indentation
+  indentation:
+    spaces: 2
+    indent-sequences: whatever  # Allow flexible sequence indentation (GitHub Actions uses various styles)
+    check-multi-line-strings: false
+
+  # Line rules
+  line-length:
+    max: 200
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  new-line-at-end-of-file: disable  # Many existing files lack trailing newline
+  new-lines:
+    type: unix
+  trailing-spaces: enable
+
+  # Comments
+  comments:
+    require-starting-space: true
+    ignore-shebangs: true
+    min-spaces-from-content: 1
+  comments-indentation: enable
+
+  # Document structure
+  document-start: disable
+  document-end: disable
+
+  # Values
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 0
+  empty-values:
+    forbid-in-block-mappings: true
+    forbid-in-flow-mappings: true
+  truthy: disable  # GitHub issue templates use Yes/No as string values
+
+  # Keys
+  key-duplicates: enable
+  key-ordering: disable
+
+  # Other
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: false
+  quoted-strings: disable

@@ -1,0 +1,179 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: 2
+
+project_name: eidos
+
+builds:
+  - id: eidos
+    binary: eidos
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    dir: cmd/eidos
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    flags:
+      - -trimpath
+    ldflags: &build-ldflags |
+      -w
+      -s
+      -extldflags "-static"
+      -X github.com/NVIDIA/eidos/pkg/cli.version={{.Version}}
+      -X github.com/NVIDIA/eidos/pkg/cli.commit={{.ShortCommit}}
+      -X github.com/NVIDIA/eidos/pkg/cli.date={{.Date}}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+  - id: eidosd
+    binary: eidosd
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    dir: cmd/eidosd
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    flags:
+      - -trimpath
+    ldflags: &build-ldflags |
+      -w
+      -s
+      -extldflags "-static"
+      -X github.com/NVIDIA/eidos/pkg/api.version={{.Version}}
+      -X github.com/NVIDIA/eidos/pkg/api.commit={{.ShortCommit}}
+      -X github.com/NVIDIA/eidos/pkg/api.date={{.Date}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+universal_binaries:
+  - name_template: "eidos"
+    replace: false  # keep platform-specific binaries too
+
+gomod:
+  proxy: false
+
+sboms:
+  - artifacts: binary
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+report_sizes: true
+
+metadata:
+  mod_timestamp: "{{ .CommitTimestamp }}"
+
+release:
+  github:
+    owner: mchmarny  # NVIDIA
+    name: eidos
+  prerelease: auto
+
+kos:
+  - id: eidos
+    build: eidos
+    repositories:
+      - ghcr.io/mchmarny/eidos
+    base_image: nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - latest
+      - "{{.Tag}}"
+    preserve_import_paths: false
+    bare: true
+
+  - id: eidosd
+    build: eidosd
+    repositories:
+      - ghcr.io/mchmarny/eidosd
+    base_image: gcr.io/distroless/static:nonroot
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - latest
+      - "{{.Tag}}"
+    preserve_import_paths: false
+    bare: true
+
+archives:
+  - id: eidos
+    ids:
+      - eidos
+    formats:
+      - binary
+    name_template: "{{ .Binary }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: eidos-homebrew
+    ids:
+      - eidos
+    formats:
+      - tar.gz
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README*
+
+brews:
+  - name: eidos
+    ids:
+      - eidos-homebrew
+    repository:
+      owner: mchmarny
+      name: homebrew-eidos
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/mchmarny/eidos"
+    description: "CLI for generating validated GPU-accelerated Kubernetes configurations"
+    license: "Apache-2.0"
+    install: |
+      bin.install "eidos"
+    test: |
+      system "#{bin}/eidos", "version"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^lint:"
+      - "^chore: readme"
+      - "^chore: bump version"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Tasks"
+      regexp: '^.*?chore(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Bug fixes"
+      regexp: '^.*?bug(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999

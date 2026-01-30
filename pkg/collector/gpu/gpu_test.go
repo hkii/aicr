@@ -1,0 +1,412 @@
+// Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package gpu
+
+import (
+	"context"
+	"encoding/xml"
+	"errors"
+	"os"
+	"os/exec"
+	"testing"
+	"time"
+
+	"github.com/NVIDIA/eidos/pkg/measurement"
+)
+
+func TestParseNvidiaSMILog(t *testing.T) {
+	data, err := os.ReadFile("gpu.xml")
+	if err != nil {
+		t.Skipf("smi.xml not available: %v", err)
+	}
+
+	var d NVSMIDevice
+	if err := xml.Unmarshal(data, &d); err != nil {
+		t.Fatalf("failed to unmarshal XML: %v", err)
+	}
+
+	// Basic validations
+	if d.Timestamp == "" {
+		t.Error("expected timestamp to be set")
+	}
+	if d.DriverVersion == "" {
+		t.Error("expected driverVersion to be set")
+	}
+	if d.CudaVersion == "" {
+		t.Error("expected cudaVersion to be set")
+	}
+	if len(d.GPUs) != 8 {
+		t.Error("expected 8 GPUs to be present")
+	}
+	for _, gpu := range d.GPUs {
+		if gpu.Serial == "" {
+			t.Error("expected GPU serial to be set")
+		}
+
+		if gpu.ProductName == "" {
+			t.Error("expected GPU productName to be set")
+		}
+		if gpu.UUID == "" {
+			t.Error("expected GPU UUID to be set")
+		}
+		if gpu.FbMemoryUsage.Total == "" {
+			t.Error("expected fbMemoryUsage.total to be set")
+		}
+	}
+}
+
+func TestNoGPUMeasurement(t *testing.T) {
+	m := noGPUMeasurement()
+
+	if m == nil {
+		t.Fatal("expected non-nil measurement")
+		return
+	}
+
+	if m.Type != measurement.TypeGPU {
+		t.Errorf("expected type %q, got %q", measurement.TypeGPU, m.Type)
+	}
+
+	if len(m.Subtypes) != 1 {
+		t.Fatalf("expected 1 subtype, got %d", len(m.Subtypes))
+	}
+
+	if m.Subtypes[0].Name != "smi" {
+		t.Errorf("expected subtype name %q, got %q", "smi", m.Subtypes[0].Name)
+	}
+
+	gpuCount, ok := m.Subtypes[0].Data[measurement.KeyGPUCount]
+	if !ok {
+		t.Fatal("expected gpu-count key in data")
+	}
+
+	gpuCountVal, ok := gpuCount.Any().(int)
+	if !ok {
+		t.Fatalf("expected gpu-count to be int, got %T", gpuCount.Any())
+	}
+
+	if gpuCountVal != 0 {
+		t.Errorf("expected gpu-count=0, got %d", gpuCountVal)
+	}
+}
+
+func TestCollector_GracefulDegradation_WhenNvidiaSmiMissing(t *testing.T) {
+	// Skip if nvidia-smi is actually available (we can't test graceful degradation)
+	if _, err := exec.LookPath(nvidiaSMICommand); err == nil {
+		t.Skip("nvidia-smi is available, skipping graceful degradation test")
+	}
+
+	collector := &Collector{}
+	ctx := context.Background()
+
+	m, err := collector.Collect(ctx)
+
+	// Should NOT return an error
+	if err != nil {
+		t.Fatalf("expected no error when nvidia-smi missing, got: %v", err)
+	}
+
+	// Should return a valid measurement
+	if m == nil {
+		t.Fatal("expected non-nil measurement")
+		return
+	}
+
+	if m.Type != measurement.TypeGPU {
+		t.Errorf("expected type %q, got %q", measurement.TypeGPU, m.Type)
+	}
+
+	// Should indicate 0 GPUs
+	if len(m.Subtypes) < 1 {
+		t.Fatal("expected at least 1 subtype")
+	}
+
+	gpuCount, ok := m.Subtypes[0].Data[measurement.KeyGPUCount]
+	if !ok {
+		t.Fatal("expected gpu-count key in data")
+	}
+
+	gpuCountVal, ok := gpuCount.Any().(int)
+	if !ok {
+		t.Fatalf("expected gpu-count to be int, got %T", gpuCount.Any())
+	}
+
+	if gpuCountVal != 0 {
+		t.Errorf("expected gpu-count=0, got %d", gpuCountVal)
+	}
+}
+
+func TestGetSMIReadings(t *testing.T) {
+	data, err := os.ReadFile("gpu.xml")
+	if err != nil {
+		t.Skipf("gpu.xml not available: %v", err)
+	}
+
+	readings, err := getSMIReadings(data)
+	if err != nil {
+		t.Fatalf("getSMIReadings failed: %v", err)
+	}
+
+	// Validate expected keys exist
+	expectedKeys := []string{
+		measurement.KeyGPUDriver,
+		measurement.KeyGPUCount,
+		"cuda-version",
+		"gpu." + measurement.KeyGPUModel,
+		"gpu.product-architecture",
+		"gpu.display-mode",
+		"gpu.persistence-mode",
+		"gpu.vbios-version",
+	}
+	for _, key := range expectedKeys {
+		if _, ok := readings[key]; !ok {
+			t.Errorf("missing expected key: %s", key)
+		}
+	}
+
+	// Validate driver version
+	driverVersion, ok := readings[measurement.KeyGPUDriver]
+	if !ok {
+		t.Fatal("missing driver-version key")
+	}
+	if driverVersion.Any().(string) != "570.86.15" {
+		t.Errorf("expected driver version 570.86.15, got %v", driverVersion.Any())
+	}
+
+	// Validate GPU count
+	gpuCount, ok := readings[measurement.KeyGPUCount]
+	if !ok {
+		t.Fatal("missing gpu-count key")
+	}
+	if gpuCount.Any().(int) != 8 {
+		t.Errorf("expected 8 GPUs, got %v", gpuCount.Any())
+	}
+
+	// Validate CUDA version
+	cudaVersion, ok := readings["cuda-version"]
+	if !ok {
+		t.Fatal("missing cuda-version key")
+	}
+	if cudaVersion.Any().(string) != "12.8" {
+		t.Errorf("expected CUDA version 12.8, got %v", cudaVersion.Any())
+	}
+
+	// Validate GPU model
+	gpuModel, ok := readings["gpu."+measurement.KeyGPUModel]
+	if !ok {
+		t.Fatal("missing gpu.product-name key")
+	}
+	if gpuModel.Any().(string) != "NVIDIA H100 80GB HBM3" {
+		t.Errorf("expected GPU model 'NVIDIA H100 80GB HBM3', got %v", gpuModel.Any())
+	}
+}
+
+func TestGetSMIReadings_NoGPUs(t *testing.T) {
+	// XML with no GPUs
+	xmlData := []byte(`<?xml version="1.0" ?>
+<nvidia_smi_log>
+	<timestamp>Mon Apr 14 12:55:43 2025</timestamp>
+	<driver_version>570.86.15</driver_version>
+	<cuda_version>12.8</cuda_version>
+	<attached_gpus>0</attached_gpus>
+</nvidia_smi_log>`)
+
+	readings, err := getSMIReadings(xmlData)
+	if err != nil {
+		t.Fatalf("getSMIReadings failed: %v", err)
+	}
+
+	// Should have driver and CUDA version
+	if _, ok := readings[measurement.KeyGPUDriver]; !ok {
+		t.Error("missing driver-version key")
+	}
+	if _, ok := readings["cuda-version"]; !ok {
+		t.Error("missing cuda-version key")
+	}
+
+	// GPU count should be 0
+	gpuCount, ok := readings[measurement.KeyGPUCount]
+	if !ok {
+		t.Fatal("missing gpu-count key")
+	}
+	if gpuCount.Any().(int) != 0 {
+		t.Errorf("expected 0 GPUs, got %v", gpuCount.Any())
+	}
+
+	// Should NOT have GPU-specific keys
+	if _, ok := readings["gpu."+measurement.KeyGPUModel]; ok {
+		t.Error("should not have gpu.product-name when no GPUs")
+	}
+}
+
+func TestParseSMIDevice(t *testing.T) {
+	data, err := os.ReadFile("gpu.xml")
+	if err != nil {
+		t.Skipf("gpu.xml not available: %v", err)
+	}
+
+	device, err := parseSMIDevice(data)
+	if err != nil {
+		t.Fatalf("parseSMIDevice failed: %v", err)
+	}
+
+	if device.DriverVersion != "570.86.15" {
+		t.Errorf("expected driver version 570.86.15, got %s", device.DriverVersion)
+	}
+
+	if device.CudaVersion != "12.8" {
+		t.Errorf("expected CUDA version 12.8, got %s", device.CudaVersion)
+	}
+
+	if len(device.GPUs) != 8 {
+		t.Errorf("expected 8 GPUs, got %d", len(device.GPUs))
+	}
+
+	// Validate first GPU
+	if len(device.GPUs) > 0 {
+		gpu := device.GPUs[0]
+		if gpu.ProductName != "NVIDIA H100 80GB HBM3" {
+			t.Errorf("expected product name 'NVIDIA H100 80GB HBM3', got %s", gpu.ProductName)
+		}
+		if gpu.ProductArchitecture != "Hopper" {
+			t.Errorf("expected architecture 'Hopper', got %s", gpu.ProductArchitecture)
+		}
+		if gpu.Serial == "" {
+			t.Error("expected GPU serial to be set")
+		}
+		if gpu.UUID == "" {
+			t.Error("expected GPU UUID to be set")
+		}
+	}
+}
+
+func TestParseSMIDevice_InvalidXML(t *testing.T) {
+	testCases := []struct {
+		name string
+		data []byte
+	}{
+		{"empty", []byte("")},
+		{"not xml", []byte("not xml at all")},
+		{"malformed xml", []byte("<nvidia_smi_log><unclosed>")},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := parseSMIDevice(tc.data)
+			if err == nil {
+				t.Error("expected error for invalid XML")
+			}
+		})
+	}
+}
+
+func TestParseSMIDevice_WrongRootElement(t *testing.T) {
+	// XML with wrong root element parses but returns empty/zero-value struct
+	xmlData := []byte("<other_element><foo>bar</foo></other_element>")
+
+	device, err := parseSMIDevice(xmlData)
+	if err != nil {
+		t.Fatalf("parseSMIDevice() unexpected error: %v", err)
+	}
+
+	// Should return empty struct (no matching fields)
+	if device.DriverVersion != "" {
+		t.Errorf("expected empty DriverVersion, got %s", device.DriverVersion)
+	}
+	if len(device.GPUs) != 0 {
+		t.Errorf("expected no GPUs, got %d", len(device.GPUs))
+	}
+}
+
+func TestParseSMIDevice_MinimalValid(t *testing.T) {
+	// Minimal valid XML
+	xmlData := []byte(`<?xml version="1.0" ?>
+<nvidia_smi_log>
+	<driver_version>550.0</driver_version>
+	<cuda_version>12.0</cuda_version>
+	<attached_gpus>0</attached_gpus>
+</nvidia_smi_log>`)
+
+	device, err := parseSMIDevice(xmlData)
+	if err != nil {
+		t.Fatalf("parseSMIDevice failed: %v", err)
+	}
+
+	if device.DriverVersion != "550.0" {
+		t.Errorf("expected driver version 550.0, got %s", device.DriverVersion)
+	}
+
+	if device.CudaVersion != "12.0" {
+		t.Errorf("expected CUDA version 12.0, got %s", device.CudaVersion)
+	}
+}
+
+func TestCollector_ContextTimeout(t *testing.T) {
+	// Skip if nvidia-smi is available (we don't want to actually run it)
+	if _, err := exec.LookPath(nvidiaSMICommand); err == nil {
+		t.Skip("nvidia-smi is available, skipping timeout test")
+	}
+
+	collector := &Collector{}
+
+	// Create a context with very short timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	defer cancel()
+
+	// Wait for context to timeout
+	time.Sleep(10 * time.Millisecond)
+
+	m, err := collector.Collect(ctx)
+
+	// With graceful degradation, should return valid measurement even when nvidia-smi missing
+	if err != nil {
+		// If we get an error, it could be context canceled
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+			t.Logf("Got error: %v", err)
+		}
+	}
+
+	if m != nil && m.Type != measurement.TypeGPU {
+		t.Errorf("expected type %q, got %q", measurement.TypeGPU, m.Type)
+	}
+}
+
+func TestNVSMIDevice_XMLUnmarshal(t *testing.T) {
+	data, err := os.ReadFile("gpu.xml")
+	if err != nil {
+		t.Skipf("gpu.xml not available: %v", err)
+	}
+
+	var device NVSMIDevice
+	if err := xml.Unmarshal(data, &device); err != nil {
+		t.Fatalf("failed to unmarshal XML: %v", err)
+	}
+
+	// Validate nested structures are parsed correctly
+	if len(device.GPUs) > 0 {
+		gpu := device.GPUs[0]
+
+		// Test MigMode parsing
+		if gpu.MigMode.CurrentMig == "" && gpu.MigMode.PendingMig == "" {
+			// MigMode might not be set, but struct should exist
+			t.Log("MigMode not set (expected for some GPU configs)")
+		}
+
+		// Test memory usage parsing
+		if gpu.FbMemoryUsage.Total == "" {
+			t.Error("expected FbMemoryUsage.Total to be set")
+		}
+	}
+}

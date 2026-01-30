@@ -1,0 +1,77 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Kube Prometheus Stack Helm values
+# Comprehensive monitoring stack with Prometheus, Grafana, and AlertManager
+
+# Prometheus configuration
+prometheus:
+  prometheusSpec:
+    # Discover ServiceMonitors across all namespaces (e.g., dcgm-exporter in nvidia-gpu-operator)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorNamespaceSelector: {}
+
+    # Resource configuration
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 2Gi
+
+    # Storage configuration
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ""  # Use default storage class
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+    # Data retention
+    retention: 15d
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminPassword: admin  # Change in production
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# AlertManager configuration
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# Node Exporter - for node-level metrics
+nodeExporter:
+  enabled: true
+
+# kube-state-metrics - for Kubernetes object metrics
+kubeStateMetrics:
+  enabled: true

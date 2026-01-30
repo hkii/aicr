@@ -1,0 +1,113 @@
+// Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package k8s
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"strings"
+
+	"github.com/NVIDIA/eidos/pkg/measurement"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// collectContainerImages extracts unique container images from all pods.
+func (k *Collector) collectContainerImages(ctx context.Context) (map[string]measurement.Reading, error) {
+	pods, err := k.ClientSet.CoreV1().Pods("").List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	// Track unique images (map of image name to version)
+	imageVersions := make(map[string]string)
+	recordImage := func(imageRef string) {
+		if imageRef == "" {
+			return
+		}
+		// Strip registry prefix to get just image:tag
+		imageNameTag := stripRegistryPrefix(imageRef)
+
+		// Split image name and tag
+		name, tag := splitImageNameTag(imageNameTag)
+		if name != "" {
+			imageVersions[name] = tag
+		}
+	}
+
+	for _, pod := range pods.Items {
+		// Check for context cancellation
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		for _, container := range pod.Spec.Containers {
+			recordImage(container.Image)
+		}
+		for _, container := range pod.Spec.InitContainers {
+			recordImage(container.Image)
+		}
+		for _, container := range pod.Spec.EphemeralContainers {
+			recordImage(container.Image)
+		}
+	}
+
+	// Convert to final result format
+	images := make(map[string]measurement.Reading)
+	for name, tag := range imageVersions {
+		images[name] = measurement.Str(tag)
+	}
+
+	slog.Debug("collected container images", slog.Int("count", len(images)))
+	return images, nil
+}
+
+// stripRegistryPrefix removes the registry domain from image references.
+// Examples:
+//   - "registry.k8s.io/pause:3.9" -> "pause:3.9"
+//   - "docker.io/library/nginx:latest" -> "nginx:latest"
+//   - "ghcr.io/org/image:v1.0" -> "image:v1.0"
+func stripRegistryPrefix(imageRef string) string {
+	// Find the last slash which separates the image name from registry/org path
+	lastSlash := strings.LastIndex(imageRef, "/")
+	if lastSlash == -1 {
+		// No slashes, already just image:tag
+		return imageRef
+	}
+	return imageRef[lastSlash+1:]
+}
+
+// splitImageNameTag splits an image reference into name and tag.
+// Examples:
+//   - "nginx:1.21" -> ("nginx", "1.21")
+//   - "argocd:v2.14.3" -> ("argocd", "v2.14.3")
+//   - "nginx" -> ("nginx", "latest")
+//   - "image:v1.0@sha256:abc123..." -> ("image", "v1.0")
+func splitImageNameTag(imageRef string) (name, tag string) {
+	// First, strip any digest (@sha256:...)
+	atIdx := strings.Index(imageRef, "@")
+	if atIdx != -1 {
+		imageRef = imageRef[:atIdx]
+	}
+
+	// Split on the last colon to separate image name from tag
+	colonIdx := strings.LastIndex(imageRef, ":")
+	if colonIdx == -1 {
+		// No tag specified, use "latest" as default
+		return imageRef, "latest"
+	}
+	return imageRef[:colonIdx], imageRef[colonIdx+1:]
+}

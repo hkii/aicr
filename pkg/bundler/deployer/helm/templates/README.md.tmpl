@@ -1,0 +1,139 @@
+# Cloud Native Stack Deployment
+
+Recipe Version: {{ .RecipeVersion }}
+Bundler Version: {{ .BundlerVersion }}
+
+This is a Helm umbrella chart that deploys NVIDIA Cloud Native Stack components
+for GPU-accelerated Kubernetes workloads.
+
+## Configuration
+
+{{ if .Criteria }}
+**Target Environment:**
+{{ range .Criteria }}
+{{ . -}}
+{{ end }}
+{{ end }}
+
+## Components
+
+The following components are included (deployed in order):
+
+| Component | Version | Repository |
+|-----------|---------|------------|
+{{ range .Components -}}
+| {{ .Name }} | {{ .Version }} | {{ .Repository }} |
+{{ end }}
+
+{{ if .Constraints }}
+## Constraints
+
+The following constraints must be satisfied:
+
+| Constraint | Value |
+|------------|-------|
+{{ range .Constraints -}}
+| {{ .Name }} | {{ .Value }} |
+{{ end }}
+{{ end }}
+
+## Quick Start
+
+1. **Add Helm repositories** (if not already added):
+
+```bash
+helm repo add nvidia https://helm.ngc.nvidia.com/nvidia
+helm repo update
+```
+
+2. **Update dependencies**:
+
+```bash
+helm dependency update
+```
+
+3. **Review and customize values** (optional):
+
+```bash
+# Edit values.yaml to customize component configuration
+vim values.yaml
+```
+
+4. **Install the chart**:
+
+```bash
+helm install {{ .ChartName }} . -n eidos-stack --create-namespace -f values.yaml
+```
+
+## Customization
+
+### Disabling Components
+
+To skip installing a specific component, set `<component>.enabled=false`:
+
+```bash
+helm install {{ .ChartName }} . -n eidos-stack --create-namespace \
+  --set cert-manager.enabled=false
+```
+
+### Overriding Values
+
+Override specific values using `--set`:
+
+```bash
+helm install {{ .ChartName }} . -n eidos-stack --create-namespace \
+  --set gpu-operator.driver.enabled=false \
+  --set gpu-operator.toolkit.enabled=true
+```
+
+### Using a Custom Values File
+
+Create a custom values file and merge it:
+
+```bash
+helm install {{ .ChartName }} . -n eidos-stack --create-namespace -f values.yaml -f custom-values.yaml
+```
+
+## Upgrade
+
+To upgrade an existing installation:
+
+```bash
+helm upgrade {{ .ChartName }} . -n eidos-stack -f values.yaml
+```
+
+## Uninstall
+
+To remove the deployment:
+
+```bash
+helm uninstall {{ .ChartName }} -n eidos-stack
+```
+
+## Troubleshooting
+
+### Check deployment status
+
+```bash
+helm status {{ .ChartName }} -n eidos-stack
+kubectl get pods -n gpu-operator
+```
+
+### View component logs
+
+```bash
+kubectl logs -n gpu-operator -l app=gpu-operator
+kubectl logs -n nvidia-network-operator -l app=network-operator
+```
+
+### Verify GPU access
+
+```bash
+kubectl get nodes -o jsonpath='{.items[*].status.allocatable}' | jq '.["nvidia.com/gpu"]'
+```
+
+## References
+
+- [GPU Operator Documentation](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/)
+- [Network Operator Documentation](https://docs.nvidia.com/networking/display/cokan10/network+operator)
+- [Helm Dependencies](https://helm.sh/docs/helm/helm_dependency/)

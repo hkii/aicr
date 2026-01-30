@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Configuration
+OWNER="mchmarny"  # NVIDIA
+PROJECT="eidos"
+REPO="$OWNER/$PROJECT"
+BIN_NAME="eidos"
+CHECKSUMS_FILE="eidos_checksums.txt"
+REQUIRED_TOOLS=(curl)
+INSTALL_DIR="${1:-/usr/local/bin}"
+
+# Colors
+COLOR_RED='\033[0;31m'
+COLOR_RESET='\033[0m'
+
+# ==============================================================================
+# Utility Functions
+# ==============================================================================
+
+usage() {
+  cat <<EOF
+Install utility for $BIN_NAME
+
+Usage: $0 [-d install_dir]
+
+Environment Variables:
+  GITHUB_TOKEN    Optional GitHub token to avoid API rate limits
+
+Examples:
+  $0                    # Install to /usr/local/bin
+  $0 -d ~/bin           # Install to custom directory
+  GITHUB_TOKEN=xyz $0   # Install with authentication
+EOF
+  exit 1
+}
+
+err() {
+  printf "${COLOR_RED}%s${COLOR_RESET}\n" "$1" >&2
+  exit 1
+}
+
+msg() {
+  printf "%s\n" "$1" >&2
+}
+
+has_tools() {
+  local missing=()
+  for tool in "$@"; do
+    command -v "$tool" &>/dev/null || missing+=("$tool")
+  done
+  [[ ${#missing[@]} -eq 0 ]] || err "Required tools not installed: ${missing[*]}"
+}
+
+normalize_arch() {
+  local arch="$1"
+  [[ $arch == "x86_64" ]] && echo "amd64" || echo "$arch"
+}
+
+get_os() {
+  case $(uname -s) in
+    Darwin) echo "darwin" ;;
+    Linux)  echo "linux" ;;
+    *)      echo "windows" ;;
+  esac
+}
+
+get_binary_name() {
+  echo "${BIN_NAME}_${1}_${2}_${3}"  # version, os, arch
+}
+
+# ==============================================================================
+# GitHub API Functions
+# ==============================================================================
+
+github_curl() {
+  local url="$1"
+  local output_file="${2:-}"
+  local curl_opts=(-w "%{http_code}")
+  
+  [[ -n "${GITHUB_TOKEN:-}" ]] && curl_opts+=(-H "Authorization: token $GITHUB_TOKEN")
+  
+  if [[ -n "$output_file" ]]; then
+    # Show progress bar for file downloads (can be large)
+    curl_opts+=(-# -Lo "$output_file")
+  else
+    # Silent for API calls
+    curl_opts+=(-s)
+  fi
+  
+  curl "${curl_opts[@]}" "$url"
+}
+
+fetch_latest_release() {
+  local api_url="https://api.github.com/repos/${REPO}/releases/latest"
+  local response
+  
+  msg "Fetching latest release from GitHub..."
+  response=$(github_curl "$api_url")
+  
+  [[ -z "$response" ]] && err "Failed to fetch release information from GitHub API"
+  
+  if grep -q "API rate limit exceeded" <<< "$response"; then
+    err "GitHub API rate limit exceeded. Set GITHUB_TOKEN environment variable or try again later."
+  fi
+  
+  echo "$response"
+}
+
+extract_version() {
+  local json="$1"
+  local version
+  
+  version=$(grep -m 1 '"tag_name"' <<< "$json" | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+  
+  [[ -z "$version" || "$version" == "null" ]] && err "Failed to extract version from GitHub API response"
+  
+  echo "$version"
+}
+
+download_file() {
+  local url="$1"
+  local output="$2"
+  local desc="${3:-file}"
+  local http_code
+  
+  msg "Downloading $desc..."
+  http_code=$(github_curl "$url" "$output" | tail -c 3)
+  
+  [[ "$http_code" == "200" ]] || err "Failed to download $desc (HTTP $http_code): $url"
+}
+
+
+# ==============================================================================
+# Main Installation Logic
+# ==============================================================================
+
+main() {
+  # Parse arguments
+  while getopts "d:h" opt; do
+    case $opt in
+      d) INSTALL_DIR="$OPTARG" ;;
+      h) usage ;;
+      *) usage ;;
+    esac
+  done
+
+  # Detect platform
+  local os arch version binary_name temp_dir
+  os=$(get_os)
+  arch=$(normalize_arch "$(uname -m)")
+  
+  # Validate platform
+  [[ $os == "linux" || $os == "darwin" ]] || err "Unsupported OS: $os"
+  [[ $arch == "amd64" || $arch == "arm64" ]] || err "Unsupported architecture: $arch"
+  has_tools "${REQUIRED_TOOLS[@]}"
+  
+  # Fetch release information
+  local release_json
+  release_json=$(fetch_latest_release)
+  version=$(extract_version "$release_json")
+  binary_name=$(get_binary_name "$version" "$os" "$arch")
+  
+  msg "Platform: $os/$arch"
+  msg "Version: $version"
+  
+  # Download and verify binary
+  temp_dir=$(mktemp -d)
+  trap "rm -rf $temp_dir" EXIT
+  
+  local binary_url="${REPO}/releases/download/${version}/${binary_name}"
+  local checksum_url="${REPO}/releases/download/${version}/${CHECKSUMS_FILE}"
+  
+  download_file "https://github.com/${binary_url}" "${temp_dir}/${binary_name}" "$binary_name"
+  download_file "https://github.com/${checksum_url}" "${temp_dir}/checksums.txt" "checksums"
+  
+  # Verify checksum
+  msg "Verifying checksum..."
+  (cd "$temp_dir" && grep "$binary_name" checksums.txt | shasum -a 256 --check --strict) \
+    || err "Checksum verification failed"
+  
+  # Install binary
+  chmod +x "${temp_dir}/${binary_name}"
+  msg "Installing $BIN_NAME to $INSTALL_DIR"
+  sudo mv "${temp_dir}/${binary_name}" "${INSTALL_DIR}/${BIN_NAME}"
+  
+  # Verify installation
+  msg "$BIN_NAME installed successfully!"
+  "${BIN_NAME}" --version
+}
+
+# Run main function
+main "$@"

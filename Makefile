@@ -1,0 +1,408 @@
+# Makefile for the eidos project
+# Purpose: Build, lint, test, and manage releases for the eidos project.
+
+REPO_NAME          := eidos
+VERSION            ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+IMAGE_REGISTRY     ?= ghcr.io/nvidia
+IMAGE_TAG          ?= latest
+YAML_FILES         := $(shell find . -type f \( -iname "*.yml" -o -iname "*.yaml" \) ! -path "./examples/*" ! -path "./bundles/*" ! -path "./.flox/*")
+COMMIT             := $(shell git rev-parse HEAD)
+BRANCH             := $(shell git rev-parse --abbrev-ref HEAD)
+GO_VERSION         := $(shell go env GOVERSION 2>/dev/null | sed 's/go//')
+GOLINT_VERSION      = $(shell golangci-lint --version 2>/dev/null | awk '{print $$4}' | sed 's/golangci-lint version //' || echo "not installed")
+KO_VERSION          = $(shell ko version 2>/dev/null || echo "not installed")
+GORELEASER_VERSION  = $(shell goreleaser --version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p' || echo "not installed")
+COVERAGE_THRESHOLD ?= 70
+
+# Tilt/ctlptl configuration
+CTLPTL_CONFIG_FILE = .ctlptl.yaml
+REGISTRY_PORT = 5001
+REGISTRY_NAME = ctlptl-registry
+
+# Default target
+all: help
+
+.PHONY: info
+info: ## Prints the current project info
+	@echo "version:        $(VERSION)"
+	@echo "commit:         $(COMMIT)"
+	@echo "branch:         $(BRANCH)"
+	@echo "repo:           $(REPO_NAME)"
+	@echo "go:             $(GO_VERSION)"
+	@echo "linter:         $(GOLINT_VERSION)"
+	@echo "ko:             $(KO_VERSION)"
+	@echo "goreleaser:     $(GORELEASER_VERSION)"
+
+.PHONY: check-tools
+check-tools: ## Verifies required tools are installed
+	@echo "Checking required tools..."
+	@command -v golangci-lint >/dev/null || (echo "ERROR: golangci-lint not installed" && exit 1)
+	@command -v yamllint >/dev/null || (echo "ERROR: yamllint not installed" && exit 1)
+	@command -v grype >/dev/null || (echo "ERROR: grype not installed" && exit 1)
+	@command -v goreleaser >/dev/null || (echo "ERROR: goreleaser not installed" && exit 1)
+	@command -v ko >/dev/null || (echo "ERROR: ko not installed" && exit 1)
+	@echo "All required tools installed"
+
+.PHONY: deps
+deps: ## Installs required development tools (versions from .versions.yaml)
+	@echo "Installing development tools..."
+	@command -v yq >/dev/null || (echo "ERROR: yq is required to read .versions.yaml. Install: brew install yq" && exit 1)
+	@GOLANGCI_VERSION=$$(yq eval '.linting.golangci_lint' .versions.yaml) && \
+		echo "Installing golangci-lint@$$GOLANGCI_VERSION..." && \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$$GOLANGCI_VERSION
+	@GORELEASER_VERSION=$$(yq eval '.build_tools.goreleaser' .versions.yaml) && \
+		echo "Installing goreleaser@$$GORELEASER_VERSION..." && \
+		go install github.com/goreleaser/goreleaser/v2@$$GORELEASER_VERSION
+	@KO_VERSION=$$(yq eval '.build_tools.ko' .versions.yaml) && \
+		echo "Installing ko@$$KO_VERSION..." && \
+		go install github.com/google/ko@$$KO_VERSION
+	@GRYPE_VERSION=$$(yq eval '.security_tools.grype' .versions.yaml) && \
+		echo "Installing grype@$$GRYPE_VERSION..." && \
+		go install github.com/anchore/grype@$$GRYPE_VERSION
+	@pip install --user yamllint 2>/dev/null || echo "Install yamllint manually: pip install yamllint"
+	@echo "Development tools installed"
+
+.PHONY: tidy
+tidy: ## Formats code and updates Go module dependencies
+	@set -e; \
+	go fmt ./...; \
+	go mod tidy
+
+.PHONY: fmt-check
+fmt-check: ## Checks if code is formatted (CI-friendly, no modifications)
+	@test -z "$$(gofmt -l .)" || (echo "Code is not formatted. Run 'make tidy' to fix:" && gofmt -l . && exit 1)
+	@echo "Code formatting check passed"
+
+.PHONY: upgrade
+upgrade: ## Upgrades all dependencies to latest versions
+	@set -e; \
+	go get -u ./...; \
+	go mod tidy
+
+.PHONY: generate
+generate: ## Runs go generate for code generation
+	@echo "Running go generate..."
+	@go generate ./...
+	@echo "Code generation completed"
+
+.PHONY: lint
+lint: lint-go lint-yaml license ## Lints the entire project (Go, YAML, and license headers)
+	@echo "Completed Go and YAML lints and ensured license headers"
+
+.PHONY: lint-go
+lint-go: ## Lints Go files with golangci-lint and go vet
+	@set -e; \
+	echo "Running go vet..."; \
+	go vet ./...; \
+	echo "Running golangci-lint..."; \
+	golangci-lint -c .golangci.yaml run
+
+.PHONY: lint-yaml
+lint-yaml: ## Lints YAML files with yamllint
+	@if [ -n "$(YAML_FILES)" ]; then \
+		yamllint -c .yamllint.yaml $(YAML_FILES); \
+	else \
+		echo "No YAML files found to lint."; \
+	fi
+
+# License ignore patterns (reused by license target)
+LICENSE_IGNORES = \
+	-ignore '.flox/**' \
+	-ignore '.git/**' \
+	-ignore '.venv/**' \
+	-ignore '**/__pycache__/**' \
+	-ignore '**/.venv/**' \
+	-ignore '**/site-packages/**' \
+	-ignore '*/.venv/**' \
+	-ignore '**/.idea/**' \
+	-ignore '**/*.csv' \
+	-ignore '**/*.pyc' \
+	-ignore '**/*.xml' \
+	-ignore '**/*.toml' \
+	-ignore '**/*lock.hcl' \
+	-ignore '**/*pb2*' \
+	-ignore 'bundles/**' \
+	-ignore 'dist/**'
+
+.PHONY: license
+license: ## Add/verify license headers in source files
+	@echo "Ensuring license headers..."
+	@addlicense -f .github/headers/LICENSE $(LICENSE_IGNORES) .
+
+.PHONY: test
+test: ## Runs unit tests with race detector and coverage
+	@set -e; \
+	echo "Running tests with race detector..."; \
+	go test -count=1 -race -covermode=atomic -coverprofile=coverage.out ./... || exit 1; \
+	echo "Test coverage:"; \
+	go tool cover -func=coverage.out | tail -1
+
+.PHONY: test-coverage
+test-coverage: test ## Runs tests and enforces coverage threshold (COVERAGE_THRESHOLD=60)
+	@coverage=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//'); \
+	echo "Coverage: $$coverage% (threshold: $(COVERAGE_THRESHOLD)%)"; \
+	if [ $$(echo "$$coverage < $(COVERAGE_THRESHOLD)" | bc) -eq 1 ]; then \
+		echo "ERROR: Coverage $$coverage% is below threshold $(COVERAGE_THRESHOLD)%"; \
+		exit 1; \
+	fi; \
+	echo "Coverage check passed"
+
+.PHONY: bench
+bench: ## Runs benchmarks
+	@echo "Running benchmarks..."
+	@go test -bench=. -benchmem ./...
+
+.PHONY: e2e
+e2e: ## Runs end-to-end integration tests (CLI only)
+	@set -e; \
+	echo "Running e2e integration tests..."; \
+	tools/e2e
+
+.PHONY: e2e-tilt
+e2e-tilt: ## Runs e2e tests with Tilt cluster (requires: make dev-env)
+	@set -e; \
+	echo "Running e2e tests with Tilt cluster..."; \
+	tests/e2e/run.sh
+
+.PHONY: scan
+scan: ## Scans for vulnerabilities with grype
+	@set -e; \
+	echo "Running vulnerability scan..."; \
+	grype dir:. --config .grype.yaml --fail-on high --quiet
+
+.PHONY: qualify
+qualify: test lint e2e scan ## Qualifies the codebase (test, lint, e2e, scan)
+	@echo "Codebase qualification completed"
+
+.PHONY: server
+server: ## Starts a local development server with debug logging
+	@set -e; \
+	echo "Starting local development server..."; \
+	LOG_LEVEL=debug go run cmd/eidosd/main.go
+
+.PHONY: docs
+docs: ## Serves Go documentation on http://localhost:6060
+	@set -e; \
+	echo "Starting Go documentation server on http://localhost:6060"; \
+	command -v pkgsite >/dev/null 2>&1 && pkgsite -http=:6060 || \
+	(command -v godoc >/dev/null 2>&1 && godoc -http=:6060 || \
+	(echo "Installing pkgsite..." && go install golang.org/x/pkgsite/cmd/pkgsite@latest && pkgsite -http=:6060))
+
+.PHONY: build
+build: tidy ## Builds binaries for the current OS and architecture
+	@set -e; \
+	goreleaser build --clean --single-target --snapshot --timeout 10m0s || exit 1; \
+	echo "Build completed, binaries are in ./dist"
+
+.PHONY: image
+image: ## Builds and pushes container image (IMAGE_REGISTRY, IMAGE_TAG)
+	@set -e; \
+	echo "Building and pushing image to $(IMAGE_REGISTRY)/eidos:$(IMAGE_TAG)"; \
+	KO_DOCKER_REPO=$(IMAGE_REGISTRY) ko build --bare --sbom=none --tags=$(IMAGE_TAG) ./cmd/eidos
+
+.PHONY: release
+release: ## Runs the full release process with goreleaser
+	@set -e; \
+	goreleaser release --clean --config .goreleaser.yaml --fail-fast --timeout 10m0s
+
+.PHONY: bump-major
+bump-major: ## Bumps major version (1.2.3 → 2.0.0)
+	tools/bump major
+
+.PHONY: bump-minor
+bump-minor: ## Bumps minor version (1.2.3 → 1.3.0)
+	tools/bump minor
+
+.PHONY: bump-patch
+bump-patch: ## Bumps patch version (1.2.3 → 1.2.4)
+	tools/bump patch
+
+.PHONY: clean
+clean: ## Cleans build artifacts (dist, coverage files)
+	@rm -rf ./dist ./bin ./coverage.out
+	@go clean ./...
+	@echo "Cleaned build artifacts"
+
+.PHONY: clean-all
+clean-all: clean ## Deep cleans including Go module cache
+	@echo "Cleaning module cache..."
+	@go clean -modcache
+	@echo "Deep clean completed"
+
+.PHONY: cleanup
+cleanup: ## Cleans up Eidos Kubernetes resources (requires kubectl)
+	tools/cleanup
+
+.PHONY: demos
+demos: ## Creates demo GIFs using VHS tool (requires: brew install vhs)
+	@command -v vhs >/dev/null 2>&1 || (echo "Error: vhs is not installed. Install: brew install vhs" && exit 1)
+	vhs docs/demos/videos/cli.tape -o docs/demos/videos/cli.gif
+	vhs docs/demos/videos/e2e.tape -o docs/demos/videos/e2e.gif
+
+# =============================================================================
+# Tilt Local Development
+# =============================================================================
+
+.PHONY: tilt-up
+tilt-up: ## Starts Tilt development environment
+	@echo "Starting Tilt development environment..."
+	@if ! command -v tilt >/dev/null 2>&1; then \
+		echo "Error: tilt is not installed."; \
+		echo "Install: brew install tilt-dev/tap/tilt"; \
+		echo "     or: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash"; \
+		exit 1; \
+	fi
+	tilt up -f tilt/Tiltfile
+
+.PHONY: tilt-down
+tilt-down: ## Stops Tilt development environment
+	@echo "Stopping Tilt development environment..."
+	@if command -v tilt >/dev/null 2>&1; then \
+		tilt down -f tilt/Tiltfile; \
+	else \
+		echo "Warning: tilt is not installed"; \
+	fi
+
+.PHONY: tilt-ci
+tilt-ci: ## Runs Tilt in CI mode (no UI, waits for resources)
+	@echo "Running Tilt in CI mode..."
+	@if ! command -v tilt >/dev/null 2>&1; then \
+		echo "Error: tilt is not installed."; \
+		echo "Install: brew install tilt-dev/tap/tilt"; \
+		echo "     or: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash"; \
+		exit 1; \
+	fi
+	@for i in 1 2 3; do \
+		echo "Attempt $$i of 3..."; \
+		if tilt ci -f tilt/Tiltfile --timeout=5m; then \
+			echo "Tilt CI succeeded on attempt $$i"; \
+			break; \
+		else \
+			if [ $$i -lt 3 ]; then \
+				echo "Tilt CI failed on attempt $$i, retrying in 10 seconds..."; \
+				sleep 10; \
+			else \
+				echo "Tilt CI failed after 3 attempts"; \
+				exit 1; \
+			fi; \
+		fi; \
+	done
+
+# =============================================================================
+# Cluster Management (ctlptl + Kind)
+# =============================================================================
+
+.PHONY: cluster-create
+cluster-create: ## Creates local Kind cluster with registry
+	@echo "Creating local development cluster..."
+	@if ! command -v ctlptl >/dev/null 2>&1; then \
+		echo "Error: ctlptl is not installed."; \
+		echo "Install: brew install tilt-dev/tap/ctlptl"; \
+		echo "     or: go install github.com/tilt-dev/ctlptl/cmd/ctlptl@latest"; \
+		exit 1; \
+	fi
+	@if ! command -v docker >/dev/null 2>&1; then \
+		echo "Error: docker is not installed."; \
+		echo "Install: https://docs.docker.com/get-docker/"; \
+		exit 1; \
+	fi
+	@if ! command -v kind >/dev/null 2>&1; then \
+		echo "Error: kind is not installed."; \
+		echo "Install: brew install kind"; \
+		echo "     or: go install sigs.k8s.io/kind@latest"; \
+		exit 1; \
+	fi
+	ctlptl apply -f $(CTLPTL_CONFIG_FILE)
+	@echo "Waiting for nodes to be ready..."
+	@kubectl wait --for=condition=ready nodes --all --timeout=300s
+	@echo "Cluster created. Registry at localhost:$(REGISTRY_PORT)"
+
+.PHONY: cluster-delete
+cluster-delete: ## Deletes local Kind cluster and registry
+	@echo "Deleting local development cluster..."
+	ctlptl delete -f $(CTLPTL_CONFIG_FILE) || echo "Cluster not found"
+
+.PHONY: cluster-status
+cluster-status: ## Shows cluster and registry status
+	@echo "=== Cluster Status ==="
+	@if command -v ctlptl >/dev/null 2>&1; then \
+		ctlptl get clusters 2>/dev/null || echo "No ctlptl clusters"; \
+	fi
+	@if command -v kubectl >/dev/null 2>&1 && kubectl cluster-info >/dev/null 2>&1; then \
+		echo "Context: $$(kubectl config current-context)"; \
+		kubectl get nodes -o wide 2>/dev/null || true; \
+		echo ""; \
+		echo "Registry:"; \
+		docker ps --filter "name=$(REGISTRY_NAME)" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true; \
+	else \
+		echo "No active cluster"; \
+	fi
+
+# =============================================================================
+# Combined Development Targets
+# =============================================================================
+
+.PHONY: dev-env
+dev-env: cluster-create tilt-up ## Creates cluster and starts Tilt (full setup)
+
+.PHONY: dev-env-clean
+dev-env-clean: tilt-down cluster-delete ## Stops Tilt and deletes cluster (full cleanup)
+
+.PHONY: dev-restart
+dev-restart: tilt-down tilt-up ## Restarts Tilt without recreating cluster
+
+.PHONY: help
+help: ## Displays available commands
+	@echo "Available make targets:"
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk \
+		'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: help-full
+help-full: ## Displays commands grouped by category
+	@echo ""
+	@echo "\033[1m=== Quality & Testing ===\033[0m"
+	@echo "  make qualify        Full qualification (test + lint + e2e + scan)"
+	@echo "  make test           Unit tests with race detector"
+	@echo "  make test-coverage  Tests with coverage threshold enforcement"
+	@echo "  make lint           Lint Go, YAML, and license headers"
+	@echo "  make e2e            CLI end-to-end tests"
+	@echo "  make e2e-tilt       E2E tests with Tilt cluster"
+	@echo "  make scan           Vulnerability scan with grype"
+	@echo "  make bench          Run benchmarks"
+	@echo ""
+	@echo "\033[1m=== Build & Release ===\033[0m"
+	@echo "  make build          Build binaries for current OS/arch"
+	@echo "  make image          Build and push container image"
+	@echo "  make release        Full release with goreleaser"
+	@echo "  make bump-major     Bump major version (1.2.3 -> 2.0.0)"
+	@echo "  make bump-minor     Bump minor version (1.2.3 -> 1.3.0)"
+	@echo "  make bump-patch     Bump patch version (1.2.3 -> 1.2.4)"
+	@echo ""
+	@echo "\033[1m=== Local Development ===\033[0m"
+	@echo "  make dev-env        Create cluster and start Tilt (full setup)"
+	@echo "  make dev-env-clean  Stop Tilt and delete cluster (full cleanup)"
+	@echo "  make dev-restart    Restart Tilt without recreating cluster"
+	@echo "  make cluster-create Create Kind cluster with registry"
+	@echo "  make cluster-delete Delete Kind cluster and registry"
+	@echo "  make cluster-status Show cluster and registry status"
+	@echo "  make tilt-up        Start Tilt development environment"
+	@echo "  make tilt-down      Stop Tilt development environment"
+	@echo "  make server         Start local development server"
+	@echo ""
+	@echo "\033[1m=== Code Maintenance ===\033[0m"
+	@echo "  make tidy           Format code and update dependencies"
+	@echo "  make fmt-check      Check code formatting (CI-friendly)"
+	@echo "  make upgrade        Upgrade all dependencies"
+	@echo "  make generate       Run go generate"
+	@echo "  make license        Add/verify license headers"
+	@echo ""
+	@echo "\033[1m=== Utilities ===\033[0m"
+	@echo "  make info           Print project info"
+	@echo "  make check-tools    Verify required tools are installed"
+	@echo "  make deps           Install development tools"
+	@echo "  make docs           Serve Go documentation"
+	@echo "  make demos          Create demo GIFs (requires vhs)"
+	@echo "  make clean          Clean build artifacts"
+	@echo "  make clean-all      Deep clean including module cache"
+	@echo "  make cleanup        Clean up Eidos Kubernetes resources"
+	@echo ""

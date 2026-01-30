@@ -1,154 +1,134 @@
-# __NVIDIA_OSS__ Standard Repo Template
+# Eidos
 
-This README file is from the NVIDIA_OSS standard repo template of [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file). It provides a list of files in the PLC-OSS-Template and guidelines on how to use (clone and customize) them.
+[![On Push CI](https://github.com/mchmarny/eidos/actions/workflows/on-push.yaml/badge.svg)](https://github.com/mchmarny/eidos/actions/workflows/on-push.yaml)
+[![On Tag Release](https://github.com/mchmarny/eidos/actions/workflows/on-tag.yaml/badge.svg)](https://github.com/mchmarny/eidos/actions/workflows/on-tag.yaml)
+[![Codecov](https://codecov.io/gh/mchmarny/eidos/branch/main/graph/badge.svg)](https://codecov.io/gh/mchmarny/eidos)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/mchmarny/eidos)](https://go.dev/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mchmarny/eidos)](https://goreportcard.com/report/github.com/mchmarny/eidos)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**Upon completing the customization for the project repo, the repo admin should replace this README template with the project specific README file.**
+Eidos (Eidos) provides validated configuration guidance for deploying GPU-accelerated Kubernetes infrastructure. It captures known-good combinations of software, configuration, and system requirements and makes them consumable as documentation and generated deployment artifacts.
 
-- Files (org-wide templates in the NVIDIA .github org repo; per-repo overrides allowed) in [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file)
+## Why We Built This
 
-   - Root 
-     - README.md skeleton (CTA + Quickstart + Support/Security/Governance links) 
-     - LICENSE (Apache 2.0 by default)
-        - For other licenses, see the [Confluence page](https://confluence.nvidia.com/pages/viewpage.action?pageId=788418816) for other licenses
-        - CLA.md file (delete if not using MIT or BSD licenses)
-     - CODE_OF_CONDUCT.md 
-     - SECURITY.md (vuln reporting path) 
-     - CONTRIBUTING.md (base; repo can add specifics)
-     - SUPPORT.md (Support levels/channels)
-     - GOVERNANCE.md (baseline; repo may extend)
-     - CITATION.md (for projects that need citation)
+Running GPU-accelerated Kubernetes clusters reliably is hard. Small differences in kernel versions, drivers, container runtimes, operators, and Kubernetes releases can cause failures that are difficult to diagnose and expensive to reproduce.
 
-   - .github/ 
-     - ISSUE_TEMPLATE/ (<https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository>)
-       - bug.yml, feature.yml, task.yml, config.yml 
-     - PULL_REQUEST_TEMPLATE.md (<https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository>)
-     - workflows/
-     - Note: workflow-templates/ for starter workflows should live in the org-level .github repo, not per-repo
+Historically, this knowledge has lived in internal validation pipelines, playbooks, and tribal knowledge. Eidos exists to externalize that experience. Its goal is to make validated configurations visible, repeatable, and reusable across environments.
 
-   - Repo-specific (not org-template, maintained by the team)
-     - CODEOWNERS (place at .github/CODEOWNERS or repo root)
-     - CHANGELOG.md (or RELEASE.md) 
-     - ROADMAP.md 
-     - MAINTAINERS.md 
-     - NOTICE or THIRD_PARTY_NOTICES / THIRD_PARTY_LICENSES (dependency specific)
-     - Build/package files (CMake, pyproject, Dockerfile, etc.)
+## What Eidos Is (and Is Not)
 
-   - Recommended structure and hygiene
-     - docs/
-     - examples/
-     - tests/
-     - scripts/
-     - Container/dev env: Dockerfile, docker/, .devcontainer/ (optional)
-     - Build/package (language-specific):
-       - Python: pyproject.toml, setup.cfg/setup.py, requirements.txt, environment.yml
-       - C++: CMakeLists.txt, cmake/, vcpkg.json
-     - Repo hygiene: .gitignore, .gitattributes, .editorconfig, .pre-commit-config.yaml, .clang-format
+Eidos is a **source of validated configuration knowledge** for NVIDIA-accelerated Kubernetes environments.
 
+It **is**:
+- A curated set of tested and validated component combinations
+- A reference for how NVIDIA-accelerated Kubernetes clusters are expected to be configured
+- A foundation for generating reproducible deployment artifacts
+- Designed to integrate with existing provisioning, CI/CD, and GitOps workflows
 
-## Usage of [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file) for NEW NVIDIA OSS repos
+It **is not**:
+- A Kubernetes distribution
+- A cluster provisioning or lifecycle management system
+- A managed control plane or hosted service
+- A replacement for cloud provider or OEM platforms
 
-1. Clone the [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file)
-2. Find/replace all in the clone of `___PROJECT___` and `__PROJECT_NAME__` with the name of the specific project.
-3. Inspect all files to make sure all replacements work and update text as needed
+## How It Works
 
+Eidos separates **validated configuration knowledge** from **how that knowledge is consumed**.
 
-**What you can reuse immediately**
-- CODE_OF_CONDUCT.md
-- SECURITY.md
-- CONTRIBUTING.md (base)
-- .github/ISSUE_TEMPLATE/.yml (bug/feature/task + config.yml)
-- .github/PULL_REQUEST_TEMPLATE.md
-- Reusable workflows 
+- Human-readable documentation lives under `docs/`.
+- Version-locked configuration definitions (“recipes”) capture known-good system states.
+- Those definitions can be rendered into concrete artifacts such as Helm values, Kubernetes manifests, or install scripts.- Recipes can be validated against actual system configurations to verify compatibility.
 
-**What you must customize per repo**
-- README.md: copy the skeleton and fill in product-specific details (Quickstart, Requirements, Usage, Support level, links)
-- LICENSE: check file is correct, update year, consult Confluence for alternatives https://confluence.nvidia.com/pages/viewpage.action?pageId=788418816, add CLA.md only if your license/process requires it
-- CODEOWNERS: replace <TEAM> with your GitHub team handle(s). Place at .github/CODEOWNERS (or repo root)
-- MAINTAINERS.md: list maintainers names/roles, escalation path
-- CHANGELOG.md (or RELEASE.md): track releases/changes
-- SUPPORT.md: Update for your project
-- ROADMAP.md (optional): upcoming milestones
-- NOTICE / THIRD_PARTY_NOTICES (if you ship third‑party content)
-- Build/package files (CMake/pyproject/Dockerfile/etc.), tests/, docs/, examples/, scripts/ as appropriate
-- Workflows: Edit if you need custom behavior 
+This separation allows the same validated configuration to be applied consistently across different environments and automation systems.
 
+*For example, a configuration validated for gb200 on Ubuntu 22.04 with Kubernetes 1.29 can be rendered into Helm values and manifests suitable for use in an existing GitOps pipeline.*
 
-4. Change git origin to point to new repo and push
-5. Remove the line break below and everything above it
+## Get Started
 
-## Usage for existing NVIDIA OSS repos
+> Some tooling and APIs are under active development; documentation reflects current and near-term capabilities.
 
-1. Follow the steps above, but add the files to your existing repo and merge
+### Installation
 
-<!-- REMOVE THE LINE BELOW AND EVERYTHING ABOVE -->
------------------------------------------
-# [Project Title]
-One-sentence value proposition for users. Who is it for, and why it matters. 
-
-# Overview
-What the project does? Why the project is useful?
-Provide a brief overview, highlighting key features or problem-solving capabilities.
-
-# Getting Started
-Guide users on how they can get started with the project. This should include basic installation step, quick-start examples 
-```bash
-# Option A: Package manager (pip/conda/npm/etc.)
-<copy-paste install>
-
-# Option B: Container
-docker run <image> <args>
-
-# Verify (hello world)
-<one-liner or ~10-line example>
+**macOS (Homebrew):**
+```shell
+brew install mchmarny/eidos/eidos
 ```
-# Requirements
-Include a list of pre-requisites. 
-- OS/Arch: <summary or link to full matrix>
-- Runtime/Compiler: <versions>
-- GPU/Drivers (if applicable): CUDA <ver>, driver <ver>, etc.
 
-# Usage
-```bash
-# Minimal runnable snippet (≤20 lines)
-<code>
+**Linux/macOS (script):**
+```shell
+curl -sfL https://raw.githubusercontent.com/nvidia/eidos/refs/heads/main/install | bash -s --
 ```
-- More examples/tutorials: <link>
-- API reference: <link>
 
-# Performance (Optional)
-Summary of benchmarks; link to detailed results and hardware used.
+See [Installation Guide](docs/user-guide/installation.md) for manual installation, building from source, and container images.
 
-## Releases & Roadmap 
-- Releases/Changelog: <link>
-- (Optional) Next milestones or link to `ROADMAP.md`.
-  
-# Contribution Guidelines
-- Start here: `CONTRIBUTING.md`
-- Code of Conduct: `CODE_OF_CONDUCT.md`
-- Development quickstart (build/test):
-```bash
-<clone> && <deps> && <build/test>
-```
-## Governance & Maintainers
-- Governance: `GOVERNANCE.md`
-- Maintainers: <team/handles>
-- Labeling/triage policy: <link>
+### Quick Start
 
-## Security
-- Vulnerability disclosure: `SECURITY.md`
-- Do not file public issues for security reports.
+Get started quickly with Eidos:
+1. Review the documentation under `docs/` to understand supported platforms and required components.
+2. Identify your target environment:
+   - GPU architecture
+   - Operating system and kernel
+   - Kubernetes distribution and version
+   - Workload intent (for example, training or inference)
+3. Apply the validated configuration guidance using your existing tools (Helm, kubectl, CI/CD, or GitOps).
+4. Validate and iterate as platforms and workloads evolve.
 
-## Support
-- Level: <Experimental | Maintained | Stable>
-- How to get help: Issues/Discussions/<channel link>
-- Response expectations (if any).
+### Get Started by Use Case
 
-# Community
-Provide the channel for community communications.
+These use cases reflect common ways teams interact with Eidos.
 
-# References
-Provide a list of related references
+<details>
+<summary><strong>Platform and Infrastructure Operators</strong></summary>
 
-# License
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
-- License: <link>
+You are responsible for deploying and operating GPU-accelerated Kubernetes clusters. 
+- **[Installation Guide](docs/user-guide/installation.md)** – Install the eidos CLI (automated script, manual, or build from source)
+- **[CLI Reference](docs/user-guide/cli-reference.md)** – Complete command reference with examples
+- **[API Reference](docs/user-guide/api-reference.md)** – Complete API reference with examples
+- **[Agent Deployment](docs/user-guide/agent-deployment.md)** – Deploy the Kubernetes agent to get automated configuration snapshots
+</details>
+
+<details>
+<summary><strong>Developers and Contributors</strong></summary>
+
+You are contributing code, extending functionality, or working on Eidos internals. 
+
+- **[Contributing Guide](CONTRIBUTING.md)** – Development setup, testing, and PR process
+- **[Architecture Overview](docs/architecture/README.md)** – System design and components
+- **[Bundler Development](docs/architecture/component.md)** – How to create new bundlers
+- **[Data Architecture](docs/architecture/data.md)** – Recipe data model and query matching
+</details>
+
+<details>
+<summary><strong>Integrators and Automation Engineers</strong></summary>
+
+You are integrating Eidos into CI/CD pipelines, GitOps workflows, or a larger product or service. 
+
+- **[API Reference](docs/integration/api-reference.md)** – REST API endpoints and usage examples
+- **[Data Flow](docs/integration/data-flow.md)** – Understanding snapshots, recipes, and bundles
+- **[Automation Guide](docs/integration/automation.md)** – CI/CD integration patterns
+- **[Kubernetes Deployment](docs/integration/kubernetes-deployment.md)** – Self-hosted API server setup
+</details>
+
+## Project Structure
+
+- `api/` — OpenAPI specifications for the REST API
+- `cmd/` — Entry points for CLI (`eidos`) and API server (`eidosd`)
+- `deployments/` — Kubernetes manifests for agent deployment
+- `docs/` — User-facing documentation, guides, and architecture docs
+- `examples/` — Example snapshots, recipes, and comparisons
+- `infra/` — Infrastructure as code (Terraform) for deployments
+- `pkg/` — Core Go packages (collectors, recipe engine, bundlers, serializers)
+- `tools/` — Build scripts, E2E testing, and utilities
+
+## Documentation & Resources
+
+- **[Documentation](/docs)** – Documentation, guides, and examples.
+- **[Roadmap](ROADMAP.md)** – Feature priorities and development timeline
+- **[Overview](docs/OVERVIEW.md)** - Detailed system overview and glossary
+- **[Security](SECURITY.md)** - Security-related resources 
+- **[Releases](https://github.com/NVIDIA/eidos/releases)** - Binaries, SBOMs, and other artifacts
+- **[Issues](https://github.com/NVIDIA/eidos/issues)** - Bugs, feature requests, and questions
+
+## Contributing
+
+Contributions are welcome. See [contributing](/CONTRIBUTING.md) for development setup, contribution guidelines, and the pull request process.

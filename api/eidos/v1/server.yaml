@@ -1,0 +1,1017 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+openapi: 3.1.0
+info:
+  title: Eidos API Server - Eidos Recipe API
+  version: 1.0.0
+  description: >
+    Returns optimized system configuration recipes (component references and deployment constraints)
+    for a given combination of platform parameters (service, accelerator, OS, intent, nodes).
+
+    The recipe system uses a criteria-based overlay architecture where base configurations are layered
+    with environment-specific overlays based on criteria matching.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Recipes
+    description: Configuration recipe operations
+  - name: Bundles
+    description: Deployment bundle generation
+  - name: Health
+    description: Service health and readiness checks
+
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: Get service information and available routes
+      operationId: getRoot
+      description: Returns service name, version, and list of available API routes
+      responses:
+        "200":
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, version, routes]
+                properties:
+                  service:
+                    type: string
+                    example: eidosd
+                  version:
+                    type: string
+                    example: v1.0.0
+                  routes:
+                    type: array
+                    items:
+                      type: string
+                    example: ["/v1/recipe", "/v1/bundle"]
+
+  /v1/recipe:
+    get:
+      tags: [Recipes]
+      summary: Get optimized system configuration recipe
+      operationId: getRecipe
+      description: >
+        Returns a recipe containing measurements and configuration recommendations
+        based on the provided query parameters. Uses rule-based overlay matching
+        to combine base measurements with environment-specific configurations.
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Client-provided request ID for tracing
+        - name: service
+          in: query
+          required: false
+          description: Kubernetes service/environment type. If omitted, treated as "any" (wildcard).
+          schema:
+            type: string
+            enum: [eks, gke, aks, oke, any]
+            default: any
+        - name: accelerator
+          in: query
+          required: false
+          description: GPU/accelerator type. If omitted, treated as "any" (wildcard).
+          schema:
+            type: string
+            enum: [h100, gb200, a100, l40, any]
+            default: any
+        - name: gpu
+          in: query
+          required: false
+          description: Alias for accelerator parameter (backwards compatibility).
+          schema:
+            type: string
+            enum: [h100, gb200, a100, l40, any]
+            default: any
+        - name: intent
+          in: query
+          required: false
+          description: Workload intent. If omitted, treated as "any" (wildcard).
+          schema:
+            type: string
+            enum: [training, inference, any]
+            default: any
+        - name: os
+          in: query
+          required: false
+          description: GPU node operating system. If omitted, treated as "any" (wildcard).
+          schema:
+            type: string
+            enum: [ubuntu, rhel, cos, amazonlinux, any]
+            default: any
+        - name: nodes
+          in: query
+          required: false
+          description: Number of GPU nodes (0 = any/unspecified).
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Recipe payload for the requested parameter combination
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecipeResponse"
+              examples:
+                basic:
+                  summary: Basic recipe request
+                  value:
+                    apiVersion: eidos.nvidia.com/v1alpha1
+                    kind: Recipe
+                    metadata:
+                      version: v1.0.0
+                      created: "2025-01-15T10:30:00Z"
+                      appliedOverlays:
+                        - base
+                        - eks
+                        - eks-training
+                        - gb200-eks-training
+                    criteria:
+                      service: eks
+                      accelerator: gb200
+                      intent: training
+                      os: any
+                    componentRefs:
+                      - name: gpu-operator
+                        version: v25.3.3
+                        order: 1
+                        repository: https://helm.ngc.nvidia.com/nvidia
+                      - name: network-operator
+                        version: v25.4.0
+                        order: 2
+                        repository: https://helm.ngc.nvidia.com/nvidia
+                    constraints:
+                      driver:
+                        version: "580.82.07"
+                        cudaVersion: "13.1"
+        "400":
+          description: Invalid request parameters
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalidParameter:
+                  summary: Invalid query parameter
+                  value:
+                    code: INVALID_REQUEST
+                    message: "Invalid recipe query"
+                    details:
+                      error: "invalid os family: windows"
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: false
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry allowed
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                internalError:
+                  summary: Server error during recipe build
+                  value:
+                    code: INTERNAL_ERROR
+                    message: "Failed to build recipe"
+                    details:
+                      error: "failed to load recipe store"
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: true
+        "503":
+          description: Service temporarily unavailable
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry allowed
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [Recipes]
+      summary: Generate recipe from criteria body
+      operationId: createRecipe
+      description: >
+        Alternative to GET with query parameters. Accepts criteria as JSON or YAML
+        in the request body. Useful for programmatic access or when criteria is
+        stored in configuration files.
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Client-provided request ID for tracing
+      requestBody:
+        required: true
+        description: Recipe criteria in Kubernetes-style resource format
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecipeCriteria"
+            examples:
+              minimal:
+                summary: Minimal criteria (single field)
+                value:
+                  kind: recipeCriteria
+                  apiVersion: eidos.nvidia.com/v1alpha1
+                  metadata:
+                    name: eks-minimal
+                  spec:
+                    service: eks
+              full:
+                summary: Full criteria specification
+                value:
+                  kind: recipeCriteria
+                  apiVersion: eidos.nvidia.com/v1alpha1
+                  metadata:
+                    name: gb200-eks-ubuntu-training
+                  spec:
+                    service: eks
+                    accelerator: gb200
+                    intent: training
+                    os: ubuntu
+                    nodes: 4
+          application/x-yaml:
+            schema:
+              $ref: "#/components/schemas/RecipeCriteria"
+            examples:
+              minimal:
+                summary: Minimal criteria (single field)
+                value: |
+                  kind: recipeCriteria
+                  apiVersion: eidos.nvidia.com/v1alpha1
+                  metadata:
+                    name: eks-minimal
+                  spec:
+                    service: eks
+              full:
+                summary: Full criteria specification
+                value: |
+                  kind: recipeCriteria
+                  apiVersion: eidos.nvidia.com/v1alpha1
+                  metadata:
+                    name: gb200-eks-ubuntu-training
+                  spec:
+                    service: eks
+                    accelerator: gb200
+                    intent: training
+                    os: ubuntu
+                    nodes: 4
+      responses:
+        "200":
+          description: Recipe payload for the provided criteria
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecipeResponse"
+        "400":
+          description: Invalid request body or criteria values
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalidCriteria:
+                  summary: Invalid criteria value
+                  value:
+                    code: INVALID_REQUEST
+                    message: "Invalid recipe criteria"
+                    details:
+                      error: "invalid service type: windows"
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: false
+                emptyBody:
+                  summary: Empty request body
+                  value:
+                    code: INVALID_REQUEST
+                    message: "Invalid recipe criteria"
+                    details:
+                      error: "request body is empty"
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: false
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry allowed
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Service temporarily unavailable
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry allowed
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/bundle:
+    post:
+      tags: [Bundles]
+      summary: Generate deployment bundles from recipe
+      operationId: createBundle
+      description: >
+        Generates deployment bundles (Helm values, Kubernetes manifests, installation scripts)
+        from a recipe and returns them as a compressed zip archive.
+
+        The request body contains the recipe (RecipeResult) directly. Configuration options
+        can be specified via query parameters. All query parameters support multiple values
+        by repeating the parameter name (e.g., ?set=a:x=1&set=b:y=2).
+
+        This design enables a simple workflow: pipe the output from GET /v1/recipe directly
+        to POST /v1/bundle.
+
+        The response is a binary zip file containing all generated bundle artifacts
+        organized by bundler type (e.g., gpu-operator/, network-operator/).
+      parameters:
+        - name: bundlers
+          in: query
+          required: false
+          description: >
+            Comma-delimited list of bundler types to execute.
+            If not specified, all registered bundlers are executed.
+          schema:
+            type: string
+          examples:
+            single:
+              summary: Single bundler
+              value: "gpu-operator"
+            multiple:
+              summary: Multiple bundlers
+              value: "gpu-operator,network-operator"
+        - name: set
+          in: query
+          required: false
+          description: >
+            Override values in generated bundle files (format: bundler:path.to.field=value).
+            Can be repeated for multiple overrides.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          examples:
+            single:
+              summary: Single override
+              value: ["gpuoperator:gds.enabled=true"]
+            multiple:
+              summary: Multiple overrides
+              value: ["gpuoperator:gds.enabled=true", "gpuoperator:driver.version=570.86.16"]
+        - name: system-node-selector
+          in: query
+          required: false
+          description: >
+            Node selector for system components (format: key=value).
+            Can be repeated for multiple selectors.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example: ["nodeGroup=system-pool"]
+        - name: system-node-toleration
+          in: query
+          required: false
+          description: >
+            Toleration for system components (format: key=value:effect or key:effect).
+            Can be repeated for multiple tolerations.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example: ["dedicated=system:NoSchedule"]
+        - name: accelerated-node-selector
+          in: query
+          required: false
+          description: >
+            Node selector for accelerated/GPU nodes (format: key=value).
+            Can be repeated for multiple selectors.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example: ["nvidia.com/gpu.present=true"]
+        - name: accelerated-node-toleration
+          in: query
+          required: false
+          description: >
+            Toleration for accelerated/GPU nodes (format: key=value:effect or key:effect).
+            Can be repeated for multiple tolerations.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example: ["nvidia.com/gpu=present:NoSchedule"]
+        - name: deployer
+          in: query
+          required: false
+          description: >
+            Deployment method for generated components.
+            Supported values: helm (default), argocd.
+          schema:
+            type: string
+            enum: [helm, argocd]
+            default: helm
+        - name: repo
+          in: query
+          required: false
+          description: >
+            Git repository URL for GitOps deployments (used with deployer=argocd).
+            Sets the repository URL in the generated app-of-apps.yaml manifest.
+            If not provided, a placeholder URL is used that must be updated manually.
+          schema:
+            type: string
+            format: uri
+          example: "https://github.com/my-org/my-gitops-repo.git"
+      requestBody:
+        required: true
+        description: The recipe (RecipeResult) to generate bundles from
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecipeResponse"
+            examples:
+              simpleRecipe:
+                summary: Simple recipe with GPU operator
+                value:
+                  apiVersion: eidos.nvidia.com/v1alpha1
+                  kind: Recipe
+                  componentRefs:
+                    - name: gpu-operator
+                      version: v25.3.3
+                      type: helm
+                      repository: https://helm.ngc.nvidia.com/nvidia
+              fullRecipe:
+                summary: Full recipe with metadata
+                value:
+                  apiVersion: eidos.nvidia.com/v1alpha1
+                  kind: Recipe
+                  metadata:
+                    version: v1.0.0
+                    created: "2025-01-15T10:30:00Z"
+                    appliedOverlays:
+                      - base
+                      - eks
+                      - eks-training
+                      - gb200-eks-training
+                  criteria:
+                    service: eks
+                    accelerator: gb200
+                    intent: training
+                    os: any
+                  componentRefs:
+                    - name: gpu-operator
+                      version: v25.3.3
+                      order: 1
+                      repository: https://helm.ngc.nvidia.com/nvidia
+      responses:
+        "200":
+          description: Zip archive containing generated bundles
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="bundles.zip"'
+              description: Indicates the response should be downloaded as a file
+            X-Bundle-Files:
+              schema:
+                type: integer
+              description: Total number of files in the bundle
+              example: 12
+            X-Bundle-Size:
+              schema:
+                type: integer
+              description: Total size of all files in bytes (uncompressed)
+              example: 45678
+            X-Bundle-Duration:
+              schema:
+                type: string
+              description: Time taken to generate bundles
+              example: "1.234s"
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid request (invalid recipe or bundler type)
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                emptyRecipe:
+                  summary: Recipe must have components
+                  value:
+                    code: INVALID_REQUEST
+                    message: "Recipe must contain at least one component reference"
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: false
+                invalidBundler:
+                  summary: Invalid bundler type
+                  value:
+                    code: INVALID_REQUEST
+                    message: "Invalid bundler type"
+                    details:
+                      bundler: "invalid-bundler"
+                      error: "unsupported bundle type: invalid-bundler"
+                      valid: ["gpu-operator", "network-operator", "skyhook-operator", "nvsentinel", "cert-manager", "nvidia-dra-driver-gpu"]
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: false
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry allowed
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Bundle generation failed
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestIdResponse"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                bundlerError:
+                  summary: Some bundlers failed
+                  value:
+                    code: INTERNAL_ERROR
+                    message: "Some bundlers failed"
+                    details:
+                      errors:
+                        - bundler: gpu-operator
+                          error: "template rendering failed"
+                      success_count: 2
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    timestamp: "2025-01-15T10:30:00Z"
+                    retryable: true
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check endpoint
+      operationId: healthCheck
+      description: Returns the health status of the service
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp of the health check
+                  reason:
+                    type: string
+                    description: Optional reason for status
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness check endpoint
+      operationId: readinessCheck
+      description: Returns whether the service is ready to serve traffic
+      responses:
+        "200":
+          description: Service is ready to serve traffic
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                    enum: [ready]
+                    example: ready
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp of the readiness check
+                  reason:
+                    type: string
+                    description: Optional reason for status
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                    enum: [not_ready]
+                    example: not_ready
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp of the readiness check
+                  reason:
+                    type: string
+                    example: "service is initializing"
+  /metrics:
+    get:
+      tags: [Health]
+      summary: Prometheus metrics endpoint
+      operationId: getMetrics
+      description: Returns Prometheus-formatted metrics including HTTP request counts, durations, and rate limiting statistics
+      responses:
+        "200":
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP eidos_http_requests_total Total number of HTTP requests
+                  # TYPE eidos_http_requests_total counter
+                  eidos_http_requests_total{method="GET",path="/v1/recipe",status="200"} 42
+components:
+  headers:
+    RequestIdResponse:
+      schema:
+        type: string
+        format: uuid
+      description: Server-assigned or echoed request ID for tracing
+    CacheControl:
+      schema:
+        type: string
+      description: Cache directives for CDN/client caching
+      example: "public, max-age=600"
+    RateLimitLimit:
+      schema:
+        type: integer
+      description: Request quota in current window
+      example: 100
+    RateLimitRemaining:
+      schema:
+        type: integer
+      description: Remaining requests in current window
+      example: 95
+    RateLimitReset:
+      schema:
+        type: integer
+      description: Unix timestamp when quota resets
+      example: 1705318200
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, requestId, timestamp, retryable]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          examples:
+            - INVALID_REQUEST
+            - METHOD_NOT_ALLOWED
+            - INTERNAL_ERROR
+            - RATE_LIMIT_EXCEEDED
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid recipe query"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional context-specific error details
+          nullable: true
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier for tracing
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when error occurred
+        retryable:
+          type: boolean
+          description: Whether client should retry this request
+          example: false
+
+    RecipeCriteria:
+      type: object
+      description: Kubernetes-style recipe criteria resource
+      required: [kind, apiVersion, spec]
+      properties:
+        kind:
+          type: string
+          description: Resource kind (always "recipeCriteria")
+          enum: [recipeCriteria]
+          example: recipeCriteria
+        apiVersion:
+          type: string
+          description: API version
+          enum: [eidos.nvidia.com/v1alpha1]
+          example: eidos.nvidia.com/v1alpha1
+        metadata:
+          type: object
+          description: Resource metadata
+          properties:
+            name:
+              type: string
+              description: Unique identifier for this criteria set
+              example: gb200-eks-ubuntu-training
+        spec:
+          $ref: "#/components/schemas/Criteria"
+
+    Criteria:
+      type: object
+      description: Recipe criteria specification
+      properties:
+        service:
+          type: string
+          description: Kubernetes service type
+          enum: [eks, gke, aks, oke, any]
+          example: eks
+        accelerator:
+          type: string
+          description: GPU/accelerator type
+          enum: [h100, gb200, a100, l40, any]
+          example: h100
+        intent:
+          type: string
+          description: Workload intent
+          enum: [training, inference, any]
+          example: training
+        os:
+          type: string
+          description: Operating system family
+          enum: [ubuntu, rhel, cos, amazonlinux, any]
+          example: ubuntu
+        nodes:
+          type: integer
+          description: Number of GPU nodes (0 = any)
+          minimum: 0
+          default: 0
+
+    Reading:
+      type: object
+      description: A single measurement reading with value and optional unit
+      required: [value]
+      properties:
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+          description: The measurement value
+        unit:
+          type: string
+          description: Optional unit of measurement
+          example: "MB"
+
+    Subtype:
+      type: object
+      description: A subtype within a measurement containing specific configuration data
+      required: [name, data]
+      properties:
+        name:
+          type: string
+          description: Subtype identifier (e.g., service name, configuration category)
+          example: containerd.service
+        data:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Reading"
+          description: Key-value pairs of configuration settings
+        context:
+          type: object
+          additionalProperties: true
+          description: Optional metadata about the source and collection method
+          nullable: true
+
+    Measurement:
+      type: object
+      description: A measurement grouping related configuration subtypes
+      required: [type, subtypes]
+      properties:
+        type:
+          type: string
+          description: Measurement type category
+          enum: [systemd, os, k8s, gpu]
+          example: systemd
+        subtypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subtype"
+          description: List of configuration subtypes within this measurement
+
+    RecipeResponse:
+      type: object
+      description: Complete recipe response with metadata and component references
+      required: [apiVersion, kind]
+      properties:
+        apiVersion:
+          type: string
+          description: API version of the recipe format
+          example: eidos.nvidia.com/v1alpha1
+        kind:
+          type: string
+          description: Resource type
+          enum: [Recipe]
+          example: Recipe
+        metadata:
+          type: object
+          description: Recipe metadata
+          properties:
+            version:
+              type: string
+              description: Recipe version
+              example: v1.0.0
+            created:
+              type: string
+              format: date-time
+              description: Recipe creation timestamp
+            appliedOverlays:
+              type: array
+              items:
+                type: string
+              description: List of overlay criteria that were applied
+        criteria:
+          $ref: "#/components/schemas/Criteria"
+          description: Original criteria parameters
+        componentRefs:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Component name
+              version:
+                type: string
+                description: Component version
+              order:
+                type: integer
+                description: Deployment order
+              repository:
+                type: string
+                description: Helm repository URL
+          description: List of component references with deployment order
+        constraints:
+          type: object
+          description: Deployment constraints (driver versions, etc.)
+          additionalProperties: true
+
+    BundleRequest:
+      type: object
+      description: Request body for bundle generation
+      deprecated: true
+      x-deprecation-reason: >
+        Use RecipeResponse directly as the request body and specify bundlers
+        via the "bundlers" query parameter (comma-delimited).
+      required: [recipe]
+      properties:
+        recipe:
+          $ref: "#/components/schemas/RecipeResponse"
+          description: The recipe to generate bundles from
+        bundlers:
+          type: array
+          items:
+            type: string
+            enum: [gpu-operator, network-operator, skyhook-operator, nvsentinel, cert-manager, nvidia-dra-driver-gpu]
+          description: >
+            Optional list of bundler types to execute.
+            If not specified, all registered bundlers are executed.
+          example: [gpu-operator, network-operator]

@@ -1,0 +1,80 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Deploy to Cloud Run'
+description: 'Authenticate to GCP via Workload Identity and deploy an image to Cloud Run'
+
+inputs:
+  project_id:
+    description: 'GCP project id'
+    required: true
+  workload_identity_provider:
+    description: 'Workload Identity Provider resource name'
+    required: true
+  service_account:
+    description: 'GCP service account email (or name@project.iam.gserviceaccount.com)'
+    required: true
+  region:
+    description: 'Cloud Run region'
+    required: true
+  service:
+    description: 'Cloud Run service name'
+    required: true
+  image:
+    description: 'Container image reference to deploy (including tag or digest)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        PROJECT_ID: ${{ inputs.project_id }}
+        WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.workload_identity_provider }}
+        SERVICE_ACCOUNT: ${{ inputs.service_account }}
+        REGION: ${{ inputs.region }}
+        SERVICE: ${{ inputs.service }}
+        IMAGE: ${{ inputs.image }}
+      run: |
+        set -euo pipefail
+        [[ -n "$PROJECT_ID" ]] || { echo "::error::project_id is required"; exit 1; }
+        [[ -n "$WORKLOAD_IDENTITY_PROVIDER" ]] || { echo "::error::workload_identity_provider is required"; exit 1; }
+        [[ -n "$SERVICE_ACCOUNT" ]] || { echo "::error::service_account is required"; exit 1; }
+        [[ -n "$REGION" ]] || { echo "::error::region is required"; exit 1; }
+        [[ -n "$SERVICE" ]] || { echo "::error::service is required"; exit 1; }
+        [[ -n "$IMAGE" ]] || { echo "::error::image is required"; exit 1; }
+
+    - name: Get Auth Token
+      id: auth
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093  # v3
+      with:
+        token_format: access_token
+        project_id: ${{ inputs.project_id }}
+        workload_identity_provider: ${{ inputs.workload_identity_provider }}
+        service_account: ${{ inputs.service_account }}
+
+    - name: Setup gcloud CLI
+      uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db  # v3.0.1
+
+    - name: Update Cloud Run service image
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Updating image..."
+        gcloud run services update "${{ inputs.service }}" \
+          --image "${{ inputs.image }}" \
+          --region "${{ inputs.region }}" \
+          --project "${{ inputs.project_id }}"
+        echo "Deploy complete."

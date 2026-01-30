@@ -1,0 +1,93 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: On Tag Release
+on:
+  push:
+    tags:
+    - 'v[0-9]+.[0-9]+.[0-9]+'  # Only build tag with semantic versioning format
+
+permissions:
+  attestations: write
+  contents: write
+  id-token: write
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IDENTITY_PROVIDER: 'projects/116689922666/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+      PROJECT_ID: 'eidosx'
+      SERVICE_ACCOUNT: 'github-actions-user'
+      RUN_REGION: 'us-west1'
+      RUN_SERVICE: 'api'
+      RUN_IMAGE_REG: 'us-docker.pkg.dev/eidosx/ghcr/mchmarny'
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Load versions
+        id: versions
+        uses: ./.github/actions/load-versions
+
+      # Setup, Test, and Lint
+      - name: Run Go CI (setup, test, lint)
+        uses: ./.github/actions/go-ci
+        with:
+          go_version: ${{ steps.versions.outputs.go }}
+          golangci_lint_version: ${{ steps.versions.outputs.golangci_lint }}
+          addlicense_version: ${{ steps.versions.outputs.addlicense }}
+          upload_codecov: 'false'
+
+      # Build and Release
+      - name: Build and Release
+        id: release
+        uses: ./.github/actions/go-build-release
+        with:
+          homebrew_tap_token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Attest eidosd image
+        uses: ./.github/actions/attest-image-from-tag
+        with:
+          image_name: ghcr.io/${{ github.repository_owner }}/eidosd
+          tag: ${{ github.ref_name }}
+          crane_version: ${{ steps.versions.outputs.crane }}
+
+      - name: Attest eidos image
+        uses: ./.github/actions/attest-image-from-tag
+        with:
+          image_name: ghcr.io/${{ github.repository_owner }}/eidos
+          tag: ${{ github.ref_name }}
+          crane_version: ${{ steps.versions.outputs.crane }}
+
+      # Deploy to Cloud Run
+      - name: Deploy API to Cloud Run
+        if: steps.release.outputs.release_outcome == 'success'
+        uses: ./.github/actions/cloud-run-deploy
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ env.IDENTITY_PROVIDER }}
+          service_account: "${{ env.SERVICE_ACCOUNT }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+          region: ${{ env.RUN_REGION }}
+          service: ${{ env.RUN_SERVICE }}
+          image: "${{ env.RUN_IMAGE_REG }}/eidosd:${{ github.ref_name }}"

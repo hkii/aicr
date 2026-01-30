@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Name }}
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "{{ .SyncWave }}"
+spec:
+  project: default
+  sources:
+    - repoURL: {{ .Repository }}
+      chart: {{ .Chart }}
+      targetRevision: {{ .Version }}
+      helm:
+        valueFiles:
+          - $values/{{ .Name }}/values.yaml
+    - repoURL: '{{ `{{ .RepoURL }}` }}'
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,124 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Go CI (setup, test, lint)'
+description: 'Shared Go workflow steps: setup environment, run unit tests, and lint Go/YAML'
+
+inputs:
+  go_version:
+    description: 'Go version to install (e.g., 1.25)'
+    required: true
+  golangci_lint_version:
+    description: 'golangci-lint version to use (e.g., v2.6)'
+    required: true
+  addlicense_version:
+    description: 'addlicense version to use (e.g., v1.1.1)'
+    required: false
+    default: 'v1.1.1'
+  upload_codecov:
+    description: 'Whether to upload coverage to Codecov (true/false)'
+    required: false
+    default: 'false'
+  codecov_token:
+    description: 'Codecov token for forks (optional, uses OIDC for NVIDIA/eidos)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    # Setup Environment
+    - name: Setup Go
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5  # v6.2.0
+      with:
+        go-version: '${{ inputs.go_version }}'
+        cache: true
+        cache-dependency-path: 'go.sum'
+        check-latest: true
+
+    # Unit Tests
+    - name: Tidy Modules
+      shell: bash
+      run: make tidy
+
+    - name: Run Tests with Coverage
+      shell: bash
+      run: make test
+
+    - name: Upload Coverage to Codecov
+      if: inputs.upload_codecov == 'true'
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
+      with:
+        files: ./coverage.out
+        flags: unit
+        fail_ci_if_error: false
+        verbose: true
+        use_oidc: ${{ inputs.codecov_token == '' }}
+        token: ${{ inputs.codecov_token }}
+
+    # Lint Code
+    - name: Config Go Lint
+      id: golangci_config
+      uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6  # v3.0.0
+      with:
+        files: .golangci.yaml
+
+    - name: Lint Go
+      if: steps.golangci_config.outputs.files_exists == 'true'
+      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
+      with:
+        version: ${{ inputs.golangci_lint_version }}
+        args: --timeout=5m
+
+    - name: Config YAML Lint
+      id: yamllint_config
+      uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6  # v3.0.0
+      with:
+        files: .yamllint.yaml
+
+    - name: Lint YAML
+      if: steps.yamllint_config.outputs.files_exists == 'true'
+      shell: bash
+      run: |
+        sudo apt-get update && sudo apt-get install -y yamllint
+        make lint-yaml
+
+    - name: Install addlicense
+      shell: bash
+      run: |
+        ADDLICENSE_VERSION="${{ inputs.addlicense_version }}"
+        ADDLICENSE_VERSION_NUM="${ADDLICENSE_VERSION#v}"
+        go install github.com/google/addlicense@${ADDLICENSE_VERSION}
+        echo "addlicense installed: $(addlicense -version 2>&1 || echo ${ADDLICENSE_VERSION_NUM})"
+
+    - name: Ensure License Headers
+      shell: bash
+      run: make license
+
+    # E2E Integration Tests
+    - name: Setup build tools
+      uses: ./.github/actions/setup-build-tools
+      with:
+        install_goreleaser: 'true'
+
+    - name: Config E2E Test
+      id: e2e_config
+      uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6  # v3.0.0
+      with:
+        files: tools/e2e
+
+    - name: Run E2E Integration Tests
+      if: steps.e2e_config.outputs.files_exists == 'true'
+      shell: bash
+      run: ./tools/e2e
