@@ -68,27 +68,15 @@ runs:
         token: ${{ inputs.codecov_token }}
 
     # Lint Code
-    - name: Config Go Lint
-      id: golangci_config
-      uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6  # v3.0.0
-      with:
-        files: .golangci.yaml
-
     - name: Lint Go
-      if: steps.golangci_config.outputs.files_exists == 'true'
+      if: hashFiles('.golangci.yaml') != ''
       uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20  # v9.2.0
       with:
         version: ${{ inputs.golangci_lint_version }}
         args: --timeout=5m
 
-    - name: Config YAML Lint
-      id: yamllint_config
-      uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6  # v3.0.0
-      with:
-        files: .yamllint.yaml
-
     - name: Lint YAML
-      if: steps.yamllint_config.outputs.files_exists == 'true'
+      if: hashFiles('.yamllint.yaml') != ''
       shell: bash
       run: |
         sudo apt-get update && sudo apt-get install -y yamllint
@@ -112,13 +100,7 @@ runs:
       with:
         install_goreleaser: 'true'
 
-    - name: Config E2E Test
-      id: e2e_config
-      uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6  # v3.0.0
-      with:
-        files: tools/e2e
-
     - name: Run E2E Integration Tests
-      if: steps.e2e_config.outputs.files_exists == 'true'
+      if: hashFiles('tools/e2e') != ''
       shell: bash
       run: ./tools/e2e
