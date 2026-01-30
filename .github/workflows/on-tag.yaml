@@ -40,7 +40,7 @@ jobs:
       SERVICE_ACCOUNT: 'github-actions-user'
       RUN_REGION: 'us-west1'
       RUN_SERVICE: 'api'
-      RUN_IMAGE_REG: 'us-docker.pkg.dev/eidosx/ghcr/mchmarny'
+      RUN_IMAGE_REG: 'us-docker.pkg.dev/eidosx/ghcr/eidosd'
     steps:
 
       - name: Checkout Code
@@ -63,8 +63,6 @@ jobs:
       - name: Build and Release
         id: release
         uses: ./.github/actions/go-build-release
-        with:
-          homebrew_tap_token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
       - name: Attest eidosd image
         uses: ./.github/actions/attest-image-from-tag

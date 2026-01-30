@@ -86,7 +86,7 @@ metadata:
 
 release:
   github:
-    owner: mchmarny  # NVIDIA
+    owner: NVIDIA
     name: eidos
   prerelease: auto
 
@@ -94,7 +94,7 @@ kos:
   - id: eidos
     build: eidos
     repositories:
-      - ghcr.io/mchmarny/eidos
+      - ghcr.io/NVIDIA/eidos
     base_image: nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04
     platforms:
       - linux/amd64
@@ -108,7 +108,7 @@ kos:
   - id: eidosd
     build: eidosd
     repositories:
-      - ghcr.io/mchmarny/eidosd
+      - ghcr.io/NVIDIA/eidosd
     base_image: gcr.io/distroless/static:nonroot
     platforms:
       - linux/amd64
@@ -126,34 +126,6 @@ archives:
     formats:
       - binary
     name_template: "{{ .Binary }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
-  - id: eidos-homebrew
-    ids:
-      - eidos
-    formats:
-      - tar.gz
-    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files:
-      - LICENSE*
-      - README*
-
-brews:
-  - name: eidos
-    ids:
-      - eidos-homebrew
-    repository:
-      owner: mchmarny
-      name: homebrew-eidos
-      branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/mchmarny/eidos"
-    description: "CLI for generating validated GPU-accelerated Kubernetes configurations"
-    license: "Apache-2.0"
-    install: |
-      bin.install "eidos"
-    test: |
-      system "#{bin}/eidos", "version"
 
 changelog:
   sort: asc

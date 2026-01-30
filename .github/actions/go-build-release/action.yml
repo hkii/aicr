@@ -24,10 +24,6 @@ inputs:
     description: 'KO_DOCKER_REPO environment variable override'
     required: false
     default: ''
-  homebrew_tap_token:
-    description: 'GitHub token for pushing to homebrew tap repository'
-    required: false
-    default: ''
 
 outputs:
   release_outcome:
@@ -55,7 +51,6 @@ runs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
         KO_DOCKER_REPO: ${{ inputs.ko_docker_repo }}
-        HOMEBREW_TAP_GITHUB_TOKEN: ${{ inputs.homebrew_tap_token }}
       run: |
         set -euo pipefail
         make release

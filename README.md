@@ -1,10 +1,10 @@
 # Eidos
 
-[![On Push CI](https://github.com/mchmarny/eidos/actions/workflows/on-push.yaml/badge.svg)](https://github.com/mchmarny/eidos/actions/workflows/on-push.yaml)
-[![On Tag Release](https://github.com/mchmarny/eidos/actions/workflows/on-tag.yaml/badge.svg)](https://github.com/mchmarny/eidos/actions/workflows/on-tag.yaml)
-[![Codecov](https://codecov.io/gh/mchmarny/eidos/branch/main/graph/badge.svg)](https://codecov.io/gh/mchmarny/eidos)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/mchmarny/eidos)](https://go.dev/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/mchmarny/eidos)](https://goreportcard.com/report/github.com/mchmarny/eidos)
+[![On Push CI](https://github.com/NVIDIA/eidos/actions/workflows/on-push.yaml/badge.svg)](https://github.com/NVIDIA/eidos/actions/workflows/on-push.yaml)
+[![On Tag Release](https://github.com/NVIDIA/eidos/actions/workflows/on-tag.yaml/badge.svg)](https://github.com/NVIDIA/eidos/actions/workflows/on-tag.yaml)
+[![Codecov](https://codecov.io/gh/NVIDIA/eidos/branch/main/graph/badge.svg)](https://codecov.io/gh/NVIDIA/eidos)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/NVIDIA/eidos)](https://go.dev/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/NVIDIA/eidos)](https://goreportcard.com/report/github.com/NVIDIA/eidos)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Eidos (Eidos) provides validated configuration guidance for deploying GPU-accelerated Kubernetes infrastructure. It captures known-good combinations of software, configuration, and system requirements and makes them consumable as documentation and generated deployment artifacts.
@@ -49,12 +49,6 @@ This separation allows the same validated configuration to be applied consistent
 
 ### Installation
 
-**macOS (Homebrew):**
-```shell
-brew install mchmarny/eidos/eidos
-```
-
-**Linux/macOS (script):**
 ```shell
 curl -sfL https://raw.githubusercontent.com/nvidia/eidos/refs/heads/main/install | bash -s --
 ```

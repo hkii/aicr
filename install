@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Configuration
-OWNER="mchmarny"  # NVIDIA
+OWNER="NVIDIA"
 PROJECT="eidos"
 REPO="$OWNER/$PROJECT"
 BIN_NAME="eidos"

@@ -13,22 +13,12 @@ This guide describes how to install Eidos (Eidos) CLI tool (`eidos`) on Linux, m
 
 ## Install eidos CLI
 
-### Option 1: Homebrew (macOS)
-
-Install using Homebrew on macOS:
-
-```shell
-brew install mchmarny/eidos/eidos
-```
-
-This installs the latest release and handles updates via `brew upgrade eidos`.
-
-### Option 2: Automated Installation (Recommended for Linux)
+### Option 1: Automated Installation (Recommended)
 
 Install the latest version using the installation script:
 
 ```shell
-curl -sfL https://raw.githubusercontent.com/mchmarny/eidos/main/install | bash -s --
+curl -sfL https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
 ```
 
 This script:
@@ -39,7 +29,7 @@ This script:
 
 > **Supply Chain Security**: Eidos includes SLSA Build Level 3 compliance with signed SBOMs and verifiable attestations. See [SECURITY](../SECURITY.md#supply-chain-security) for verification instructions.
 
-### Option 3: Manual Installation
+### Option 2: Manual Installation
 
 1. **Download the latest release**
 
@@ -65,7 +55,7 @@ sudo chmod +x /usr/local/bin/eidos
 eidos --version
 ```
 
-### Option 4: Build from Source
+### Option 3: Build from Source
 
 **Requirements:**
 - Go 1.25 or higher

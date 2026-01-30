@@ -23,5 +23,5 @@ variable "project_id" {
 variable "git_repo" {
   description = "GitHub Repo"
   type        = string
-  default     = "mchmarny/eidos"
+  default     = "NVIDIA/eidos"
 }
