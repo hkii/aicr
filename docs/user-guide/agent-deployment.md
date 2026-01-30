@@ -345,7 +345,7 @@ spec:
   ttlSecondsAfterFinished: 3600
   template:
     spec:
-      serviceAccountname: eidos
+      serviceAccountName: eidos
       restartPolicy: Never
       hostPID: true
       hostNetwork: true
@@ -393,7 +393,7 @@ spec:
   ttlSecondsAfterFinished: 3600
   template:
     spec:
-      serviceAccountname: eidos
+      serviceAccountName: eidos
       restartPolicy: Never
       hostPID: true
       hostNetwork: true
@@ -443,7 +443,7 @@ spec:
       ttlSecondsAfterFinished: 3600
       template:
         spec:
-          serviceAccountname: eidos
+          serviceAccountName: eidos
           restartPolicy: Never
           hostPID: true
           hostNetwork: true

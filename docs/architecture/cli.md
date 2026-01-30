@@ -345,7 +345,7 @@ metadata:
 spec:
   template:
     spec:
-      serviceAccountname: eidos
+      serviceAccountName: eidos
       containers:
       - name: eidos
         image: ghcr.io/nvidia/eidos:latest
@@ -1321,7 +1321,7 @@ spec:
           labels:
             app: eidos-audit
         spec:
-          serviceAccountname: eidos
+          serviceAccountName: eidos
           nodeSelector:
             node-role.kubernetes.io/gpu: "true"
           tolerations:

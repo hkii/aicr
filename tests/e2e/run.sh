@@ -618,7 +618,7 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     spec:
-      serviceAccountname: eidos
+      serviceAccountName: eidos
       restartPolicy: Never
       nodeSelector:
         kubernetes.io/os: linux

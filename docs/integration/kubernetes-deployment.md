@@ -306,7 +306,7 @@ spec:
       labels:
         app: eidos-agent
     spec:
-      serviceAccountname: eidos
+      serviceAccountName: eidos
       restartPolicy: Never
       
       containers:
