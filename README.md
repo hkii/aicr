@@ -2,7 +2,6 @@
 
 [![On Push CI](https://github.com/NVIDIA/eidos/actions/workflows/on-push.yaml/badge.svg)](https://github.com/NVIDIA/eidos/actions/workflows/on-push.yaml)
 [![On Tag Release](https://github.com/NVIDIA/eidos/actions/workflows/on-tag.yaml/badge.svg)](https://github.com/NVIDIA/eidos/actions/workflows/on-tag.yaml)
-[![Codecov](https://codecov.io/gh/NVIDIA/eidos/branch/main/graph/badge.svg)](https://codecov.io/gh/NVIDIA/eidos)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/NVIDIA/eidos)](https://go.dev/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/NVIDIA/eidos)](https://goreportcard.com/report/github.com/NVIDIA/eidos)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)

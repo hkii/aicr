@@ -1,0 +1,195 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Go Coverage Report'
+description: 'GitHub-native coverage tracking: badge updates, PR comments, and threshold enforcement'
+
+inputs:
+  coverage_file:
+    description: 'Path to Go coverage.out file'
+    required: false
+    default: 'coverage.out'
+  threshold:
+    description: 'Minimum coverage percentage required'
+    required: false
+    default: '70'
+  badge_gist_id:
+    description: 'Gist ID for storing the coverage badge JSON (optional)'
+    required: false
+    default: ''
+  badge_gist_token:
+    description: 'GitHub token with gist scope for badge updates (optional)'
+    required: false
+    default: ''
+
+outputs:
+  coverage:
+    description: 'Current coverage percentage'
+    value: ${{ steps.coverage.outputs.coverage }}
+  coverage_pass:
+    description: 'Whether coverage meets threshold'
+    value: ${{ steps.coverage.outputs.pass }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Calculate Coverage
+      id: coverage
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        COVERAGE_FILE="${{ inputs.coverage_file }}"
+        THRESHOLD="${{ inputs.threshold }}"
+
+        if [[ ! -f "$COVERAGE_FILE" ]]; then
+          echo "::error::Coverage file not found: $COVERAGE_FILE"
+          exit 1
+        fi
+
+        # Calculate coverage percentage from Go coverage file
+        COVERAGE=$(go tool cover -func="$COVERAGE_FILE" | grep total | awk '{print $3}' | sed 's/%//')
+
+        if [[ -z "$COVERAGE" ]]; then
+          echo "::error::Failed to calculate coverage"
+          exit 1
+        fi
+
+        echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+        # Check threshold
+        PASS="true"
+        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+          PASS="false"
+          echo "::warning::Coverage $COVERAGE% is below threshold $THRESHOLD%"
+        fi
+        echo "pass=$PASS" >> $GITHUB_OUTPUT
+
+        # Determine badge color
+        if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+          COLOR="brightgreen"
+        elif (( $(echo "$COVERAGE >= 70" | bc -l) )); then
+          COLOR="green"
+        elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+          COLOR="yellow"
+        elif (( $(echo "$COVERAGE >= 50" | bc -l) )); then
+          COLOR="orange"
+        else
+          COLOR="red"
+        fi
+        echo "color=$COLOR" >> $GITHUB_OUTPUT
+
+        echo "### Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Coverage | **$COVERAGE%** |" >> $GITHUB_STEP_SUMMARY
+        echo "| Threshold | $THRESHOLD% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Status | $([ \"$PASS\" = \"true\" ] && echo '✅ Pass' || echo '❌ Fail') |" >> $GITHUB_STEP_SUMMARY
+
+    - name: Post PR Comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      with:
+        script: |
+          const coverage = '${{ steps.coverage.outputs.coverage }}';
+          const threshold = '${{ inputs.threshold }}';
+          const pass = '${{ steps.coverage.outputs.pass }}' === 'true';
+          const color = '${{ steps.coverage.outputs.color }}';
+
+          const status = pass ? '✅' : '❌';
+          const statusText = pass ? 'Pass' : 'Fail';
+
+          const body = `## Coverage Report ${status}
+
+          | Metric | Value |
+          |--------|-------|
+          | Coverage | **${coverage}%** |
+          | Threshold | ${threshold}% |
+          | Status | ${statusText} |
+
+          <details>
+          <summary>Coverage Badge</summary>
+
+          \`\`\`
+          ![Coverage](https://img.shields.io/badge/coverage-${coverage}%25-${color})
+          \`\`\`
+          </details>`;
+
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const botComment = comments.find(comment =>
+            comment.user.type === 'Bot' &&
+            comment.body.includes('## Coverage Report')
+          );
+
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
+
+    - name: Update Badge Gist
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && inputs.badge_gist_id != '' && inputs.badge_gist_token != ''
+      shell: bash
+      env:
+        GIST_TOKEN: ${{ inputs.badge_gist_token }}
+        GIST_ID: ${{ inputs.badge_gist_id }}
+      run: |
+        set -euo pipefail
+
+        COVERAGE="${{ steps.coverage.outputs.coverage }}"
+        COLOR="${{ steps.coverage.outputs.color }}"
+
+        # Create shields.io endpoint JSON
+        JSON=$(cat <<EOF
+        {
+          "schemaVersion": 1,
+          "label": "coverage",
+          "message": "${COVERAGE}%",
+          "color": "${COLOR}"
+        }
+        EOF
+        )
+
+        # Update gist
+        curl -s -X PATCH \
+          -H "Authorization: token $GIST_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/gists/$GIST_ID" \
+          -d "{\"files\":{\"coverage.json\":{\"content\":$(echo "$JSON" | jq -c '.')}}}"
+
+        echo "Badge gist updated: https://gist.github.com/$GIST_ID"
+
+    - name: Enforce Threshold
+      if: steps.coverage.outputs.pass == 'false'
+      shell: bash
+      run: |
+        echo "::error::Coverage ${{ steps.coverage.outputs.coverage }}% is below threshold ${{ inputs.threshold }}%"
+        exit 1

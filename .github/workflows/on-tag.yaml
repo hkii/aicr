@@ -57,7 +57,7 @@ jobs:
           go_version: ${{ steps.versions.outputs.go }}
           golangci_lint_version: ${{ steps.versions.outputs.golangci_lint }}
           addlicense_version: ${{ steps.versions.outputs.addlicense }}
-          upload_codecov: 'false'
+          coverage_report: 'false'
 
       # Build and Release
       - name: Build and Release

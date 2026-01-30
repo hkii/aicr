@@ -26,14 +26,14 @@ inputs:
     description: 'addlicense version to use (e.g., v1.1.1)'
     required: false
     default: 'v1.1.1'
-  upload_codecov:
-    description: 'Whether to upload coverage to Codecov (true/false)'
+  coverage_report:
+    description: 'Whether to generate coverage report (true/false)'
     required: false
     default: 'false'
-  codecov_token:
-    description: 'Codecov token for forks (optional, uses OIDC for NVIDIA/eidos)'
+  coverage_threshold:
+    description: 'Minimum coverage percentage required'
     required: false
-    default: ''
+    default: '70'
 
 runs:
   using: 'composite'
@@ -56,17 +56,12 @@ runs:
       shell: bash
       run: make test
 
-    - name: Upload Coverage to Codecov
-      if: inputs.upload_codecov == 'true'
-      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
+    - name: Coverage Report
+      if: inputs.coverage_report == 'true'
+      uses: ./.github/actions/go-coverage
       with:
-        files: ./coverage.out
-        flags: unit
-        fail_ci_if_error: false
-        verbose: true
-        slug: ${{ github.repository }}
-        use_oidc: ${{ inputs.codecov_token == '' }}
-        token: ${{ inputs.codecov_token }}
+        coverage_file: ./coverage.out
+        threshold: ${{ inputs.coverage_threshold }}
 
     # Lint Code
     - name: Lint Go

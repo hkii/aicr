@@ -63,8 +63,8 @@ jobs:
           go_version: ${{ steps.versions.outputs.go }}
           golangci_lint_version: ${{ steps.versions.outputs.golangci_lint }}
           addlicense_version: ${{ steps.versions.outputs.addlicense }}
-          upload_codecov: 'true'
-          codecov_token: ${{ secrets.CODECOV_TOKEN }}
+          coverage_report: 'true'
+          coverage_threshold: '70'
 
       # Scan for Vulnerabilities
       - name: Security Scan
