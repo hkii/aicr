@@ -28,3 +28,8 @@ output "IDENTITY_PROVIDER" {
   value       = google_iam_workload_identity_pool_provider.github_provider.name
   description = "Provider ID to use in Auth action for GCP in GitHub."
 }
+
+output "ARTIFACT_REGISTRY" {
+  value       = "${var.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.demo.repository_id}"
+  description = "Artifact Registry path for container images."
+}

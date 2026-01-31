@@ -16,7 +16,7 @@
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
-  default     = "eidos"
+  default     = "eidosx"
 }
 
 # NVidia GitHub Repo
@@ -24,4 +24,18 @@ variable "git_repo" {
   description = "GitHub Repo"
   type        = string
   default     = "NVIDIA/eidos"
+}
+
+# Region for Artifact Registry and Cloud Run
+variable "region" {
+  description = "GCP region for Artifact Registry and Cloud Run"
+  type        = string
+  default     = "us-west1"
+}
+
+# Demo Artifact Registry Location
+variable "location" {
+  description = "GCP Artifact Registry location"
+  type        = string
+  default     = "us"
 }

@@ -30,7 +30,7 @@ locals {
 
 # Service account to be used for federated auth to publish to GCR
 resource "google_service_account" "github_actions_user" {
-  account_id   = "github-actions-user"
+  account_id   = "github-actions"
   display_name = "Service Account impersonated in GitHub Actions"
 }
 
@@ -44,13 +44,13 @@ resource "google_project_iam_member" "github_actions_user_roles" {
 
 # Identiy pool for GitHub action based identity's access to Google Cloud resources
 resource "google_iam_workload_identity_pool" "github_pool" {
-  workload_identity_pool_id = "github-pool"
+  workload_identity_pool_id = "github-actions-pool"
 }
 
 # Configuration for GitHub identiy provider
 resource "google_iam_workload_identity_pool_provider" "github_provider" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
-  workload_identity_pool_provider_id = "github-provider"
+  workload_identity_pool_provider_id = "github-actions-provider"
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
     "attribute.aud"        = "assertion.aud"

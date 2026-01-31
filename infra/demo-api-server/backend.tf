@@ -15,6 +15,6 @@
 terraform {
   backend "gcs" {
     bucket = "eidos-tf-state"
-    prefix = "eidos/prod" # or eidos/dev, eidos/stage, etc.
+    prefix = "demo"
   }
 }
