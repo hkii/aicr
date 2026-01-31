@@ -214,7 +214,12 @@ main() {
   # Install binary
   chmod +x "${temp_dir}/${binary_name}"
   msg "Installing $BIN_NAME to $INSTALL_DIR"
-  sudo mv "${temp_dir}/${binary_name}" "${INSTALL_DIR}/${BIN_NAME}"
+  mkdir -p "$INSTALL_DIR"
+  if [[ -w "$INSTALL_DIR" ]]; then
+    mv "${temp_dir}/${binary_name}" "${INSTALL_DIR}/${BIN_NAME}"
+  else
+    sudo mv "${temp_dir}/${binary_name}" "${INSTALL_DIR}/${BIN_NAME}"
+  fi
   
   # Verify installation
   msg "$BIN_NAME installed successfully!"
