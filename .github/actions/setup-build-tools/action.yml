@@ -45,8 +45,15 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        go install github.com/google/ko@latest
-        echo "ko installed: $(ko version 2>&1 || echo 'latest')"
+        # Install ko from binary release (go install puts in GOPATH which isn't in PATH)
+        KO_VERSION="0.18.0"  # From .versions.yaml
+        KO_URL="https://github.com/ko-build/ko/releases/download/v${KO_VERSION}/ko_${KO_VERSION}_Linux_x86_64.tar.gz"
+        KO_TMP="$(mktemp -d)"
+        curl -fsSL "$KO_URL" | tar -xzC "$KO_TMP"
+        sudo mv "$KO_TMP/ko" /usr/local/bin/ko
+        sudo chmod +x /usr/local/bin/ko
+        rm -rf "$KO_TMP"
+        echo "ko installed: $(ko version)"
 
     - name: Install Syft
       if: inputs.install_syft == 'true'
@@ -57,7 +64,17 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        go install github.com/google/go-containerregistry/cmd/crane@${{ inputs.crane_version }}
+        # Install crane from binary release (go install puts in GOPATH which isn't in PATH)
+        # Strip 'v' prefix for URL construction
+        CRANE_VERSION="${{ inputs.crane_version }}"
+        CRANE_VERSION="${CRANE_VERSION#v}"
+        CRANE_URL="https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+        CRANE_TMP="$(mktemp -d)"
+        curl -fsSL "$CRANE_URL" | tar -xzC "$CRANE_TMP"
+        sudo mv "$CRANE_TMP/crane" /usr/local/bin/crane
+        sudo chmod +x /usr/local/bin/crane
+        rm -rf "$CRANE_TMP"
+        echo "crane installed: $(crane version 2>&1 || echo '${{ inputs.crane_version }}')"
 
     - name: Install GoReleaser
       if: inputs.install_goreleaser == 'true'
