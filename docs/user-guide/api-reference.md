@@ -38,8 +38,8 @@ http://localhost:8080
 
 Start the local server:
 ```shell
-docker pull ghcr.io/nvidia/eidos/eidosd:latest
-docker run -p 8080:8080 ghcr.io/nvidia/eidos/eidosd:latest
+docker pull ghcr.io/nvidia/eidosd:latest
+docker run -p 8080:8080 ghcr.io/nvidia/eidosd:latest
 ```
 
 ## Quick Start
@@ -536,7 +536,7 @@ Allowlists are configured via environment variables when starting the server:
 docker run -p 8080:8080 \
   -e Eidos_ALLOWED_ACCELERATORS=h100,l40 \
   -e Eidos_ALLOWED_SERVICES=eks \
-  ghcr.io/nvidia/eidos/eidosd:latest
+  ghcr.io/nvidia/eidosd:latest
 ```
 
 ### Error Response

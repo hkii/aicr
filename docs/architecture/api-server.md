@@ -544,7 +544,7 @@ flowchart LR
     C --> D["Build Image<br/>(ko + goreleaser)"]
     D --> E["Generate SBOM<br/>(Syft)"]  
     E --> F["Sign Attestations<br/>(Cosign keyless)"]
-    F --> G["Push to GHCR<br/>ghcr.io/nvidia/eidos/eidosd"]
+    F --> G["Push to GHCR<br/>ghcr.io/nvidia/eidosd"]
     G --> H["Deploy to Cloud Run<br/>(WIF auth)"]
     H --> I["Health Check<br/>Verification"]
 ```
@@ -553,7 +553,7 @@ flowchart LR
 - **SLSA Build Level 3** compliance
 - **Signed SBOMs** in SPDX format
 - **Attestations** logged in Rekor transparency log  
-- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/eidos/eidosd:TAG --owner nvidia`
+- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/eidosd:TAG --owner nvidia`
 
 **Monitoring:**
 - Health endpoint: `/health`
@@ -654,7 +654,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: ghcr.io/nvidia/eidos/eidosd:v1.0.0
+        image: ghcr.io/nvidia/eidosd:v1.0.0
         ports:
         - containerPort: 8080
           name: http
@@ -1045,7 +1045,7 @@ func TestRecipeHandler(t *testing.T) {
 export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
 
 # Verify attestations
-gh attestation verify oci://ghcr.io/nvidia/eidos/eidosd:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/eidosd:${TAG} --owner nvidia
 ```
 
 For detailed CI/CD architecture, see [../CONTRIBUTING.md#github-actions--cicd](../../CONTRIBUTING.md#github-actions--cicd) and [README.md](README.md#cicd-architecture).
@@ -1401,7 +1401,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: api-server
-        image: ghcr.io/nvidia/eidos/eidosd:latest  # Or use specific tag like v0.8.12
+        image: ghcr.io/nvidia/eidosd:latest  # Or use specific tag like v0.8.12
         ports:
         - name: http
           containerPort: 8080

@@ -111,14 +111,14 @@ Eidos is also available as container images for integration into automated pipel
 
 ### CLI Image
 ```shell
-docker pull ghcr.io/nvidia/eidos/eidos:latest
-docker run ghcr.io/nvidia/eidos/eidos:latest --version
+docker pull ghcr.io/nvidia/eidos:latest
+docker run ghcr.io/nvidia/eidos:latest --version
 ```
 
 ### API Server Image (Self-hosting)
 ```shell
-docker pull ghcr.io/nvidia/eidos/eidosd:latest
-docker run -p 8080:8080 ghcr.io/nvidia/eidos/eidosd:latest
+docker pull ghcr.io/nvidia/eidosd:latest
+docker run -p 8080:8080 ghcr.io/nvidia/eidosd:latest
 ```
 
 ## Next Steps

@@ -117,7 +117,7 @@ eidos snapshot --deploy-agent \
 # Full customization
 eidos snapshot --deploy-agent \
   --namespace gpu-operator \
-  --image ghcr.io/nvidia/eidos/eidos:v0.8.0 \
+  --image ghcr.io/nvidia/eidos:v0.8.0 \
   --node-selector accelerator=nvidia-h100 \
   --toleration nvidia.com/gpu:NoSchedule \
   --timeout 10m \
@@ -128,7 +128,7 @@ eidos snapshot --deploy-agent \
 - `--deploy-agent`: Enable agent deployment mode
 - `--kubeconfig`: Custom kubeconfig path (default: `~/.kube/config` or `$KUBECONFIG`)
 - `--namespace`: Deployment namespace (default: `gpu-operator`)
-- `--image`: Container image (default: `ghcr.io/nvidia/eidos/eidos:latest`)
+- `--image`: Container image (default: `ghcr.io/nvidia/eidos:latest`)
 - `--job-name`: Job name (default: `eidos`)
 - `--service-account-name`: ServiceAccount name (default: `eidos`)
 - `--node-selector`: Node selector (format: `key=value`, repeatable)
@@ -282,12 +282,12 @@ spec:
     spec:
       containers:
         - name: eidos
-          image: ghcr.io/nvidia/eidos/eidos:v0.8.0  # Pin to version
+          image: ghcr.io/nvidia/eidos:v0.8.0  # Pin to version
 ```
 
 **Finding versions:**
 - [GitHub Releases](https://github.com/nvidia/eidos/releases)
-- Container registry: [ghcr.io/nvidia/eidos/eidos](https://github.com/nvidia/eidos/pkgs/container/eidos%2Feidos)
+- Container registry: [ghcr.io/nvidia/eidos](https://github.com/nvidia/eidos/pkgs/container/eidos)
 
 ### Resource Limits
 
@@ -362,7 +362,7 @@ spec:
         fsGroup: 0
       containers:
         - name: eidos
-          image: ghcr.io/nvidia/eidos/eidos:latest
+          image: ghcr.io/nvidia/eidos:latest
           command: ["/bin/sh", "-c"]
           args: ["/ko-app/eidos snapshot -o cm://gpu-operator/eidos-snapshot"]
           securityContext:
@@ -406,7 +406,7 @@ spec:
         fsGroup: 0
       containers:
         - name: eidos
-          image: ghcr.io/nvidia/eidos/eidos:latest
+          image: ghcr.io/nvidia/eidos:latest
           command: ["/bin/sh", "-c"]
           args: ["/ko-app/eidos snapshot -o cm://gpu-operator/eidos-snapshot"]
           securityContext:
@@ -456,7 +456,7 @@ spec:
             fsGroup: 0
           containers:
             - name: eidos
-              image: ghcr.io/nvidia/eidos/eidos:latest
+              image: ghcr.io/nvidia/eidos:latest
               command: ["/bin/sh", "-c"]
               args: ["/ko-app/eidos snapshot -o cm://gpu-operator/eidos-snapshot"]
               securityContext:

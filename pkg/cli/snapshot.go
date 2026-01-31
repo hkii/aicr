@@ -89,7 +89,7 @@ Combined node selector and custom tolerations:
 				Name:    "image",
 				Usage:   "Container image for agent Job",
 				Sources: cli.EnvVars("EIDOS_IMAGE"),
-				Value:   "ghcr.io/nvidia/eidos/eidos:latest",
+				Value:   "ghcr.io/nvidia/eidos:latest",
 			},
 			&cli.StringSliceFlag{
 				Name:  "image-pull-secret",

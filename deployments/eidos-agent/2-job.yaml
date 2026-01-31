@@ -56,7 +56,7 @@ spec:
         fsGroupChangePolicy: "OnRootMismatch"
       containers:
         - name: eidos
-          image: ghcr.io/nvidia/eidos/eidos:latest
+          image: ghcr.io/nvidia/eidos:latest
           command: ["/bin/sh", "-c"]
           env:
             - name: EIDOS_LOG_PREFIX

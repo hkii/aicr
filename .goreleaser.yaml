@@ -94,7 +94,7 @@ kos:
   - id: eidos
     build: eidos
     repositories:
-      - ghcr.io/nvidia/eidos/eidos
+      - ghcr.io/nvidia/eidos
     base_image: nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04
     platforms:
       - linux/amd64
@@ -108,7 +108,7 @@ kos:
   - id: eidosd
     build: eidosd
     repositories:
-      - ghcr.io/nvidia/eidos/eidosd
+      - ghcr.io/nvidia/eidosd
     base_image: gcr.io/distroless/static:nonroot
     platforms:
       - linux/amd64

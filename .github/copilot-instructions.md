@@ -551,7 +551,7 @@ eidos bundle -r recipe.yaml -b gpu-operator,network-operator \
 
 - **Kubernetes**: Singleton client via `pkg/k8s/client.GetKubeClient()`
 - **NVIDIA Operators**: GPU Operator, Network Operator, NIM Operator, Nsight Operator
-- **Container Images**: ghcr.io/nvidia/eidos/eidos, ghcr.io/nvidia/eidos/eidosd
+- **Container Images**: ghcr.io/nvidia/eidos, ghcr.io/nvidia/eidosd
 - **Observability**: Prometheus metrics at `/metrics`, structured JSON logs to stderr
 
 ### Key Links
@@ -988,7 +988,7 @@ jobs:
         uses: ./.github/actions/go-build-release
       - uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: 'ghcr.io/nvidia/eidos/eidos'
+          image_name: 'ghcr.io/nvidia/eidos'
           image_tag: ${{ github.ref_name }}
       - if: steps.release.outputs.release_outcome == 'success'
         uses: ./.github/actions/cloud-run-deploy
@@ -998,7 +998,7 @@ jobs:
 - **SLSA Build Level 3**: GitHub OIDC attestations
 - **SBOMs**: SPDX format via Syft (containers) and GoReleaser (binaries)
 - **Signing**: Cosign keyless signing (Fulcio + Rekor)
-- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/eidos/eidos:${TAG}`
+- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG}`
 
 For detailed GitHub Actions architecture, see [actions/README.md](actions/README.md)
 

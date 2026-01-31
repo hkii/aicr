@@ -83,12 +83,12 @@ Built via GoReleaser for multiple platforms:
 
 ### Container Images
 
-Published to GitHub Container Registry (`ghcr.io/nvidia/eidos/`):
+Published to GitHub Container Registry (`ghcr.io/nvidia/`):
 
 | Image | Base | Description |
 |-------|------|-------------|
-| `eidos/eidos` | `nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04` | CLI with CUDA runtime |
-| `eidos/eidosd` | `gcr.io/distroless/static:nonroot` | Minimal API server |
+| `eidos` | `nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04` | CLI with CUDA runtime |
+| `eidosd` | `gcr.io/distroless/static:nonroot` | Minimal API server |
 
 Tags: `latest`, `v1.2.3`
 
@@ -119,15 +119,15 @@ All releases must pass:
 export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
 
 # Verify with GitHub CLI (recommended)
-gh attestation verify oci://ghcr.io/nvidia/eidos/eidos:${TAG} --owner nvidia
-gh attestation verify oci://ghcr.io/nvidia/eidos/eidosd:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/eidosd:${TAG} --owner nvidia
 
 # Verify with Cosign
 cosign verify-attestation \
   --type spdxjson \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp 'https://github.com/NVIDIA/eidos/.github/workflows/.*' \
-  ghcr.io/nvidia/eidos/eidos:${TAG}
+  ghcr.io/nvidia/eidos:${TAG}
 ```
 
 ### Verify Binary Checksums
@@ -144,14 +144,14 @@ sha256sum -c checksums.txt --ignore-missing
 
 ```bash
 # Pull container images
-docker pull ghcr.io/nvidia/eidos/eidos:${TAG}
-docker pull ghcr.io/nvidia/eidos/eidosd:${TAG}
+docker pull ghcr.io/nvidia/eidos:${TAG}
+docker pull ghcr.io/nvidia/eidosd:${TAG}
 
 # Test CLI
-docker run --rm ghcr.io/nvidia/eidos/eidos:${TAG} --version
+docker run --rm ghcr.io/nvidia/eidos:${TAG} --version
 
 # Test API server
-docker run --rm -p 8080:8080 ghcr.io/nvidia/eidos/eidosd:${TAG} &
+docker run --rm -p 8080:8080 ghcr.io/nvidia/eidosd:${TAG} &
 curl http://localhost:8080/health
 ```
 

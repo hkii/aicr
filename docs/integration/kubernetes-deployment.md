@@ -109,7 +109,7 @@ spec:
       
       containers:
         - name: api-server
-          image: ghcr.io/nvidia/eidos/eidosd:latest
+          image: ghcr.io/nvidia/eidosd:latest
           imagePullPolicy: IfNotPresent
           
           ports:
@@ -311,7 +311,7 @@ spec:
       
       containers:
       - name: eidos
-        image: ghcr.io/nvidia/eidos/eidos:latest
+        image: ghcr.io/nvidia/eidos:latest
         imagePullPolicy: IfNotPresent
         
         command:
@@ -732,7 +732,7 @@ env:
 ```shell
 # Update image
 kubectl set image deployment/eidosd \
-  api-server=ghcr.io/nvidia/eidos/eidosd:v0.8.0 \
+  api-server=ghcr.io/nvidia/eidosd:v0.8.0 \
   -n eidos
 
 # Watch rollout

@@ -51,7 +51,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
         # Force lowercase registry path to avoid ko's uppercase character rejection
-        KO_DOCKER_REPO: ${{ inputs.ko_docker_repo || 'ghcr.io/nvidia/eidos' }}
+        KO_DOCKER_REPO: ${{ inputs.ko_docker_repo || 'ghcr.io/nvidia' }}
       run: |
         set -euo pipefail
         make release

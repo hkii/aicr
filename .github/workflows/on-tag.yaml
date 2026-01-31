@@ -133,14 +133,14 @@ jobs:
       - name: Attest eidos image
         uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/nvidia/eidos/eidos
+          image_name: ghcr.io/nvidia/eidos
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 
       - name: Attest eidosd image
         uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/nvidia/eidos/eidosd
+          image_name: ghcr.io/nvidia/eidosd
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 

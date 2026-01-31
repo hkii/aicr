@@ -1160,14 +1160,14 @@ Checkout → Validate (Go CI) → Build & Release → Attest Images → Deploy
 export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
 
 # Verify image attestations
-gh attestation verify oci://ghcr.io/nvidia/eidos/eidos:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG} --owner nvidia
 
 # Verify with Cosign
 cosign verify-attestation \
   --type spdxjson \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp 'https://github.com/NVIDIA/eidos/.github/workflows/.*' \
-  ghcr.io/nvidia/eidos/eidos:${TAG}
+  ghcr.io/nvidia/eidos:${TAG}
 ```
 
 **Transparency**:

@@ -79,7 +79,7 @@ eidos snapshot [flags]
 | `--kubeconfig` | `-k` | string | ~/.kube/config | Path to kubeconfig file (overrides KUBECONFIG env) |
 | `--deploy-agent` | | bool | false | Deploy Kubernetes Job to capture snapshot on cluster nodes |
 | `--namespace` | `-n` | string | gpu-operator | Kubernetes namespace for agent deployment |
-| `--image` | | string | ghcr.io/nvidia/eidos/eidos:latest | Container image for agent Job |
+| `--image` | | string | ghcr.io/nvidia/eidos:latest | Container image for agent Job |
 | `--job-name` | | string | eidos | Name for the agent Job |
 | `--service-account-name` | | string | eidos | ServiceAccount name for agent Job |
 | `--node-selector` | | string[] | | Node selector for agent scheduling (key=value, repeatable) |
@@ -137,7 +137,7 @@ eidos snapshot --deploy-agent \
 eidos snapshot --deploy-agent \
   --kubeconfig ~/.kube/config \
   --namespace gpu-operator \
-  --image ghcr.io/nvidia/eidos/eidos:v0.8.0 \
+  --image ghcr.io/nvidia/eidos:v0.8.0 \
   --job-name snapshot-gpu-nodes \
   --service-account-name eidos \
   --node-selector accelerator=nvidia-h100 \

@@ -348,7 +348,7 @@ spec:
       serviceAccountName: eidos
       containers:
       - name: eidos
-        image: ghcr.io/nvidia/eidos/eidos:latest
+        image: ghcr.io/nvidia/eidos:latest
         command:
         - eidos
         - snapshot
@@ -1203,7 +1203,7 @@ func TestSnapshotCommand(t *testing.T) {
 ```yaml
 validate_gpu_config:
   stage: test
-  image: ghcr.io/nvidia/eidos/eidos:latest
+  image: ghcr.io/nvidia/eidos:latest
   script:
     - eidos snapshot --format json > snapshot.json
     # Validate against known-good baseline
@@ -1330,7 +1330,7 @@ spec:
             effect: NoSchedule
           containers:
           - name: eidos
-            image: ghcr.io/nvidia/eidos/eidos:v0.6.4
+            image: ghcr.io/nvidia/eidos:v0.6.4
             command:
               - /bin/sh
               - -c
@@ -2131,7 +2131,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: eidos
-        image: ghcr.io/nvidia/eidos/eidos:latest
+        image: ghcr.io/nvidia/eidos:latest
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
