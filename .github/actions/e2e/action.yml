@@ -1,0 +1,137 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'E2E Tests'
+description: 'Run end-to-end tests using Kind cluster with fake GPU environment'
+
+inputs:
+  go_version:
+    description: 'Go version to install (e.g., 1.25)'
+    required: true
+  upload_artifacts:
+    description: 'Whether to upload debug artifacts on failure (true/false)'
+    required: false
+    default: 'true'
+  artifact_retention_days:
+    description: 'Number of days to retain debug artifacts'
+    required: false
+    default: '7'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5  # v6.2.0
+      with:
+        go-version: ${{ inputs.go_version }}
+        cache: true
+
+    - name: Free up disk space
+      shell: bash
+      run: |
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        docker system prune -f
+
+    - name: Prep system for Kind cluster
+      shell: bash
+      run: |
+        # Network configuration for Kind
+        sudo sysctl -w net.ipv4.ip_forward=1
+        sudo sysctl -w fs.inotify.max_user_watches=524288
+        sudo sysctl -w fs.inotify.max_user_instances=1024
+
+    - name: Install E2E testing tools
+      uses: ./.github/actions/install-e2e-tools
+
+    - name: Create Kind cluster
+      shell: bash
+      run: make cluster-create
+
+    - name: Run Tilt CI
+      shell: bash
+      run: make tilt-ci
+
+    - name: Build and push Eidos image to local registry
+      shell: bash
+      run: |
+        # Build and push eidos image for snapshot agent
+        KO_DOCKER_REPO=localhost:5001/eidos ko build --bare --tags=local ./cmd/eidos
+        # Verify image is available
+        curl -sf http://localhost:5001/v2/eidos/tags/list
+
+    - name: Set up fake GPU environment
+      shell: bash
+      run: |
+        # Create gpu-operator namespace
+        kubectl create namespace gpu-operator --dry-run=client -o yaml | kubectl apply -f -
+
+        # Inject fake nvidia-smi into Kind worker nodes
+        for node in $(docker ps --filter "name=-worker" --format "{{.Names}}"); do
+          echo "Injecting fake nvidia-smi into $node"
+          docker cp tools/fake-nvidia-smi "${node}:/usr/local/bin/nvidia-smi"
+          docker exec "$node" chmod +x /usr/local/bin/nvidia-smi
+          # Verify it works
+          docker exec "$node" nvidia-smi --version
+        done
+
+    - name: Set up port forwarding
+      shell: bash
+      run: |
+        kubectl port-forward -n eidos svc/eidosd 8080:8080 &
+        sleep 5
+        curl -sf http://localhost:8080/health || exit 1
+
+    - name: Run E2E tests
+      id: e2e-tests
+      shell: bash
+      env:
+        EIDOS_IMAGE: localhost:5001/eidos:local
+        FAKE_GPU_ENABLED: "true"
+      run: ./tests/e2e/run.sh
+
+    - name: Collect debug artifacts
+      if: failure()
+      shell: bash
+      run: |
+        mkdir -p /tmp/debug-artifacts
+        kubectl get all --all-namespaces > /tmp/debug-artifacts/all-resources.txt || true
+        kubectl get events --all-namespaces --sort-by='.lastTimestamp' > /tmp/debug-artifacts/events.txt || true
+        kubectl logs -n eidos -l app.kubernetes.io/name=eidosd --tail=500 > /tmp/debug-artifacts/eidosd-logs.txt || true
+        docker images > /tmp/debug-artifacts/docker-images.txt || true
+
+    - name: Export Kind logs
+      if: failure()
+      shell: bash
+      run: |
+        mkdir -p /tmp/kind-logs
+        kind export logs /tmp/kind-logs --name eidos || true
+
+    - name: Upload debug artifacts
+      if: failure() && inputs.upload_artifacts == 'true'
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+      with:
+        name: e2e-debug-artifacts-${{ github.run_id }}
+        path: |
+          /tmp/debug-artifacts/
+          /tmp/kind-logs/
+        retention-days: ${{ inputs.artifact_retention_days }}
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        make cluster-delete || true
+        docker system prune -f || true

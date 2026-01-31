@@ -81,6 +81,23 @@ jobs:
         with:
           go_version: ${{ steps.versions.outputs.go }}
 
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Load versions
+        id: versions
+        uses: ./.github/actions/load-versions
+
+      - name: Run E2E Tests
+        uses: ./.github/actions/e2e
+        with:
+          go_version: ${{ steps.versions.outputs.go }}
+
   # =============================================================================
   # Build Job (runs after all tests pass)
   # =============================================================================
@@ -88,7 +105,7 @@ jobs:
   build:
     name: Build and Release
     runs-on: ubuntu-latest
-    needs: [unit, integration]  # Wait for tests to pass
+    needs: [unit, integration, e2e]  # Wait for all tests to pass
     timeout-minutes: 30
     outputs:
       release_outcome: ${{ steps.release.outputs.release_outcome }}
