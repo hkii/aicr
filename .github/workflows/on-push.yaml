@@ -44,10 +44,10 @@ concurrency:
 
 jobs:
 
-  test:
-    name: Unit/Integration Tests
+  unit:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
 
       - name: Checkout Code
@@ -57,7 +57,6 @@ jobs:
         id: versions
         uses: ./.github/actions/load-versions
 
-      # Setup, Test, and Lint
       - name: Run Go CI (setup, test, lint)
         uses: ./.github/actions/go-ci
         with:
@@ -67,19 +66,36 @@ jobs:
           coverage_report: 'true'
           coverage_threshold: '70'
 
-      # Scan for Vulnerabilities
       - name: Security Scan
         uses: ./.github/actions/security-scan
         with:
           severity: 'MEDIUM'
           category: 'trivy-fs'
 
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Load versions
+        id: versions
+        uses: ./.github/actions/load-versions
+
+      - name: Run Integration Tests
+        uses: ./.github/actions/integration
+        with:
+          go_version: ${{ steps.versions.outputs.go }}
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
+
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 

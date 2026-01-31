@@ -24,7 +24,7 @@ build_tools:
 
 # Linting
 linting:
-  golangci_lint: 'v2.6'
+  golangci_lint: 'v2.6.2'
   yamllint: '1.35.0'
   addlicense: 'v1.1.1'
 

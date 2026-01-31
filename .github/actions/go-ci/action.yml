@@ -89,14 +89,3 @@ runs:
     - name: Ensure License Headers
       shell: bash
       run: make license
-
-    # Integration Tests
-    - name: Setup build tools
-      uses: ./.github/actions/setup-build-tools
-      with:
-        install_goreleaser: 'true'
-
-    - name: Run Integration Tests
-      if: hashFiles('tools/e2e') != ''
-      shell: bash
-      run: ./tools/e2e
