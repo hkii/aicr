@@ -20,10 +20,6 @@ inputs:
     description: 'Container registry (e.g. ghcr.io)'
     required: false
     default: 'ghcr.io'
-  ko_docker_repo:
-    description: 'KO_DOCKER_REPO environment variable override'
-    required: false
-    default: ''
 
 outputs:
   release_outcome:
@@ -50,8 +46,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
-        # Force lowercase registry path to avoid ko's uppercase character rejection
-        KO_DOCKER_REPO: ${{ inputs.ko_docker_repo || 'ghcr.io/nvidia' }}
+        # Repository paths are fully specified in .goreleaser.yaml kos.repositories
       run: |
         set -euo pipefail
         make release
