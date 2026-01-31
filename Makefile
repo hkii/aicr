@@ -167,6 +167,10 @@ tools-setup: ## Setup development environment (installs all required tools). Use
 	@echo "Setting up development environment..."
 	@AUTO_MODE=$(AUTO_MODE) bash tools/setup-tools
 
+.PHONY: flox-manifest
+flox-manifest: ## Generate Flox manifest.toml from .versions.yaml (alternative to tools-setup)
+	@bash tools/generate-flox-manifest
+
 # =============================================================================
 # Code Formatting & Dependencies
 # =============================================================================
@@ -512,6 +516,7 @@ help-full: ## Displays commands grouped by category
 	@echo "\033[1m=== Tools ===\033[0m"
 	@echo "  make tools-check    Check tools and compare versions"
 	@echo "  make tools-setup    Install all development tools"
+	@echo "  make flox-manifest  Generate Flox manifest (alternative setup)"
 	@echo ""
 	@echo "\033[1m=== Utilities ===\033[0m"
 	@echo "  make info           Print project info"
