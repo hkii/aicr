@@ -13,16 +13,20 @@
 # limitations under the License.
 
 name: On Tag Release
+
 on:
   push:
     tags:
-    - 'v[0-9]+.[0-9]+.[0-9]+'  # Only build tag with semantic versioning format
+      - 'v[0-9]+.[0-9]+.[0-9]+'  # Only build tags with semantic versioning format
 
 permissions:
+  actions: read
   attestations: write
   contents: write
   id-token: write
   packages: write
+  pull-requests: write
+  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,19 +34,15 @@ concurrency:
 
 jobs:
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      IDENTITY_PROVIDER: 'projects/116689922666/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-      PROJECT_ID: 'eidosx'
-      SERVICE_ACCOUNT: 'github-actions-user'
-      RUN_REGION: 'us-west1'
-      RUN_SERVICE: 'api'
-      RUN_IMAGE_REG: 'us-docker.pkg.dev/eidosx/ghcr/eidosd'
-    steps:
+  # =============================================================================
+  # Test Jobs (run in parallel, same as on-push.yaml)
+  # =============================================================================
 
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
@@ -50,7 +50,6 @@ jobs:
         id: versions
         uses: ./.github/actions/load-versions
 
-      # Setup, Test, and Lint
       - name: Run Go CI (setup, test, lint)
         uses: ./.github/actions/go-ci
         with:
@@ -59,28 +58,113 @@ jobs:
           addlicense_version: ${{ steps.versions.outputs.addlicense }}
           coverage_report: 'false'
 
-      # Build and Release
+      - name: Security Scan
+        uses: ./.github/actions/security-scan
+        with:
+          severity: 'MEDIUM'
+          category: 'trivy-fs'
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Load versions
+        id: versions
+        uses: ./.github/actions/load-versions
+
+      - name: Run Integration Tests
+        uses: ./.github/actions/integration
+        with:
+          go_version: ${{ steps.versions.outputs.go }}
+
+  # =============================================================================
+  # Build Job (runs after all tests pass)
+  # =============================================================================
+
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    needs: [unit, integration]  # Wait for tests to pass
+    timeout-minutes: 30
+    outputs:
+      release_outcome: ${{ steps.release.outputs.release_outcome }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0  # Full history for changelog generation
+
+      - name: Load versions
+        id: versions
+        uses: ./.github/actions/load-versions
+
+      - name: Setup Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5  # v6.2.0
+        with:
+          go-version: ${{ steps.versions.outputs.go }}
+          cache: true
+
       - name: Build and Release
         id: release
         uses: ./.github/actions/go-build-release
 
-      - name: Attest eidosd image
-        uses: ./.github/actions/attest-image-from-tag
-        with:
-          image_name: ghcr.io/${{ github.repository_owner }}/eidosd
-          tag: ${{ github.ref_name }}
-          crane_version: ${{ steps.versions.outputs.crane }}
+  # =============================================================================
+  # Attestation Job (runs after build succeeds)
+  # =============================================================================
+
+  attest:
+    name: Attest Images
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: needs.build.outputs.release_outcome == 'success'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Load versions
+        id: versions
+        uses: ./.github/actions/load-versions
 
       - name: Attest eidos image
         uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/${{ github.repository_owner }}/eidos
+          image_name: ghcr.io/nvidia/eidos/eidos
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 
-      # Deploy to Cloud Run
+      - name: Attest eidosd image
+        uses: ./.github/actions/attest-image-from-tag
+        with:
+          image_name: ghcr.io/nvidia/eidos/eidosd
+          tag: ${{ github.ref_name }}
+          crane_version: ${{ steps.versions.outputs.crane }}
+
+  # =============================================================================
+  # Deploy Job (runs after attestation succeeds)
+  # =============================================================================
+
+  deploy:
+    name: Deploy API Server
+    runs-on: ubuntu-latest
+    needs: [attest]
+    timeout-minutes: 10
+    env:
+      IDENTITY_PROVIDER: 'projects/116689922666/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+      PROJECT_ID: 'eidosx'
+      SERVICE_ACCOUNT: 'github-actions-user'
+      RUN_REGION: 'us-west1'
+      RUN_SERVICE: 'api'
+      RUN_IMAGE_REG: 'us-docker.pkg.dev/eidosx/ghcr/eidosd'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
       - name: Deploy API to Cloud Run
-        if: steps.release.outputs.release_outcome == 'success'
         uses: ./.github/actions/cloud-run-deploy
         with:
           project_id: ${{ env.PROJECT_ID }}
