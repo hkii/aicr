@@ -90,13 +90,13 @@ runs:
       shell: bash
       run: make license
 
-    # E2E Integration Tests
+    # Integration Tests
     - name: Setup build tools
       uses: ./.github/actions/setup-build-tools
       with:
         install_goreleaser: 'true'
 
-    - name: Run E2E Integration Tests
+    - name: Run Integration Tests
       if: hashFiles('tools/e2e') != ''
       shell: bash
       run: ./tools/e2e

@@ -139,7 +139,7 @@ The e2e tests run automatically on:
 - Push to `main` branch
 - Pull requests to `main`
 
-See `.github/workflows/e2e-test.yaml` for the CI configuration.
+E2E tests run as a separate job in the main CI workflow, **after** the unit tests and lint checks pass. See the `e2e` job in `.github/workflows/on-push.yaml` for the CI configuration.
 
 ## Cleanup
 

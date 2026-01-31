@@ -225,6 +225,7 @@ ADDLICENSE_VERSION=$(yq '.linting.addlicense' .versions.yaml)
 GRYPE_VERSION=$(yq '.security_tools.grype' .versions.yaml)
 KIND_VERSION=$(yq '.testing_tools.kind' .versions.yaml)
 CTLPTL_VERSION=$(yq '.testing_tools.ctlptl' .versions.yaml)
+TILT_VERSION=$(yq '.testing_tools.tilt' .versions.yaml)
 HELM_VERSION=$(yq '.testing_tools.helm' .versions.yaml)
 KO_VERSION=$(yq '.build_tools.ko' .versions.yaml)
 
@@ -234,6 +235,7 @@ echo "  Go:              ${GO_VERSION}"
 echo "  golangci-lint:   ${GOLANGCI_LINT_VERSION}"
 echo "  grype:           ${GRYPE_VERSION}"
 echo "  kind:            ${KIND_VERSION}"
+echo "  tilt:            ${TILT_VERSION}"
 echo "  helm:            ${HELM_VERSION}"
 echo ""
 
@@ -363,12 +365,26 @@ if [[ "${SKIP_TOOLS}" == "false" ]]; then
     if command_exists tilt; then
         log_success "Tilt already installed: $(tilt version)"
     else
-        log_info "Installing Tilt..."
+        log_info "Installing Tilt ${TILT_VERSION}..."
         if prompt_continue; then
             if [[ "${OS}" == "darwin" ]]; then
                 brew install tilt
             elif [[ "${OS}" == "linux" ]]; then
-                curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash
+                # Install to a temp directory first to avoid "file exists" errors
+                TILT_TMP=$(mktemp -d)
+                TILT_URL="https://github.com/tilt-dev/tilt/releases/download/v${TILT_VERSION}/tilt.${TILT_VERSION}.linux.x86_64.tar.gz"
+                if [[ "${GO_ARCH}" == "arm64" ]]; then
+                    TILT_URL="https://github.com/tilt-dev/tilt/releases/download/v${TILT_VERSION}/tilt.${TILT_VERSION}.linux.arm64.tar.gz"
+                fi
+                if verify_download_url "$TILT_URL" "tilt ${TILT_VERSION} for Linux ${GO_ARCH}"; then
+                    curl -fsSL "$TILT_URL" | tar -xzC "$TILT_TMP"
+                    sudo mv "$TILT_TMP/tilt" /usr/local/bin/tilt
+                    sudo chmod +x /usr/local/bin/tilt
+                    rm -rf "$TILT_TMP"
+                else
+                    log_error "Failed to install Tilt. Please install manually."
+                    rm -rf "$TILT_TMP"
+                fi
             fi
             log_success "Tilt installed"
         fi
