@@ -3,7 +3,7 @@
 
 REPO_NAME          := eidos
 VERSION            ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-IMAGE_REGISTRY     ?= ghcr.io/nvidia
+IMAGE_REGISTRY     ?= ghcr.io/nvidia/eidos
 IMAGE_TAG          ?= latest
 YAML_FILES         := $(shell find . -type f \( -iname "*.yml" -o -iname "*.yaml" \) ! -path "./examples/*" ! -path "./bundles/*" ! -path "./.flox/*")
 COMMIT             := $(shell git rev-parse HEAD)

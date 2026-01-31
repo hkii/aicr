@@ -97,7 +97,7 @@ capture_snapshot:
 
 generate_recipe:
   stage: recipe
-  image: ghcr.io/nvidia/eidos:latest
+  image: ghcr.io/nvidia/eidos/eidos:latest
   script:
     # Option 1: Use ConfigMap directly (no artifact needed)
     - eidos recipe -s cm://gpu-operator/eidos-snapshot --intent training -o recipe.yaml
@@ -111,7 +111,7 @@ generate_recipe:
 
 create_bundle:
   stage: bundle
-  image: ghcr.io/nvidia/eidos:latest
+  image: ghcr.io/nvidia/eidos/eidos:latest
   script:
     - eidos bundle --recipe recipe.yaml --bundlers gpu-operator --output ./bundles
     # Override values at bundle generation time

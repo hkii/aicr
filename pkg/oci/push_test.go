@@ -249,14 +249,14 @@ func TestPushOptions_Defaults(t *testing.T) {
 func TestPushResult_Fields(t *testing.T) {
 	result := PushResult{
 		Digest:    "sha256:abc123",
-		Reference: "ghcr.io/nvidia/eidos:v1.0.0",
+		Reference: "ghcr.io/nvidia/eidos/eidos:v1.0.0",
 	}
 
 	if result.Digest != "sha256:abc123" {
 		t.Errorf("Digest = %q, want %q", result.Digest, "sha256:abc123")
 	}
-	if result.Reference != "ghcr.io/nvidia/eidos:v1.0.0" {
-		t.Errorf("Reference = %q, want %q", result.Reference, "ghcr.io/nvidia/eidos:v1.0.0")
+	if result.Reference != "ghcr.io/nvidia/eidos/eidos:v1.0.0" {
+		t.Errorf("Reference = %q, want %q", result.Reference, "ghcr.io/nvidia/eidos/eidos:v1.0.0")
 	}
 }
 
