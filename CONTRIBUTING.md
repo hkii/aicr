@@ -11,13 +11,14 @@ make tools-setup    # Install all required tools
 make tools-check    # Verify versions match .versions.yaml
 
 # 2. Develop
-make build          # Build binaries
 make test           # Run tests with race detector
 make lint           # Run linters
+make build          # Build binaries
+make e2e            # Run integration tests
 
 # 3. Before submitting PR
 make qualify        # Full check: test + lint + scan (REQUIRED)
-git commit -s -m "Your message"  # -s for DCO sign-off
+git commit -s -m "chore: your message"  # -s for DCO sign-off
 ```
 
 ## Table of Contents
@@ -41,7 +42,6 @@ This project follows NVIDIA's commitment to fostering an open and welcoming envi
 
 ### Reporting Bugs
 
-- Use the [GitHub issue tracker](https://github.com/NVIDIA/eidos/issues) to report bugs
 - Describe the issue clearly, including steps to reproduce
 - Include relevant system information (OS, Go version, hardware)
 - Attach logs or screenshots if applicable
@@ -63,9 +63,6 @@ This project follows NVIDIA's commitment to fostering an open and welcoming envi
 ### Contributing Code
 
 - Fix bugs, add features, or improve performance
-- Add new collectors for system configuration capture
-- Enhance recipe generation logic
-- Improve error handling and logging
 - Follow the development workflow outlined below
 - Ensure all tests pass and code meets quality standards
 
@@ -81,11 +78,19 @@ The same tools, same versions, and same validation run locally and in CI.
 
 **Why:** "Works on my machine" is not acceptable. If a contributor can run `make qualify` locally and it passes, CI will pass. This eliminates surprise failures and reduces feedback loops.
 
+### Adoption Comes from Idiomatic Experience
+
+The system integrates into how users already work. We provide validated configuration, not a new operational model.
+
+**What:** Eidos outputs standard formats (Helm values, Kubernetes manifests) that work with existing tools (kubectl, ArgoCD, Flux). Users don't need to learn "the Eidos way" of deploying.
+
+**Why:** If adoption requires retraining users on a new workflow, our design has failed. Value comes from correctness, not from lock-in.
+
 ### Correctness Must Be Reproducible
 
-Given the same inputs, the same system version must always produce the same result.
+Given the same inputs, the same system version must always produce the same result (e.g. recipe, bundle artifacts).
 
-**What:** No hidden state, no implicit defaults, no non-deterministic behavior. A recipe generated from a snapshot today must be identical to one generated from the same snapshot tomorrow.
+**What:** No hidden state, no implicit defaults, no non-deterministic behavior. A recipe/bundle/image digest generated using the same version of eidos today must be identical to one generated tomorrow.
 
 **Why:** Reproducibility is a prerequisite for debugging, validation, and trust. If users can't reproduce a result, they can't trust it.
 
@@ -112,14 +117,6 @@ Trust is established through evidence, not assertions. Every released artifact c
 **What:** All releases include SLSA Build Level 3 provenance, SBOM attestations, and Sigstore signatures. Users can verify exactly which commit, workflow, and build produced any artifact.
 
 **Why:** This underpins supply-chain security, compliance, and confidence. "Trust us" is not a security model.
-
-### Adoption Comes from Idiomatic Experience
-
-The system integrates into how users already work. We provide validated configuration, not a new operational model.
-
-**What:** Eidos outputs standard formats (Helm values, Kubernetes manifests) that work with existing tools (kubectl, ArgoCD, Flux). Users don't need to learn "the Eidos way" of deploying.
-
-**Why:** If adoption requires retraining users on a new workflow, our design has failed. Value comes from correctness, not from lock-in.
 
 ## Development Setup
 
