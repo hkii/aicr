@@ -19,6 +19,9 @@ CTLPTL_CONFIG_FILE = .ctlptl.yaml
 REGISTRY_PORT = 5001
 REGISTRY_NAME = ctlptl-registry
 
+# yq is required for tools-check target
+YQ := $(shell command -v yq 2>/dev/null)
+
 # Default target
 all: help
 
@@ -33,34 +36,140 @@ info: ## Prints the current project info
 	@echo "ko:             $(KO_VERSION)"
 	@echo "goreleaser:     $(GORELEASER_VERSION)"
 
-.PHONY: check-tools
-check-tools: ## Verifies required tools are installed
-	@echo "Checking required tools..."
-	@command -v golangci-lint >/dev/null || (echo "ERROR: golangci-lint not installed" && exit 1)
-	@command -v yamllint >/dev/null || (echo "ERROR: yamllint not installed" && exit 1)
-	@command -v grype >/dev/null || (echo "ERROR: grype not installed" && exit 1)
-	@command -v goreleaser >/dev/null || (echo "ERROR: goreleaser not installed" && exit 1)
-	@command -v ko >/dev/null || (echo "ERROR: ko not installed" && exit 1)
-	@echo "All required tools installed"
+# =============================================================================
+# Tools Management
+# =============================================================================
 
-.PHONY: deps
-deps: ## Installs required development tools (versions from .versions.yaml)
-	@echo "Installing development tools..."
-	@command -v yq >/dev/null || (echo "ERROR: yq is required to read .versions.yaml. Install: brew install yq" && exit 1)
-	@GOLANGCI_VERSION=$$(yq eval '.linting.golangci_lint' .versions.yaml) && \
-		echo "Installing golangci-lint@$$GOLANGCI_VERSION..." && \
-		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$$GOLANGCI_VERSION
-	@GORELEASER_VERSION=$$(yq eval '.build_tools.goreleaser' .versions.yaml) && \
-		echo "Installing goreleaser@$$GORELEASER_VERSION..." && \
-		go install github.com/goreleaser/goreleaser/v2@$$GORELEASER_VERSION
-	@KO_VERSION=$$(yq eval '.build_tools.ko' .versions.yaml) && \
-		echo "Installing ko@$$KO_VERSION..." && \
-		go install github.com/google/ko@$$KO_VERSION
-	@GRYPE_VERSION=$$(yq eval '.security_tools.grype' .versions.yaml) && \
-		echo "Installing grype@$$GRYPE_VERSION..." && \
-		go install github.com/anchore/grype@$$GRYPE_VERSION
-	@pip install --user yamllint 2>/dev/null || echo "Install yamllint manually: pip install yamllint"
-	@echo "Development tools installed"
+.PHONY: tools-check
+tools-check: ## Verifies required tools are installed and shows version comparison
+ifndef YQ
+	@echo "ERROR: yq is required for this target"
+	@echo "Install: brew install yq (macOS) or see https://github.com/mikefarah/yq"
+	@exit 1
+else
+	@echo "=== Tool Version Check ==="
+	@echo ""
+	@printf "%-20s %-15s %-15s %s\n" "Tool" "Expected" "Installed" "Status"
+	@printf "%-20s %-15s %-15s %s\n" "----" "--------" "---------" "------"
+	@# Go
+	@expected=$$($(YQ) '.languages.go' .versions.yaml); \
+	if command -v go >/dev/null 2>&1; then \
+		installed=$$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//'); \
+		if echo "$$installed" | grep -q "^$$expected"; then \
+			printf "%-20s %-15s %-15s %s\n" "go" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "go" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "go" "$$expected" "-" "✗"; \
+	fi
+	@# golangci-lint
+	@expected=$$($(YQ) '.linting.golangci_lint' .versions.yaml); \
+	if command -v golangci-lint >/dev/null 2>&1; then \
+		installed=$$(golangci-lint version --short 2>/dev/null || echo "unknown"); \
+		if echo "$$installed" | grep -q "$${expected#v}"; then \
+			printf "%-20s %-15s %-15s %s\n" "golangci-lint" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "golangci-lint" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "golangci-lint" "$$expected" "-" "✗"; \
+	fi
+	@# grype
+	@expected=$$($(YQ) '.security_tools.grype' .versions.yaml); \
+	if command -v grype >/dev/null 2>&1; then \
+		installed=$$(grype version 2>/dev/null | grep -E '^Version:' | awk '{print $$2}' | grep -v '^\[' || echo "installed"); \
+		printf "%-20s %-15s %-15s %s\n" "grype" "$$expected" "$$installed" "✓"; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "grype" "$$expected" "-" "✗"; \
+	fi
+	@# ko
+	@expected=$$($(YQ) '.build_tools.ko' .versions.yaml); \
+	if command -v ko >/dev/null 2>&1; then \
+		installed=$$(ko version 2>/dev/null | head -1); \
+		if echo "$$installed" | grep -q "$${expected#v}"; then \
+			printf "%-20s %-15s %-15s %s\n" "ko" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "ko" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "ko" "$$expected" "-" "✗"; \
+	fi
+	@# goreleaser
+	@expected=$$($(YQ) '.build_tools.goreleaser' .versions.yaml); \
+	if command -v goreleaser >/dev/null 2>&1; then \
+		installed=$$(goreleaser --version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p'); \
+		printf "%-20s %-15s %-15s %s\n" "goreleaser" "$$expected" "$$installed" "✓"; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "goreleaser" "$$expected" "-" "✗"; \
+	fi
+	@# helm
+	@expected=$$($(YQ) '.testing_tools.helm' .versions.yaml); \
+	if command -v helm >/dev/null 2>&1; then \
+		installed=$$(helm version --short 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'); \
+		if echo "$$installed" | grep -q "$$expected"; then \
+			printf "%-20s %-15s %-15s %s\n" "helm" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "helm" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "helm" "$$expected" "-" "✗"; \
+	fi
+	@# kind
+	@expected=$$($(YQ) '.testing_tools.kind' .versions.yaml); \
+	if command -v kind >/dev/null 2>&1; then \
+		installed=$$(kind version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | sed 's/v//'); \
+		if echo "$$installed" | grep -q "$$expected"; then \
+			printf "%-20s %-15s %-15s %s\n" "kind" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "kind" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "kind" "$$expected" "-" "✗"; \
+	fi
+	@# yamllint
+	@expected=$$($(YQ) '.linting.yamllint' .versions.yaml); \
+	if command -v yamllint >/dev/null 2>&1; then \
+		installed=$$(yamllint --version 2>/dev/null | awk '{print $$2}'); \
+		if echo "$$installed" | grep -q "$$expected"; then \
+			printf "%-20s %-15s %-15s %s\n" "yamllint" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "yamllint" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "yamllint" "$$expected" "-" "✗"; \
+	fi
+	@# kubectl
+	@expected=$$($(YQ) '.testing_tools.kubectl' .versions.yaml); \
+	if command -v kubectl >/dev/null 2>&1; then \
+		installed=$$(kubectl version --client -o json 2>/dev/null | grep gitVersion | grep -oE 'v[0-9]+\.[0-9]+' || echo "installed"); \
+		if echo "$$installed" | grep -q "$$expected"; then \
+			printf "%-20s %-15s %-15s %s\n" "kubectl" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "kubectl" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "kubectl" "$$expected" "-" "✗"; \
+	fi
+	@# docker (no version requirement)
+	@if command -v docker >/dev/null 2>&1; then \
+		installed=$$(docker version --format '{{.Server.Version}}' 2>/dev/null || echo "not running"); \
+		printf "%-20s %-15s %-15s %s\n" "docker" "-" "$$installed" "✓"; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "docker" "-" "-" "✗"; \
+	fi
+	@echo ""
+	@echo "Legend: ✓ = installed, ⚠ = version mismatch, ✗ = missing"
+endif
+
+.PHONY: tools-setup
+tools-setup: ## Setup development environment (installs all required tools). Use AUTO_MODE=true to skip prompts
+	@echo "Setting up development environment..."
+	@AUTO_MODE=$(AUTO_MODE) bash tools/setup-tools
+
+# =============================================================================
+# Code Formatting & Dependencies
+# =============================================================================
 
 .PHONY: tidy
 tidy: ## Formats code and updates Go module dependencies
@@ -351,6 +460,9 @@ dev-env-clean: tilt-down cluster-delete ## Stops Tilt and deletes cluster (full 
 .PHONY: dev-restart
 dev-restart: tilt-down tilt-up ## Restarts Tilt without recreating cluster
 
+.PHONY: dev-reset
+dev-reset: dev-env-clean dev-env ## Full reset (tear down and recreate everything)
+
 .PHONY: help
 help: ## Displays available commands
 	@echo "Available make targets:"
@@ -382,6 +494,7 @@ help-full: ## Displays commands grouped by category
 	@echo "  make dev-env        Create cluster and start Tilt (full setup)"
 	@echo "  make dev-env-clean  Stop Tilt and delete cluster (full cleanup)"
 	@echo "  make dev-restart    Restart Tilt without recreating cluster"
+	@echo "  make dev-reset      Full reset (tear down and recreate everything)"
 	@echo "  make cluster-create Create Kind cluster with registry"
 	@echo "  make cluster-delete Delete Kind cluster and registry"
 	@echo "  make cluster-status Show cluster and registry status"
@@ -396,10 +509,12 @@ help-full: ## Displays commands grouped by category
 	@echo "  make generate       Run go generate"
 	@echo "  make license        Add/verify license headers"
 	@echo ""
+	@echo "\033[1m=== Tools ===\033[0m"
+	@echo "  make tools-check    Check tools and compare versions"
+	@echo "  make tools-setup    Install all development tools"
+	@echo ""
 	@echo "\033[1m=== Utilities ===\033[0m"
 	@echo "  make info           Print project info"
-	@echo "  make check-tools    Verify required tools are installed"
-	@echo "  make deps           Install development tools"
 	@echo "  make docs           Serve Go documentation"
 	@echo "  make demos          Create demo GIFs (requires vhs)"
 	@echo "  make clean          Clean build artifacts"

@@ -42,6 +42,43 @@ This directory contains a modular, reusable GitHub Actions architecture optimize
     category: 'trivy-fs'
 ```
 
+### Development Environment Actions
+
+#### `install-e2e-tools/`
+**Purpose**: Install development and E2E testing tools using the shared `tools/setup-tools` script
+**When to use**: E2E test workflows that need development tools (kubectl, kind, tilt, etc.)
+**Key Features**:
+- Uses `tools/setup-tools` for consistency with local development
+- Caches tools based on `.versions.yaml` hash
+- Same tools, same versions as local dev - no "works on my machine" issues
+
+**Example**:
+```yaml
+- uses: ./.github/actions/install-e2e-tools
+```
+
+This action runs `tools/setup-tools --skip-go --skip-docker` in auto mode, which:
+- Reads versions from `.versions.yaml` (single source of truth)
+- Installs: helm, kubectl, kind, ctlptl, tilt, ko, grype, yamllint, golangci-lint
+- Skips Go (handled by `actions/setup-go`) and Docker (pre-installed on runners)
+- Uses the same installation logic as local development
+
+#### `load-versions/`
+**Purpose**: Load tool versions from `.versions.yaml` as workflow outputs
+**When to use**: When you need version values in workflow steps
+**Outputs**:
+- `go`, `goreleaser`, `ko`, `crane`, `golangci_lint`, `yamllint`, `addlicense`
+- `grype`, `kubectl`, `kind`, `ctlptl`, `tilt`, `helm`
+
+**Example**:
+```yaml
+- uses: ./.github/actions/load-versions
+  id: versions
+- uses: actions/setup-go@v5
+  with:
+    go-version: ${{ steps.versions.outputs.go }}
+```
+
 ### Build & Release Actions
 
 #### `setup-build-tools/`
@@ -192,9 +229,12 @@ This directory contains a modular, reusable GitHub Actions architecture optimize
 - Eliminates redundant login steps (was happening 3x in on-tag workflow)
 
 ### Tool Installation Strategy
-- Build tools centralized in `setup-build-tools` action
-- Selective installation via boolean flags reduces overhead
-- Version pinning ensures reproducibility
+- **Development tools**: Use `install-e2e-tools` which delegates to `tools/setup-tools`
+  - Same script used locally and in CI - guaranteed consistency
+  - Versions managed in `.versions.yaml` (single source of truth)
+  - `make tools-check` works identically in both environments
+- **Build tools**: Use `setup-build-tools` for selective installation of ko, syft, crane, goreleaser
+- Version pinning ensures reproducibility across all environments
 
 ## Migration from Previous Architecture
 
@@ -262,6 +302,32 @@ steps:
       crane digest ghcr.io/org/my-app:latest
 ```
 
+## Local/CI Consistency
+
+The `install-e2e-tools` action ensures that CI uses the exact same tool installation logic as local development:
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   Local Dev         │     │   GitHub Actions    │
+│                     │     │                     │
+│ make tools-setup    │     │ install-e2e-tools   │
+│        │            │     │        │            │
+│        ▼            │     │        ▼            │
+│ tools/setup-tools   │◄───►│ tools/setup-tools   │
+│        │            │     │        │            │
+│        ▼            │     │        ▼            │
+│  .versions.yaml     │◄───►│  .versions.yaml     │
+└─────────────────────┘     └─────────────────────┘
+         │                           │
+         └───────────────────────────┘
+                Same versions, same tools
+```
+
+This eliminates "works on my machine" issues by ensuring:
+- Same tool versions (from `.versions.yaml`)
+- Same installation logic (`tools/setup-tools`)
+- Same verification (`make tools-check`)
+
 ## Future Enhancements
 
 ### Potential Improvements
@@ -269,8 +335,7 @@ steps:
 2. **Reusable Workflow**: For full "CI → release → attest → deploy" as a callable workflow
 3. **Multi-Registry Support**: Extend ghcr-login to support DockerHub, ECR, GAR, etc.
 4. **Parallel Attestations**: Run attestations concurrently for faster builds
-5. **Cache Management**: Centralized Go module/build cache management action
-6. **Notification Action**: Slack/Discord/PagerDuty notifications for workflow events
+5. **Notification Action**: Slack/Discord/PagerDuty notifications for workflow events
 
 ### Cross-Repo Reusability
 To use these actions in other repositories:

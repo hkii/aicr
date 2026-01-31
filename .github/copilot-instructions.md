@@ -5,8 +5,9 @@
 **Code Quality (Non-Negotiable):**
 - Tests must pass with race detector (`make test`)
 - Never disable tests to make CI green (including "temporary" skips)
-- Use structured errors from `pkg/errors` with error codes
+- Use structured errors from `pkg/errors` with error codes (never `fmt.Errorf`)
 - Context with timeouts for all I/O operations (prevent resource leaks)
+- Check `ctx.Done()` in loops and long-running operations
 - Stop after 3 failed attempts at same fix → reassess approach
 
 **Development Process:**
@@ -19,7 +20,7 @@
 **Go Code Requirements:**
 - Handle context cancellation explicitly
 - Define timeouts at API boundaries (collectors: 10s, handlers: 30s)
-- Wrap errors with actionable context: `fmt.Errorf("operation: %w", err)`
+- Wrap errors with `pkg/errors`: `errors.Wrap(errors.ErrCodeInternal, "operation failed", err)`
 - Use table-driven tests for multiple scenarios
 - Run with `-race` flag enabled
 
@@ -405,18 +406,20 @@ Act as a Principal Distributed Systems Architect with deep expertise in Go and c
 
 ### Design Principles
 
-**Resilience by Design:**
-- Partial failure is the steady state
-- Design for: partitions, timeouts, bounded retries, circuit breakers, backpressure
-- Any design assuming "reliable networks" must be explicitly justified
+**Operational Principles:**
 
-**Boring First:**
-- Default to proven, simple technologies
-- Introduce complexity only to address concrete limitations, and explain the trade-off
+- **Resilience by Design:** Partial failure is the steady state. Design for partitions, timeouts, bounded retries, circuit breakers, backpressure.
+- **Boring First:** Default to proven, simple technologies. Introduce complexity only to address concrete limitations.
+- **Observability Is Mandatory:** Structured logging, metrics, tracing are part of the API contract.
 
-**Observability Is Mandatory:**
-- A system is incomplete without: structured logging, metrics, tracing
-- Observability is part of the API and runtime contract
+**Foundational Principles:**
+
+- **Local Development Equals CI:** Same tools, same versions locally and in CI. `.versions.yaml` is single source of truth.
+- **Correctness Must Be Reproducible:** Same inputs → same outputs, always. No hidden state or non-deterministic behavior.
+- **Metadata Is Separate from Consumption:** Recipes define *what* is correct; bundlers/deployers determine *how* to deliver it.
+- **Recipe Specialization Requires Explicit Intent:** Generic intent never silently resolves to specialized configurations.
+- **Trust Requires Verifiable Provenance:** Every artifact carries verifiable proof of origin (SLSA, SBOM, Sigstore).
+- **Adoption Comes from Idiomatic Experience:** Output standard formats, integrate into existing workflows.
 
 ### Response Contract
 
@@ -488,9 +491,27 @@ When writing documentation, act as a senior open-source documentation editor wit
 
 ## Quick Reference
 
+### Development Setup
+
+```bash
+# First-time setup
+git clone https://github.com/NVIDIA/eidos.git && cd eidos
+make tools-setup    # Install all required tools (interactive)
+make tools-check    # Verify versions match .versions.yaml
+
+# Auto-mode for CI/scripts
+AUTO_MODE=true make tools-setup
+```
+
+Tool versions are centralized in `.versions.yaml` (single source of truth). Both local development and CI use this file to ensure consistency.
+
 ### Commands
 
 ```bash
+# Tools Management
+make tools-setup  # Install all required development tools
+make tools-check  # Check installed tools and compare versions
+
 # Development
 make tidy         # Format code + update deps
 make build        # Build binaries
@@ -535,19 +556,22 @@ eidos bundle -r recipe.yaml -b gpu-operator,network-operator \
 
 ### Key Links
 
-- **[Contributing Guide](../CONTRIBUTING.md)** – Development setup, PR process
+- **[Contributing Guide](../CONTRIBUTING.md)** – Design principles, development setup, PR process
+- **[Release Process](../RELEASING.md)** – Maintainer guide for releases, verification, hotfixes
 - **[Architecture Overview](../docs/architecture/README.md)** – System design
 - **[Bundler Development](../docs/architecture/component.md)** – Create new bundlers
 - **[API Reference](../docs/integration/api-reference.md)** – REST API endpoints
 - **[GitHub Actions README](actions/README.md)** – CI/CD architecture
 - **[API Specification](../api/eidos/v1/server.yaml)** – OpenAPI spec
+- **[.versions.yaml](../.versions.yaml)** – Tool versions (single source of truth)
 
 ### Version Information
 
 Check current versions dynamically:
 ```bash
-make info         # Show all tool versions
-cat go.mod        # Go module versions
+make tools-check  # Compare installed vs expected versions (from .versions.yaml)
+make info         # Show project build info
+cat .versions.yaml # All tool versions (single source of truth)
 ```
 
 ---

@@ -25,6 +25,7 @@ build_tools:
 # Linting
 linting:
   golangci_lint: 'v2.6'
+  yamllint: '1.35.0'
   addlicense: 'v1.1.1'
 
 # Security Tools
@@ -33,6 +34,7 @@ security_tools:
 
 # E2E Testing Tools
 testing_tools:
+  kubectl: 'v1.32'
   kind: '0.27.0'
   ctlptl: '0.8.43'
   tilt: '0.35.0'

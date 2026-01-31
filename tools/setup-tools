@@ -1,0 +1,536 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Eidos Development Environment Setup
+#
+# This script installs all required dependencies for development
+# on Linux (x86_64/arm64) and macOS (amd64/arm64).
+#
+# Usage:
+#   ./tools/setup-tools                    # Interactive mode
+#   ./tools/setup-tools --auto             # Non-interactive mode
+#   ./tools/setup-tools --skip-go          # Skip Go installation check
+#   ./tools/setup-tools --skip-docker      # Skip Docker check
+#   ./tools/setup-tools --skip-tools       # Skip development tools installation
+#   ./tools/setup-tools --help             # Show help
+
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=tools/common
+. "${DIR}/common"
+VERSIONS_FILE="${REPO_ROOT}/.versions.yaml"
+
+# Configuration
+AUTO_MODE=${AUTO_MODE:-false}
+SKIP_GO=false
+SKIP_DOCKER=false
+SKIP_TOOLS=false
+
+# Detect OS and architecture
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+
+# Map architecture names for different tools
+case "${ARCH}" in
+    x86_64)
+        GO_ARCH="amd64"
+        ;;
+    aarch64|arm64)
+        GO_ARCH="arm64"
+        ARCH="arm64"  # Normalize to arm64
+        ;;
+    *) echo -e "${RED}❌ Unsupported architecture: ${ARCH}${NC}" && exit 1 ;;
+esac
+
+# Verify URL accessibility before downloading
+verify_download_url() {
+    local url="$1"
+    local description="$2"
+
+    log_debug "Attempting to verify: $description"
+    log_debug "URL: $url"
+
+    local http_code
+    http_code=$(curl -f -s -I -L -w "%{http_code}" -o /dev/null "$url" 2>/dev/null)
+    local curl_exit_code=$?
+
+    if [[ $curl_exit_code -ne 0 || "$http_code" != "200" ]]; then
+        log_error "Failed to access URL for $description"
+        log_error "URL: $url"
+        log_error "HTTP status code: ${http_code:-unknown}"
+
+        if [[ "$http_code" == "404" ]]; then
+            log_error "File not found (404). The version or architecture might not be available."
+        elif [[ "$http_code" == "403" ]]; then
+            log_error "Access forbidden (403). This might be a rate limit issue."
+        elif [[ $curl_exit_code -eq 6 ]]; then
+            log_error "Could not resolve host. Check your internet connection."
+        fi
+
+        return 1
+    fi
+
+    log_debug "URL verified successfully for $description (HTTP $http_code)"
+    return 0
+}
+
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+prompt_continue() {
+    if [[ "${AUTO_MODE}" == "true" ]]; then
+        return 0
+    fi
+
+    read -p "Continue? [Y/n] " -r
+    REPLY=${REPLY:-Y}
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_warning "Skipped"
+        return 1
+    fi
+    return 0
+}
+
+show_help() {
+    cat << EOF
+Eidos Development Environment Setup
+
+Usage: $0 [OPTIONS]
+
+OPTIONS:
+    --auto              Non-interactive mode (auto-yes to all prompts)
+    --skip-go           Skip Go installation check
+    --skip-docker       Skip Docker installation check
+    --skip-tools        Skip development tools installation
+    --help              Show this help message
+
+ENVIRONMENT VARIABLES:
+    AUTO_MODE=true      Same as --auto flag (non-interactive mode)
+    DEBUG=true          Enable debug output (shows URLs, architecture mappings)
+
+EXAMPLES:
+    # Interactive mode
+    $0
+
+    # Automated CI setup
+    $0 --auto
+
+    # Install only tools (Go already installed)
+    $0 --skip-go --skip-docker
+
+    # Enable debug output to troubleshoot download issues
+    DEBUG=true $0
+
+EOF
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --auto)
+            AUTO_MODE=true
+            shift
+            ;;
+        --skip-go)
+            SKIP_GO=true
+            shift
+            ;;
+        --skip-docker)
+            SKIP_DOCKER=true
+            shift
+            ;;
+        --skip-tools)
+            SKIP_TOOLS=true
+            shift
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# Banner
+echo ""
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║   Eidos Development Environment Setup                  ║"
+echo "╚════════════════════════════════════════════════════════╝"
+echo ""
+log_info "Platform: ${OS}-${GO_ARCH}"
+log_debug "Architecture: ${ARCH} -> GO_ARCH=${GO_ARCH}"
+echo ""
+
+# Check if .versions.yaml exists
+if [[ ! -f "${VERSIONS_FILE}" ]]; then
+    log_error "Version file not found: ${VERSIONS_FILE}"
+    log_error "Please run this script from the repository root or ensure .versions.yaml exists"
+    exit 1
+fi
+
+# Install yq if not present (needed to parse .versions.yaml)
+if ! command_exists yq; then
+    log_info "Installing yq (YAML processor)..."
+
+    if [[ "${OS}" == "darwin" ]]; then
+        if command_exists brew; then
+            brew install yq
+        else
+            log_error "Homebrew not found. Please install Homebrew first: https://brew.sh"
+            exit 1
+        fi
+    elif [[ "${OS}" == "linux" ]]; then
+        YQ_URL="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${GO_ARCH}"
+
+        if verify_download_url "$YQ_URL" "yq for Linux ${GO_ARCH}"; then
+            log_debug "Downloading yq from: $YQ_URL"
+            sudo wget -qO /usr/local/bin/yq "$YQ_URL"
+            sudo chmod +x /usr/local/bin/yq
+        else
+            log_error "Failed to install yq. Please install manually."
+            exit 1
+        fi
+    fi
+
+    log_success "yq installed"
+else
+    log_success "yq already installed: $(yq --version)"
+fi
+
+# Load versions from .versions.yaml
+log_info "Loading versions from .versions.yaml..."
+cd "${REPO_ROOT}"
+
+GO_VERSION=$(yq '.languages.go' .versions.yaml)
+GOLANGCI_LINT_VERSION=$(yq '.linting.golangci_lint' .versions.yaml)
+ADDLICENSE_VERSION=$(yq '.linting.addlicense' .versions.yaml)
+GRYPE_VERSION=$(yq '.security_tools.grype' .versions.yaml)
+KIND_VERSION=$(yq '.testing_tools.kind' .versions.yaml)
+CTLPTL_VERSION=$(yq '.testing_tools.ctlptl' .versions.yaml)
+HELM_VERSION=$(yq '.testing_tools.helm' .versions.yaml)
+KO_VERSION=$(yq '.build_tools.ko' .versions.yaml)
+
+echo ""
+log_info "Target Versions:"
+echo "  Go:              ${GO_VERSION}"
+echo "  golangci-lint:   ${GOLANGCI_LINT_VERSION}"
+echo "  grype:           ${GRYPE_VERSION}"
+echo "  kind:            ${KIND_VERSION}"
+echo "  helm:            ${HELM_VERSION}"
+echo ""
+
+# ============================================================================
+# Go Installation Check
+# ============================================================================
+if [[ "${SKIP_GO}" == "false" ]]; then
+    echo "════════════════════════════════════════════════════════"
+    log_info "Go Installation"
+    echo "════════════════════════════════════════════════════════"
+
+    if command_exists go; then
+        CURRENT_GO=$(go version | grep -o 'go[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?' | sed 's/go//' || echo "unknown")
+        log_info "Current Go version: ${CURRENT_GO}"
+
+        if [[ "${CURRENT_GO}" == "${GO_VERSION}"* ]]; then
+            log_success "Go ${GO_VERSION} already installed"
+        else
+            log_warning "Go version mismatch (current: ${CURRENT_GO}, target: ${GO_VERSION})"
+            log_info "Please install Go ${GO_VERSION} from https://go.dev/dl/"
+        fi
+    else
+        log_warning "Go not found"
+        log_info "Please install Go ${GO_VERSION} from https://go.dev/dl/"
+    fi
+    echo ""
+fi
+
+# ============================================================================
+# Docker Check
+# ============================================================================
+if [[ "${SKIP_DOCKER}" == "false" ]]; then
+    echo "════════════════════════════════════════════════════════"
+    log_info "Docker Check"
+    echo "════════════════════════════════════════════════════════"
+
+    if command_exists docker; then
+        if docker info >/dev/null 2>&1; then
+            DOCKER_VERSION=$(docker version --format '{{.Server.Version}}')
+            log_success "Docker is installed and running: ${DOCKER_VERSION}"
+        else
+            log_warning "Docker is installed but not running"
+            log_info "Please start Docker Desktop or the Docker daemon"
+        fi
+    else
+        log_warning "Docker not found"
+        log_info "Please install Docker: https://docs.docker.com/get-docker/"
+    fi
+    echo ""
+fi
+
+# ============================================================================
+# Development Tools Installation
+# ============================================================================
+if [[ "${SKIP_TOOLS}" == "false" ]]; then
+    echo "════════════════════════════════════════════════════════"
+    log_info "Development Tools Installation"
+    echo "════════════════════════════════════════════════════════"
+
+    # Helm
+    if command_exists helm; then
+        log_success "Helm already installed: $(helm version --short)"
+    else
+        log_info "Installing Helm..."
+        if prompt_continue; then
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            log_success "Helm installed"
+        fi
+    fi
+
+    # kubectl
+    if command_exists kubectl; then
+        log_success "kubectl already installed: $(kubectl version --client --short 2>/dev/null || kubectl version --client)"
+    else
+        log_info "Installing kubectl..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install kubectl
+            elif [[ "${OS}" == "linux" ]]; then
+                log_debug "Fetching latest kubectl version..."
+                KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+                KUBECTL_URL="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl"
+
+                if verify_download_url "$KUBECTL_URL" "kubectl ${KUBECTL_VERSION} for Linux ${GO_ARCH}"; then
+                    sudo curl -L "$KUBECTL_URL" -o /usr/local/bin/kubectl
+                    sudo chmod +x /usr/local/bin/kubectl
+                else
+                    log_error "Failed to install kubectl. Please install manually."
+                    exit 1
+                fi
+            fi
+            log_success "kubectl installed"
+        fi
+    fi
+
+    # yamllint (for YAML linting)
+    if command_exists yamllint; then
+        log_success "yamllint already installed: $(yamllint --version)"
+    else
+        log_info "Installing yamllint..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install yamllint
+            elif [[ "${OS}" == "linux" ]]; then
+                pip3 install --user yamllint
+            fi
+            log_success "yamllint installed"
+        fi
+    fi
+
+    # grype (vulnerability scanner)
+    if command_exists grype; then
+        log_success "grype already installed: $(grype version 2>/dev/null | head -1)"
+    else
+        log_info "Installing grype ${GRYPE_VERSION}..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install grype
+            elif [[ "${OS}" == "linux" ]]; then
+                curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin "${GRYPE_VERSION}"
+            fi
+            log_success "grype installed"
+        fi
+    fi
+
+    # Tilt
+    if command_exists tilt; then
+        log_success "Tilt already installed: $(tilt version)"
+    else
+        log_info "Installing Tilt..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install tilt
+            elif [[ "${OS}" == "linux" ]]; then
+                curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash
+            fi
+            log_success "Tilt installed"
+        fi
+    fi
+
+    # Kind
+    if command_exists kind; then
+        log_success "Kind already installed: $(kind version)"
+    else
+        log_info "Installing Kind ${KIND_VERSION}..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install kind
+            elif [[ "${OS}" == "linux" ]]; then
+                KIND_URL="https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-linux-${GO_ARCH}"
+                if verify_download_url "$KIND_URL" "kind ${KIND_VERSION} for Linux ${GO_ARCH}"; then
+                    sudo curl -Lo /usr/local/bin/kind "$KIND_URL"
+                    sudo chmod +x /usr/local/bin/kind
+                else
+                    log_error "Failed to install kind. Please install manually."
+                fi
+            fi
+            log_success "Kind installed"
+        fi
+    fi
+
+    # ctlptl
+    if command_exists ctlptl; then
+        log_success "ctlptl already installed: $(ctlptl version)"
+    else
+        log_info "Installing ctlptl ${CTLPTL_VERSION}..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install tilt-dev/tap/ctlptl
+            elif [[ "${OS}" == "linux" ]]; then
+                if command_exists go; then
+                    go install github.com/tilt-dev/ctlptl/cmd/ctlptl@v"${CTLPTL_VERSION}"
+                    sudo cp "$(go env GOPATH)/bin/ctlptl" /usr/local/bin/
+                else
+                    log_warning "Go not installed, skipping ctlptl"
+                fi
+            fi
+            log_success "ctlptl installed"
+        fi
+    fi
+
+    # ko (container image builder)
+    if command_exists ko; then
+        log_success "ko already installed: $(ko version)"
+    else
+        log_info "Installing ko ${KO_VERSION}..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install ko
+            elif [[ "${OS}" == "linux" ]]; then
+                if command_exists go; then
+                    go install github.com/ko-build/ko@"${KO_VERSION}"
+                    sudo cp "$(go env GOPATH)/bin/ko" /usr/local/bin/
+                else
+                    log_warning "Go not installed, skipping ko"
+                fi
+            fi
+            log_success "ko installed"
+        fi
+    fi
+
+    # goreleaser
+    if command_exists goreleaser; then
+        log_success "goreleaser already installed: $(goreleaser --version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p')"
+    else
+        log_info "Installing goreleaser..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install goreleaser
+            elif [[ "${OS}" == "linux" ]]; then
+                curl -sfL https://goreleaser.com/static/run | bash -s -- --version
+            fi
+            log_success "goreleaser installed"
+        fi
+    fi
+
+    echo ""
+fi
+
+# ============================================================================
+# Go Development Tools
+# ============================================================================
+if [[ "${SKIP_TOOLS}" == "false" ]] && command_exists go; then
+    echo "════════════════════════════════════════════════════════"
+    log_info "Go Development Tools"
+    echo "════════════════════════════════════════════════════════"
+
+    # golangci-lint
+    if command_exists golangci-lint; then
+        CURRENT_LINT=$(golangci-lint version 2>/dev/null | awk '{print $4}' || echo "unknown")
+        log_success "golangci-lint already installed: ${CURRENT_LINT}"
+    else
+        log_info "Installing golangci-lint ${GOLANGCI_LINT_VERSION}..."
+        if prompt_continue; then
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$(go env GOPATH)/bin" "${GOLANGCI_LINT_VERSION}"
+            log_success "golangci-lint installed"
+        fi
+    fi
+
+    # addlicense
+    if command_exists addlicense; then
+        log_success "addlicense already installed"
+    else
+        log_info "Installing addlicense ${ADDLICENSE_VERSION}..."
+        if prompt_continue; then
+            go install github.com/google/addlicense@"${ADDLICENSE_VERSION}"
+            log_success "addlicense installed"
+        fi
+    fi
+
+    echo ""
+fi
+
+# ============================================================================
+# Summary
+# ============================================================================
+echo "════════════════════════════════════════════════════════"
+log_success "Setup Complete!"
+echo "════════════════════════════════════════════════════════"
+echo ""
+log_info "Installed Tools Summary:"
+echo ""
+
+# Check all tools - each entry is "name:command" where command extracts a clean version string
+TOOLS=(
+    "yq:yq --version 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+'"
+    "go:go version 2>/dev/null | grep -oE 'go[0-9]+\\.[0-9]+\\.[0-9]+' | head -1"
+    "docker:docker version --format '{{.Server.Version}}' 2>/dev/null"
+    "helm:helm version --short 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+'"
+    "kubectl:kubectl version --client -o json 2>/dev/null | grep gitVersion | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+[^\"]*'"
+    "yamllint:yamllint --version 2>/dev/null | awk '{print \$2}'"
+    "grype:grype version 2>/dev/null | grep -E '^Version:' | awk '{print \$2}' | grep -v '^\\[' || echo installed"
+    "tilt:tilt version 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+'"
+    "kind:kind version 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+'"
+    "ctlptl:ctlptl version 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+'"
+    "ko:ko version 2>/dev/null | head -1"
+    "goreleaser:goreleaser --version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p'"
+    "golangci-lint:golangci-lint version --short 2>/dev/null"
+    "addlicense:echo installed"
+)
+
+for tool_spec in "${TOOLS[@]}"; do
+    tool_name="${tool_spec%%:*}"
+    tool_cmd="${tool_spec#*:}"
+
+    printf "  %-20s " "${tool_name}:"
+    if command_exists "${tool_name}"; then
+        version=$(eval "${tool_cmd}" 2>/dev/null || echo "installed")
+        echo -e "${GREEN}✓${NC} ${version}"
+    else
+        echo -e "${YELLOW}✗ not installed${NC}"
+    fi
+done
+
+echo ""
+log_info "Next Steps:"
+echo "  1. Verify all tools: make tools-check"
+echo "  2. Run tests: make qualify"
+echo "  3. Start development: make dev-env"
+echo ""

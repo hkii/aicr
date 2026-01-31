@@ -2,17 +2,36 @@
 
 Thank you for your interest in contributing to NVIDIA Eidos! We welcome contributions from developers of all backgrounds, experience levels, and disciplines.
 
+## Quick Start (TL;DR)
+
+```bash
+# 1. Clone and setup
+git clone https://github.com/NVIDIA/eidos.git && cd eidos
+make tools-setup    # Install all required tools
+make tools-check    # Verify versions match .versions.yaml
+
+# 2. Develop
+make build          # Build binaries
+make test           # Run tests with race detector
+make lint           # Run linters
+
+# 3. Before submitting PR
+make qualify        # Full check: test + lint + scan (REQUIRED)
+git commit -s -m "Your message"  # -s for DCO sign-off
+```
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [How Can I Contribute?](#how-can-i-contribute)
+- [Design Principles](#design-principles)
 - [Development Setup](#development-setup)
 - [Project Architecture](#project-architecture)
 - [Development Workflow](#development-workflow)
-- [Building and Testing](#building-and-testing)
-- [Code Quality Standards](#code-quality-standards)
 - [Pull Request Process](#pull-request-process)
 - [Developer Certificate of Origin](#developer-certificate-of-origin)
+- [Tips for Contributors](#tips-for-contributors)
+- [Additional Resources](#additional-resources)
 
 ## Code of Conduct
 
@@ -50,6 +69,58 @@ This project follows NVIDIA's commitment to fostering an open and welcoming envi
 - Follow the development workflow outlined below
 - Ensure all tests pass and code meets quality standards
 
+## Design Principles
+
+These principles guide all design decisions in Eidos. When faced with trade-offs, these principles take precedence.
+
+### Local Development Equals CI
+
+The same tools, same versions, and same validation run locally and in CI.
+
+**What:** Tool versions are centralized in `.versions.yaml`. Both `make tools-setup` (local) and GitHub Actions use this single source of truth. `make qualify` runs the exact same checks as CI.
+
+**Why:** "Works on my machine" is not acceptable. If a contributor can run `make qualify` locally and it passes, CI will pass. This eliminates surprise failures and reduces feedback loops.
+
+### Correctness Must Be Reproducible
+
+Given the same inputs, the same system version must always produce the same result.
+
+**What:** No hidden state, no implicit defaults, no non-deterministic behavior. A recipe generated from a snapshot today must be identical to one generated from the same snapshot tomorrow.
+
+**Why:** Reproducibility is a prerequisite for debugging, validation, and trust. If users can't reproduce a result, they can't trust it.
+
+### Metadata Is Separate from Consumption
+
+Validated configuration exists independent of how it is rendered, packaged, or deployed.
+
+**What:** Recipes define *what* is correct. Bundlers and deployers determine *how* to deliver it (Helm, ArgoCD, raw manifests). The recipe doesn't change based on the deployment mechanism.
+
+**Why:** This prevents tight coupling of correctness to a specific tool, workflow, or delivery mechanism. Users can adopt new deployment tools without re-validating their configurations.
+
+### Recipe Specialization Requires Explicit Intent
+
+More specific recipes are never matched unless explicitly requested. Generic intent cannot silently resolve to specialized configurations.
+
+**What:** If a user requests a "training" recipe, they get the training configuration. The system never silently upgrades to a more specific variant (e.g., "training-distributed-horovod") without explicit opt-in.
+
+**Why:** This prevents accidental misconfiguration and preserves user control. Surprises in infrastructure configuration are dangerous.
+
+### Trust Requires Verifiable Provenance
+
+Trust is established through evidence, not assertions. Every released artifact carries verifiable proof of origin and build process.
+
+**What:** All releases include SLSA Build Level 3 provenance, SBOM attestations, and Sigstore signatures. Users can verify exactly which commit, workflow, and build produced any artifact.
+
+**Why:** This underpins supply-chain security, compliance, and confidence. "Trust us" is not a security model.
+
+### Adoption Comes from Idiomatic Experience
+
+The system integrates into how users already work. We provide validated configuration, not a new operational model.
+
+**What:** Eidos outputs standard formats (Helm values, Kubernetes manifests) that work with existing tools (kubectl, ArgoCD, Flux). Users don't need to learn "the Eidos way" of deploying.
+
+**Why:** If adoption requires retraining users on a new workflow, our design has failed. Value comes from correctness, not from lock-in.
+
 ## Development Setup
 
 ### Clone the Repository
@@ -59,104 +130,87 @@ git clone https://github.com/NVIDIA/eidos.git
 cd eidos
 ```
 
-### Option A: Using Flox (Recommended)
+### Prerequisites
 
-The easiest way to set up a development environment is with [Flox](https://flox.dev/), which provides all required tools in a reproducible environment.
+Before running the setup script, ensure you have:
+
+- **Go**: Version 1.25 or higher ([download](https://golang.org/dl/))
+- **make**: For build automation (pre-installed on macOS/Linux)
+- **git**: For version control
+
+### Automated Setup (Recommended)
+
+The project includes a setup script that installs all required development tools with versions managed centrally in `.versions.yaml`. This ensures consistency between local development and CI environments.
 
 ```bash
-# Install Flox if you haven't already
-# https://flox.dev/docs/install-flox/
+# Install all required tools (interactive mode)
+make tools-setup
 
-# Activate the development environment
+# Verify all tools are installed with correct versions
+make tools-check
+```
+
+Example `make tools-check` output:
+
+```
+=== Tool Version Check ===
+
+Tool                 Expected        Installed       Status
+----                 --------        ---------       ------
+go                   1.25            1.25            ✓
+golangci-lint        v2.6            2.6.0           ✓
+grype                v0.107.0        0.107.0         ✓
+ko                   v0.18.0         0.18.0          ✓
+goreleaser           v2              2.13.3          ✓
+helm                 v3.17.0         v3.17.0         ✓
+kind                 0.27.0          0.27.0          ✓
+yamllint             1.35.0          1.35.0          ✓
+kubectl              v1.32           v1.32           ✓
+docker               -               24.0.7          ✓
+
+Legend: ✓ = installed, ⚠ = version mismatch, ✗ = missing
+```
+
+### Version Management
+
+All tool versions are centrally managed in `.versions.yaml`. This file is the single source of truth used by:
+- `make tools-setup` - Local development setup
+- `make tools-check` - Version verification
+- GitHub Actions CI - Ensures CI uses identical versions
+
+When updating tool versions, edit `.versions.yaml` and the changes propagate everywhere automatically.
+
+### Alternative: Using Flox
+
+If you prefer a fully reproducible environment without installing tools globally, you can use [Flox](https://flox.dev/):
+
+```bash
+# Install Flox (https://flox.dev/docs/install-flox/)
+# Then activate the development environment
 flox activate
 
 # Optional: Enable auto-activation with direnv
 direnv allow
 ```
 
-### Option B: Manual Installation
+Flox provides all tools in an isolated environment that won't affect your system.
 
-If you prefer to install tools manually:
+### Finalize Setup
 
-- **Go**: Version 1.25 or higher ([download](https://golang.org/dl/))
-- **golangci-lint**: For Go linting ([installation](https://golangci-lint.run/usage/install/))
-- **yamllint**: For YAML validation (`pip install yamllint`)
-- **grype**: For vulnerability scanning ([installation](https://github.com/anchore/grype#installation))
-- **goreleaser**: For building releases ([installation](https://goreleaser.com/install/))
-- **ko**: For container image builds ([installation](https://ko.build/install/))
-- **yq**: For YAML parsing in scripts ([installation](https://github.com/mikefarah/yq#install))
-- **addlicense**: For license header management (`go install github.com/google/addlicense@latest`)
-- **make**: For build automation (usually pre-installed on Unix systems)
-- **git**: For version control
-
-### Install Dependencies
+After installing tools (via either method):
 
 ```bash
-# Download and update Go modules
+# Download Go module dependencies
 make tidy
 
-# Verify tool versions
-make info
-```
+# Verify everything is ready
+make tools-check
 
-Example output:
-
-```
-version:        v0.7.6
-commit:         abc123...
-branch:         main
-repo:           eidos
-go:             1.23.4
-linter:         1.62.2
-ko:             0.17.2
-goreleaser:     2.5.1
+# Run full qualification to ensure setup is correct
+make qualify
 ```
 
 ## Project Architecture
-
-### Directory Structure
-
-```
-eidos/
-├── cmd/                      # Entry points
-│   ├── eidos/               # CLI binary
-│   └── eidosd/    # API server binary
-├── pkg/                      # Core packages
-│   ├── api/                 # HTTP API layer and handlers
-│   ├── bundler/             # Bundle generation framework
-│   │   ├── examples/       # Example bundler implementations
-│   │   └── gpuoperator/    # GPU Operator bundler with templates
-│   ├── cli/                 # CLI commands (urfave/cli v3)
-│   ├── collector/           # System configuration collectors
-│   │   ├── gpu/            # GPU hardware collectors
-│   │   ├── k8s/            # Kubernetes API collectors
-│   │   ├── os/             # Operating system collectors
-│   │   └── systemd/        # SystemD service collectors
-│   ├── logging/             # Structured logging (slog)
-│   ├── measurement/         # Measurement types and utilities
-│   ├── recipe/              # Recipe generation logic
-│   │   ├── header/         # Common header types
-│   │   └── version/        # Semantic version parsing
-│   ├── serializer/          # Output formatting (JSON/YAML/table)
-│   ├── server/              # HTTP server implementation
-│   └── snapshotter/         # Snapshot orchestration
-├── api/                      # API specifications
-│   └── eidos/               # OpenAPI/Swagger definitions
-├── deployments/             # Kubernetes manifests
-│   └── eidos-agent/         # Agent Job and RBAC
-├── docs/                    # Documentation
-│   ├── install-guides/      # Platform-specific guides
-│   ├── playbooks/           # Ansible automation
-│   ├── optimizations/       # Performance tuning
-│   └── troubleshooting/     # Common issues
-├── examples/                # Example configurations and comparisons
-├── infra/                   # Infrastructure as code (Terraform)
-├── tools/                   # Build and release scripts
-├── .goreleaser.yaml         # Release configuration
-├── .golangci.yaml           # Linter configuration
-└── Makefile                 # Build automation
-
-```
 
 ### Key Components
 
@@ -211,25 +265,6 @@ eidos/
 - **Pattern**: Registry-based with pluggable bundler implementations
 - **API**: Object-oriented with functional options (DefaultBundler.New())
 - **Purpose**: Generate deployment bundles from recipes (Helm values, K8s manifests, scripts)
-- **Available Bundlers**:
-  - **GPU Operator**: Generates complete GPU Operator deployment bundle
-    - Helm values.yaml with version management
-    - Kubernetes ClusterPolicy manifest
-    - SHA256 checksums for verification
-  - **Network Operator**: Generates Network Operator deployment bundle
-    - Helm values.yaml for RDMA and SR-IOV configuration
-    - NICClusterPolicy manifest
-  - **Cert-Manager**: Generates cert-manager deployment bundle
-    - Helm values.yaml with resource configuration
-  - **NVSentinel**: Generates NVSentinel deployment bundle
-    - Helm values.yaml
-  - **Skyhook**: Generates Skyhook node optimization bundle
-    - Helm values.yaml
-    - Skyhook CR manifest
-  - **DRA Driver**: Generates NVIDIA DRA (Dynamic Resource Allocation) Driver deployment bundle
-    - Helm values.yaml with DRA configuration
-    - Installation/uninstallation scripts
-    - README with deployment instructions
 - **Features**:
   - Template-based generation with go:embed
   - Functional options pattern for configuration (WithBundlerTypes, WithFailFast, WithConfig, WithRegistry)
@@ -245,6 +280,10 @@ eidos/
 ### Common Make Targets
 
 ```bash
+# Tools Management
+make tools-check  # Check installed tools and compare versions
+make tools-setup  # Install all required development tools
+
 # Development
 make tidy         # Format code and update dependencies
 make build        # Build binaries for current platform
@@ -252,7 +291,6 @@ make server       # Start API server locally (debug mode)
 
 # Testing
 make test         # Run unit tests with coverage
-make test-race    # Run tests with race detection
 make qualify      # Run tests, lints, and scans (full check)
 
 # Code Quality
@@ -266,15 +304,14 @@ make scan         # Security and vulnerability scanning
 make upgrade      # Upgrade all dependencies
 make info         # Show project and tool versions
 
-# Releases (CI only)
-make release      # Build multi-platform release artifacts
-make snapshot     # Create release snapshot
-make bump-major   # Bump major version
-make bump-minor   # Bump minor version
-make bump-patch   # Bump patch version
+# Local Development Environment
+make dev-env      # Create Kind cluster and start Tilt
+make dev-env-clean # Stop Tilt and delete cluster
+make dev-reset    # Full reset (tear down and recreate)
 
 # Utilities
 make help         # Show all available targets
+make help-full    # Show targets grouped by category
 ```
 
 ## Development Workflow
@@ -285,7 +322,7 @@ Use descriptive branch names:
 
 ```bash
 # For new features
-git checkout -b feature/add-gpu-collector
+git checkout -b feat/add-gpu-collector
 
 # For bug fixes
 git checkout -b fix/snapshot-crash-on-empty-gpu
@@ -302,226 +339,11 @@ Follow these principles:
 - **Test as you go**: Write tests alongside your code
 - **Document your code**: Add comments for exported functions and complex logic
 
-### 3. Add a New Collector (Example)
-
-If adding a new system collector (like the OS release collector added in v0.7.0):
-
-1. Create the collector in `pkg/collector/os/`:
-```go
-// pkg/collector/os/release.go
-package os
-
-import (
-    "bufio"
-    "context"
-    "fmt"
-    "os"
-    "strings"
-)
-
-// collectRelease reads and parses /etc/os-release
-func (c *Collector) collectRelease(ctx context.Context) (*measurement.Subtype, error) {
-    data := make(map[string]measurement.Reading)
-    
-    file, err := os.Open("/etc/os-release")
-    if err != nil {
-        return nil, fmt.Errorf("failed to open /etc/os-release: %w", err)
-    }
-    defer file.Close()
-    
-    scanner := bufio.NewScanner(file)
-    for scanner.Scan() {
-        line := scanner.Text()
-        if strings.TrimSpace(line) == "" || strings.HasPrefix(line, "#") {
-            continue
-        }
-        
-        parts := strings.SplitN(line, "=", 2)
-        if len(parts) != 2 {
-            continue
-        }
-        
-        key := parts[0]
-        value := strings.Trim(parts[1], `"`)
-        data[key] = measurement.Reading{Value: value}
-    }
-    
-    if err := scanner.Err(); err != nil {
-        return nil, fmt.Errorf("error reading /etc/os-release: %w", err)
-    }
-    
-    return &measurement.Subtype{
-        Name: "release",
-        Data: data,
-    }, nil
-}
-```
-
-2. Update the main collector to include the new subtype:
-```go
-// pkg/collector/os/os.go
-func (c *Collector) Collect(ctx context.Context) ([]*measurement.Measurement, error) {
-    // Collect all OS subtypes in parallel
-    grubSubtype, _ := c.collectGrub(ctx)
-    sysctlSubtype, _ := c.collectSysctl(ctx)
-    kmodSubtype, _ := c.collectKmod(ctx)
-    releaseSubtype, _ := c.collectRelease(ctx) // New subtype
-    
-    return []*measurement.Measurement{{
-        Type: measurement.TypeOS,
-        Subtypes: []*measurement.Subtype{
-            grubSubtype,
-            sysctlSubtype,
-            kmodSubtype,
-            releaseSubtype, // Add to list
-        },
-    }}, nil
-}
-```
-
-3. Add tests for the new collector:
-```go
-// pkg/collector/os/release_test.go
-func TestCollectRelease(t *testing.T) {
-    c := NewCollector()
-    ctx := context.Background()
-    
-    subtype, err := c.collectRelease(ctx)
-    if err != nil {
-        t.Fatalf("collectRelease() error = %v", err)
-    }
-    
-    // Verify expected fields exist
-    expectedFields := []string{"ID", "VERSION_ID", "PRETTY_NAME"}
-    for _, field := range expectedFields {
-        if _, exists := subtype.Data[field]; !exists {
-            t.Errorf("expected field %q not found", field)
-        }
-    }
-    
-    // Verify subtype name
-    if subtype.Name != "release" {
-        t.Errorf("expected subtype name 'release', got %q", subtype.Name)
-    }
-}
-```
-
-4. Update integration tests to expect 4 OS subtypes instead of 3:
-```go
-// pkg/collector/os/os_test.go
-func TestOSCollector(t *testing.T) {
-    measurements, err := c.Collect(ctx)
-    if err != nil {
-        t.Fatalf("Collect() error = %v", err)
-    }
-    
-    // Should return 4 subtypes: grub, sysctl, kmod, release
-    if len(measurements[0].Subtypes) != 4 {
-        t.Errorf("expected 4 subtypes, got %d", len(measurements[0].Subtypes))
-    }
-}
-```
-
-### Example: Version Parser with Vendor Extras
-
-When adding version parsing support for vendor-specific formats:
-
-```go
-// pkg/version/version.go
-type Version struct {
-    Major  int
-    Minor  int
-    Patch  int
-    Extras string // New field for vendor suffixes
-}
-
-func ParseVersion(s string) (*Version, error) {
-    // Remove 'v' prefix if present
-    s = strings.TrimPrefix(s, "v")
-    
-    // Find position of extras (after digits, before first dash or plus)
-    extrasPos := -1
-    for i, c := range s {
-        if (c == '-' || c == '+') && i > 0 && isDigit(rune(s[i-1])) {
-            extrasPos = i
-            break
-        }
-    }
-    
-    // Split version from extras
-    versionPart := s
-    extras := ""
-    if extrasPos != -1 {
-        versionPart = s[:extrasPos]
-        extras = s[extrasPos:]
-    }
-    
-    // Parse Major.Minor.Patch
-    parts := strings.Split(versionPart, ".")
-    // ... parse logic ...
-    
-    return &Version{
-        Major:  major,
-        Minor:  minor,
-        Patch:  patch,
-        Extras: extras,
-    }, nil
-}
-
-// String returns the version without extras for clean comparison
-func (v *Version) String() string {
-    return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
-}
-```
-
-Tests for version parsing with extras:
-```go
-func TestParseVersionWithExtras(t *testing.T) {
-    tests := []struct {
-        input        string
-        wantMajor    int
-        wantMinor    int
-        wantPatch    int
-        wantExtras   string
-    }{
-        {"6.8.0-1028-aws", 6, 8, 0, "-1028-aws"},
-        {"v1.33.5-eks-3025e55", 1, 33, 5, "-eks-3025e55"},
-        {"v1.28.0-gke.1337000", 1, 28, 0, "-gke.1337000"},
-        {"1.29.2-hotfix.20240322", 1, 29, 2, "-hotfix.20240322"},
-    }
-    
-    for _, tt := range tests {
-        t.Run(tt.input, func(t *testing.T) {
-            v, err := ParseVersion(tt.input)
-            if err != nil {
-                t.Fatalf("ParseVersion(%q) error = %v", tt.input, err)
-            }
-            if v.Major != tt.wantMajor || v.Minor != tt.wantMinor || 
-               v.Patch != tt.wantPatch || v.Extras != tt.wantExtras {
-                t.Errorf("got %d.%d.%d%s, want %d.%d.%d%s",
-                    v.Major, v.Minor, v.Patch, v.Extras,
-                    tt.wantMajor, tt.wantMinor, tt.wantPatch, tt.wantExtras)
-            }
-        })
-    }
-}
-```
-
-### 4. Run Tests
+### 3. Run Tests
 
 ```bash
 # Run all tests
 make test
-
-# Run tests for a specific package
-go test ./pkg/collector/... -v
-
-# Run tests with race detection
-go test -race ./...
-
-# Check test coverage
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
 ```
 
 ### 5. Lint Your Code
@@ -529,49 +351,20 @@ go tool cover -html=coverage.out
 ```bash
 # Run all linters
 make lint
-
-# Fix auto-fixable issues
-golangci-lint run --fix
-
-# Check specific files
-golangci-lint run pkg/collector/network.go
 ```
-
-Common linting issues and fixes:
-- **Unused variables/imports**: Remove them
-- **Error handling**: Never ignore errors without explicit comment
-- **Naming conventions**: Use camelCase for unexported, PascalCase for exported
-- **Line length**: Keep lines under 120 characters
 
 ### 6. Test Locally
 
+CLI: 
+
 ```bash
-# Build for current platform
-make build
+# Build for current platform and test
+make e2e
+```
 
-# Test CLI commands
-./dist/eidos_*/eidos snapshot
-./dist/eidos_*/eidos recipe --os ubuntu --service eks
+API Server: 
 
-# Test snapshot with ConfigMap output (requires cluster access)
-./dist/eidos_*/eidos snapshot --output cm://gpu-operator/test-snapshot
-
-# Test agent deployment mode
-./dist/eidos_*/eidos snapshot --deploy-agent \
-  --namespace gpu-operator \
-  --node-selector nvidia.com/gpu.present=true
-
-# Test recipe with ConfigMap input
-./dist/eidos_*/eidos recipe \
-  --snapshot cm://gpu-operator/test-snapshot \
-  --intent training
-
-# Test recipe with custom kubeconfig
-./dist/eidos_*/eidos recipe \
-  --snapshot cm://gpu-operator/test-snapshot \
-  --kubeconfig ~/.kube/dev-cluster \
-  --intent training
-
+```bash
 # Start API server
 make server
 
@@ -585,9 +378,6 @@ curl "http://localhost:8080/v1/recipe?os=ubuntu&service=eks"
 ```bash
 # Run vulnerability scan
 make scan
-
-# Manual vulnerability check
-grype dir:. --fail-on high
 ```
 
 ### 8. Full Qualification
@@ -595,746 +385,11 @@ grype dir:. --fail-on high
 Before submitting a PR:
 
 ```bash
-# Run everything
+# Run everything above
 make qualify
-
-# This runs:
-# - make test   (unit tests with coverage)
-# - make lint   (Go and YAML linting)
-# - make scan   (vulnerability scanning)
 ```
 
 All checks must pass before PR submission.
-
-## Building and Testing
-
-### Local Development
-
-```bash
-# Quick build for local testing
-make build
-
-# Build outputs to dist/
-ls -lh dist/
-
-# Example output:
-# dist/
-#   eidos_darwin_arm64/
-#     eidos
-#   eidosd_darwin_arm64/
-#     eidosd
-```
-
-### Running the CLI
-
-```bash
-# Help
-./dist/eidos_*/eidos --help
-
-# STEP 1: Snapshot - Capture system configuration
-eidos snapshot --format yaml
-eidos snapshot --output system.yaml --format json
-eidos snapshot --output cm://gpu-operator/eidos-snapshot --format yaml  # ConfigMap output
-
-# Agent deployment mode (Kubernetes Job on cluster nodes)
-eidos snapshot --deploy-agent
-eidos snapshot --deploy-agent --output cm://gpu-operator/eidos-snapshot
-eidos snapshot --deploy-agent --kubeconfig ~/.kube/prod-cluster
-
-# Agent deployment with node targeting
-# Note: All taints are tolerated by default, only specify --toleration to restrict
-eidos snapshot --deploy-agent \
-  --namespace gpu-operator \
-  --node-selector accelerator=nvidia-gb200 \
-  --toleration nvidia.com/gpu:NoSchedule \
-  --timeout 10m
-
-# STEP 2: Recipe - Generate optimized configuration
-# Query mode: Direct generation from parameters
-eidos recipe --os ubuntu --service eks --gpu gb200
-eidos recipe \
-  --os ubuntu \
-  --osv 24.04 \
-  --kernel 6.8 \
-  --service eks \
-  --k8s 1.33 \
-  --gpu gb200 \
-  --intent training \
-  --context \
-  --format yaml
-
-# Snapshot mode: Generate recipe from captured snapshot
-eidos recipe --snapshot system.yaml --intent training
-eidos recipe -s system.yaml -i inference -o recipe.yaml
-eidos recipe -s cm://gpu-operator/eidos-snapshot -i training -o cm://gpu-operator/eidos-recipe  # ConfigMap I/O
-
-# With custom kubeconfig for ConfigMap access
-eidos recipe \
-  -s cm://gpu-operator/eidos-snapshot \
-  --kubeconfig ~/.kube/prod-cluster \
-  -i training \
-  -o recipe.yaml
-
-# STEP 3: Bundle - Create deployment artifacts
-eidos bundle --recipe recipe.yaml --output ./bundles
-eidos bundle -r recipe.yaml -b gpu-operator -o ./deployment
-eidos bundle -r cm://gpu-operator/eidos-recipe -o ./bundles  # ConfigMap input
-
-# Override bundle values at generation time
-eidos bundle -r recipe.yaml -b gpu-operator \
-  --set gpuoperator:gds.enabled=true \
-  --set gpuoperator:driver.version=570.86.16 \
-  -o ./bundles
-
-# Multiple bundlers with overrides
-eidos bundle -r recipe.yaml \
-  -b gpu-operator \
-  -b network-operator \
-  --set gpuoperator:mig.strategy=mixed \
-  --set networkoperator:rdma.enabled=true \
-  -o ./bundles
-```
-
-### Complete End-to-End Workflow
-
-Here's a complete example showing all four steps:
-
-```bash
-# 1. Capture system configuration
-eidos snapshot --output snapshot.yaml
-
-echo "Snapshot captured:"
-ls -lh snapshot.yaml
-
-# 2. Generate optimized recipe for training workloads
-eidos recipe \
-  --snapshot snapshot.yaml \
-  --intent training \
-  --format yaml \
-  --output recipe.yaml
-
-echo "Recipe generated:"
-cat recipe.yaml | grep "matchedRules" -A 5
-
-# 3. Validate recipe constraints against snapshot
-eidos validate \
-  --recipe recipe.yaml \
-  --snapshot snapshot.yaml
-
-echo "Validation complete"
-
-# 4. Create deployment bundle
-eidos bundle \
-  --recipe recipe.yaml \
-  --bundlers gpu-operator \
-  --output ./bundles
-
-echo "Bundle generated:"
-tree bundles/
-
-# 5. Deploy to cluster
-cd bundles/gpu-operator
-cat README.md  # Review deployment instructions
-sha256sum -c checksums.txt  # Verify file integrity
-chmod +x scripts/install.sh
-./scripts/install.sh  # Deploy GPU Operator
-
-# 5. Monitor deployment
-kubectl get pods -n gpu-operator
-kubectl logs -n gpu-operator -l app=nvidia-operator-validator
-```
-
-**Alternative: ConfigMap-based Workflow (for Kubernetes Jobs)**
-
-When running in Kubernetes, you can use ConfigMap URIs to avoid file dependencies:
-
-```bash
-# 1. Capture snapshot directly to ConfigMap (agent deployment mode)
-eidos snapshot --deploy-agent -o cm://gpu-operator/eidos-snapshot
-
-# Alternative: Manual kubectl deployment
-eidos snapshot -o cm://gpu-operator/eidos-snapshot
-
-# 2. Generate recipe from ConfigMap snapshot to ConfigMap output
-eidos recipe -s cm://gpu-operator/eidos-snapshot --intent training -o cm://gpu-operator/eidos-recipe
-
-# With custom kubeconfig
-eidos recipe \
-  -s cm://gpu-operator/eidos-snapshot \
-  --kubeconfig ~/.kube/config \
-  --intent training \
-  -o cm://gpu-operator/eidos-recipe
-
-# 3. Create bundle from ConfigMap recipe
-eidos bundle -r cm://gpu-operator/eidos-recipe -b gpu-operator -o ./bundles
-
-# 4. Verify ConfigMap data
-kubectl get configmap eidos-snapshot -n gpu-operator -o yaml
-kubectl get configmap eidos-recipe -n gpu-operator -o yaml
-```
-
-**Expected Bundle Structure:**
-```
-bundles/gpu-operator/
-├── values.yaml              # Helm chart configuration
-├── manifests/
-│   └── clusterpolicy.yaml  # ClusterPolicy custom resource (when applicable)
-└── checksums.txt            # SHA256 checksums
-```
-
-Note: Deployment documentation (README) is generated at the deployer level (helm, argocd), not by component bundlers.
-
-### Running the API Server
-
-```bash
-# Development mode with debug logging
-make server
-
-# Custom configuration
-PORT=8080 LOG_LEVEL=debug go run cmd/eidosd/main.go
-
-# Test endpoints
-curl http://localhost:8080/health
-curl http://localhost:8080/ready
-curl http://localhost:8080/metrics
-curl "http://localhost:8080/v1/recipe?os=ubuntu&gpu=gb200&intent=training"
-curl "http://localhost:8080/v1/recipe?os=ubuntu&osv=24.04&service=eks&gpu=gb200&context=true"
-
-# Test with jq
-curl -s "http://localhost:8080/v1/recipe?gpu=gb200" | jq '.matchedRules'
-```
-
-### Testing in Kubernetes
-
-Build and deploy the agent locally:
-
-```bash
-# Build container image with ko
-ko build --local ./cmd/eidosd
-
-# Or build with Docker
-docker build -t eidos:dev -f Dockerfile .
-
-# Deploy agent
-kubectl apply -f deployments/eidos-agent/1-deps.yaml
-kubectl apply -f deployments/eidos-agent/2-job.yaml
-
-# Update job image for testing
-kubectl set image job/eidos -n gpu-operator eidos=<local-image>
-
-# Check status and logs
-kubectl get jobs -n gpu-operator
-kubectl logs -n gpu-operator job/eidos
-
-# Get snapshot from ConfigMap
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
-
-# Verify ConfigMap was created
-kubectl get configmap eidos-snapshot -n gpu-operator -o yaml
-```
-
-### End-to-End Testing
-
-The `tools/e2e` script validates the complete ConfigMap workflow:
-
-```bash
-# Run full E2E test (snapshot → recipe → bundle)
-./tools/e2e -s examples/snapshots/gb200.yaml \
-           -r examples/recipes/gb200-eks-ubuntu-training.yaml \
-           -b examples/bundles/gb200-eks-ubuntu-training
-
-# Just capture snapshot
-./tools/e2e -s snapshot.yaml
-
-# Generate recipe from ConfigMap
-./tools/e2e -r recipe.yaml
-
-# Get help
-./tools/e2e --help
-```
-
-The e2e script:
-1. Deploys agent Job to cluster
-2. Waits for snapshot to be written to ConfigMap
-3. Optionally saves snapshot to file
-4. Optionally generates recipe using `cm://gpu-operator/eidos-snapshot`
-5. Optionally generates bundle from recipe
-6. Validates each step completes successfully
-```
-
-### Adding a New Bundler
-
-The bundler framework uses a **ComponentConfig-based architecture** with shared utilities in `pkg/component/internal`. Bundlers define their configuration declaratively and delegate common logic to `MakeBundle()`.
-
-#### Quick Start: Minimal Bundler Implementation
-
-1. Create bundler package in `pkg/component/<bundler-name>/`:
-```go
-// pkg/component/mybundler/bundler.go
-package mybundler
-
-import (
-    "context"
-    _ "embed"
-
-    "github.com/NVIDIA/eidos/pkg/bundler/config"
-    "github.com/NVIDIA/eidos/pkg/bundler/registry"
-    "github.com/NVIDIA/eidos/pkg/bundler/result"
-    "github.com/NVIDIA/eidos/pkg/bundler/types"
-    "github.com/NVIDIA/eidos/pkg/component/internal"
-    "github.com/NVIDIA/eidos/pkg/recipe"
-)
-
-const (
-    Name = "my-bundler"  // Component name matching recipe componentRefs
-)
-
-// Note: Most bundlers don't need templates or GetTemplate.
-// Only add these if the bundler generates custom manifests.
-// Values are written directly to values.yaml using MarshalYAMLWithHeader().
-
-func init() {
-    // Self-register bundler factory in global registry
-    registry.MustRegister(types.BundleTypeMyBundler, func(cfg *config.Config) registry.Bundler {
-        return NewBundler(cfg)
-    })
-}
-
-// componentConfig defines all component-specific settings declaratively.
-var componentConfig = internal.ComponentConfig{
-    Name:                  Name,
-    DisplayName:           "my-bundler",
-    ValueOverrideKeys:     []string{"mybundler"},  // CLI --set prefix
-    DefaultHelmRepository: "https://charts.example.com",
-    DefaultHelmChart:      "example/my-bundler",
-    TemplateGetter:        GetTemplate,
-}
-
-// Bundler generates deployment bundles from recipes.
-type Bundler struct {
-    *internal.BaseBundler
-}
-
-// NewBundler creates a new bundler instance.
-func NewBundler(cfg *config.Config) *Bundler {
-    return &Bundler{
-        BaseBundler: internal.NewBaseBundler(cfg, types.BundleTypeMyBundler),
-    }
-}
-
-// Make generates the bundle by delegating to MakeBundle.
-func (b *Bundler) Make(ctx context.Context, input recipe.RecipeInput, outputDir string) (*result.Result, error) {
-    return internal.MakeBundle(ctx, b.BaseBundler, input, outputDir, componentConfig)
-}
-```
-
-2. Create bundler package directory:
-```
-pkg/component/mybundler/
-├── bundler.go           # All bundler logic (shown above)
-├── bundler_test.go      # Tests using RunStandardBundlerTests
-└── doc.go               # Package documentation
-```
-
-Note: Most bundlers don't need a templates/ directory since they only generate values.yaml and checksums.txt. Templates are only needed for bundlers that generate custom Kubernetes manifests (e.g., GPU Operator's DCGM exporter ConfigMap). Deployment documentation (README) is generated at the deployer level (helm, argocd), not by component bundlers.
-
-3. Add tests using the shared test harness:
-```go
-// pkg/component/mybundler/bundler_test.go
-package mybundler
-
-import (
-    "testing"
-
-    "github.com/NVIDIA/eidos/pkg/bundler/config"
-    "github.com/NVIDIA/eidos/pkg/component/internal"
-)
-
-func TestBundler_Make(t *testing.T) {
-    // RunStandardBundlerTests provides consistent testing across all bundlers
-    internal.RunStandardBundlerTests(t, Name, func(cfg *config.Config) internal.BundlerInterface {
-        return NewBundler(cfg)
-    })
-}
-```
-
-4. Create package documentation:
-```go
-// pkg/component/mybundler/doc.go
-
-// Package mybundler implements bundle generation for My Bundler.
-//
-// # Bundle Structure
-//
-// Generated bundles include:
-//   - values.yaml: Helm chart configuration
-//   - README.md: Deployment documentation
-//   - checksums.txt: SHA256 checksums for verification
-//
-// # Implementation
-//
-// This bundler uses the generic bundler framework from [internal.ComponentConfig]
-// and [internal.MakeBundle].
-package mybundler
-```
-
-5. Test bundle generation:
-```bash
-# Run tests
-go test ./pkg/component/mybundler/...
-
-# Build CLI and test bundle generation
-make build
-./dist/eidos_*/eidos bundle \
-  --recipe examples/recipes/example.yaml \
-  --bundlers my-bundler \
-  --output ./test-bundles
-
-# Verify bundle structure
-tree test-bundles/my-bundler/
-```
-
-**Expected output:**
-```
-test-bundles/my-bundler/
-├── values.yaml
-└── checksums.txt
-```
-
-#### ComponentConfig Options
-
-The `ComponentConfig` struct supports these fields:
-
-```go
-var componentConfig = internal.ComponentConfig{
-    // Required fields
-    Name:                  "my-bundler",           // Component name (matches recipe)
-    DisplayName:           "My Bundler",           // Human-readable name for headers
-    ValueOverrideKeys:     []string{"mybundler"},  // CLI --set prefix keys
-    DefaultHelmRepository: "https://charts.example.com",
-    DefaultHelmChart:      "example/my-bundler",
-    TemplateGetter:        GetTemplate,            // Template access function
-
-    // Optional: Default chart version (used when recipe doesn't specify)
-    DefaultHelmChartVersion: "v1.0.0",
-
-    // Optional: Node scheduling paths (for --system-node-selector, etc. flags)
-    SystemNodeSelectorPaths:      []string{"operator.nodeSelector"},
-    SystemTolerationPaths:        []string{"operator.tolerations"},
-    AcceleratedNodeSelectorPaths: []string{"daemonsets.nodeSelector"},
-    AcceleratedTolerationPaths:   []string{"daemonsets.tolerations"},
-
-    // Optional: Custom metadata for README templates
-    MetadataExtensions: map[string]interface{}{
-        "InstallCRDs": true,
-        "CustomField": "value",
-    },
-
-    // Optional: Custom manifest generation
-    CustomManifestFunc: func(ctx context.Context, b *internal.BaseBundler,
-        values map[string]interface{}, configMap map[string]string, dir string) ([]string, error) {
-        // Generate additional K8s manifests
-        return []string{"manifests/custom.yaml"}, nil
-    },
-}
-```
-
-#### Adding Custom Metadata
-
-For components that need additional template data, use `MetadataExtensions`:
-
-```go
-var componentConfig = internal.ComponentConfig{
-    // ... other fields ...
-    MetadataExtensions: map[string]interface{}{
-        "InstallCRDs": true,
-        "CustomField": "custom-value",
-    },
-}
-```
-
-Access in templates via:
-```
-{{ .Script.Extensions.InstallCRDs }}
-{{ .Script.Extensions.CustomField }}
-```
-
-#### Adding Custom Manifests
-
-For components that generate additional Kubernetes manifests:
-
-```go
-var componentConfig = internal.ComponentConfig{
-    // ... other fields ...
-    CustomManifestFunc: func(ctx context.Context, b *internal.BaseBundler,
-        values map[string]interface{}, configMap map[string]string, dir string) ([]string, error) {
-
-        manifestPath := filepath.Join(dir, "manifests", "custom.yaml")
-        if err := b.GenerateFileFromTemplate(ctx, GetTemplate, "custom-manifest",
-            manifestPath, values, 0644); err != nil {
-            return nil, err
-        }
-        return []string{manifestPath}, nil
-    },
-}
-```
-
-#### File Structure Summary
-
-Each bundler package contains just 2-3 files:
-
-```
-pkg/component/mybundler/
-├── bundler.go           # ComponentConfig + Bundler
-├── bundler_test.go      # Tests using RunStandardBundlerTests
-└── doc.go               # Package documentation
-```
-
-Bundlers with custom manifest generation add a templates/ directory:
-
-```
-pkg/component/gpuoperator/
-├── bundler.go           # ComponentConfig + Bundler + embedded templates
-├── bundler_test.go      # Tests using RunStandardBundlerTests
-├── doc.go               # Package documentation
-└── templates/
-    ├── dcgm-exporter.yaml.tmpl      # Custom manifest template
-    └── kernel-module-params.yaml.tmpl
-```
-
-#### Key Framework Features
-
-**MakeBundle handles all common logic:**
-- Extracting component values from recipe input
-- Applying CLI --set value overrides
-- Applying node selectors and tolerations to configured Helm paths
-- Creating directory structure
-- Writing values.yaml with proper headers
-- Calling CustomManifestFunc if defined (for custom manifests)
-- Computing SHA256 checksums
-
-**Template helpers:**
-- Most bundlers don't need templates (only values.yaml and checksums.txt are generated)
-- For bundlers with custom manifests, use `internal.NewTemplateGetter(map[string]string{...})`
-- Returns a template getter function compatible with ComponentConfig
-
-**RunStandardBundlerTests:**
-- Provides consistent test coverage for all bundlers
-- Tests both success and error cases
-- Verifies file existence and checksums
-- Reduces test boilerplate significantly
-
-**BundleMetadata in custom manifest templates:**
-- Access via `{{ .Script.Namespace }}`, `{{ .Script.Version }}`, etc.
-- Extensions via `{{ .Script.Extensions.FieldName }}`
-- Values via `{{ .Values }}` or `{{ index .Values "key" }}`
-
-#### Bundler Best Practices
-
-**Implementation:**
-- ✅ Use `Name` constant for component name
-- ✅ Most bundlers don't need templates (only values.yaml and checksums.txt)
-- ✅ Use `go:embed` for template portability when custom manifests are needed
-- ✅ Self-register in `init()` using `registry.MustRegister()`
-
-**Testing:**
-- ✅ Use `internal.RunStandardBundlerTests()` for consistent testing
-- ✅ Add custom tests only for component-specific behavior
-
-**Custom Manifest Templates (when needed):**
-- ✅ Access metadata via `{{ .Script.FieldName }}`
-- ✅ Access extensions via `{{ .Script.Extensions.CustomField }}`
-- ✅ Handle missing values gracefully with `{{- if }}`
-
-**Documentation:**
-- ✅ Add doc.go with package overview
-- ✅ Document bundle structure and any custom manifests generated
-
-
-## Code Quality Standards
-
-### License Headers
-
-All Go source files must include the Apache 2.0 license header. The header is automatically added using `addlicense`.
-
-**Required license header:**
-```go
-// Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-```
-
-**Ensuring license headers:**
-```bash
-# Add/verify license headers (idempotent - safe to run anytime)
-make license
-```
-
-This is part of `make lint` and runs automatically in CI.
-
-### Go Code Style
-
-- Follow [Effective Go](https://golang.org/doc/effective_go.html) guidelines
-- Follow [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
-- Use `gofmt` for formatting (automated via `make tidy`)
-- Write clear, self-documenting code with meaningful names
-- Keep functions small and focused (single responsibility)
-- Add godoc comments for all exported types, functions, and methods
-
-Example:
-```go
-// Collector defines the interface for system configuration collectors.
-// Each collector is responsible for gathering specific system information
-// and returning it in a structured format.
-type Collector interface {
-    // Name returns the unique identifier for this collector.
-    Name() string
-    
-    // Collect gathers configuration data and returns it.
-    // Returns an error if collection fails.
-    Collect(ctx context.Context) (interface{}, error)
-}
-```
-
-### Testing Requirements
-
-- **Coverage**: Aim for meaningful test coverage (current: ~60%, target: >70%)
-- **Unit tests**: Test all public functions and methods
-- **Table-driven tests**: Use for multiple test cases
-- **Integration tests**: Test collector interactions with real/fake clients
-- **Error cases**: Test error conditions and edge cases
-- **Context handling**: Test context cancellation and timeouts
-- **Mocks**: Use fake clients for external dependencies (Kubernetes client-go fakes)
-
-Example test structure:
-```go
-func TestCollectorName(t *testing.T) {
-    tests := []struct {
-        name     string
-        input    string
-        expected string
-        wantErr  bool
-    }{
-        {"valid input", "test", "test", false},
-        {"empty input", "", "", true},
-    }
-    
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result, err := Function(tt.input)
-            if (err != nil) != tt.wantErr {
-                t.Errorf("Function() error = %v, wantErr %v", err, tt.wantErr)
-            }
-            if result != tt.expected {
-                t.Errorf("Function() = %v, want %v", result, tt.expected)
-            }
-        })
-    }
-}
-```
-
-### Error Handling
-
-- **Always check errors**: Never ignore errors without explicit `// nolint:errcheck` comment
-- **Wrap errors**: Add context using `fmt.Errorf` with `%w`
-- **Sentinel errors**: Define package-level errors for common cases
-- **Error checking**: Use `errors.Is()` and `errors.As()` for wrapped errors
-
-Example:
-```go
-var ErrInvalidConfig = errors.New("invalid configuration")
-
-func Process(config Config) error {
-    if config.Name == "" {
-        return fmt.Errorf("%w: name is required", ErrInvalidConfig)
-    }
-    
-    if err := validate(config); err != nil {
-        return fmt.Errorf("validation failed: %w", err)
-    }
-    
-    return nil
-}
-```
-
-### Logging
-
-- **Use structured logging**: Use `pkg/logging` package with slog
-- **Three logging modes**:
-  - **CLI Mode** (default): Minimal user-friendly output, just message text with red ANSI color for errors
-  - **Text Mode** (--debug): Key=value format with full metadata (time, level, source, module, version)
-  - **JSON Mode** (--log-json): Structured JSON format for machine parsing
-- **Appropriate levels**:
-  - `Debug`: Detailed diagnostic information
-  - `Info`: General informational messages
-  - `Warn`: Warning messages for recoverable issues
-  - `Error`: Error messages for failures
-- **Context**: Include relevant context (IDs, names, paths)
-- **Security**: Never log sensitive information (passwords, keys, tokens)
-
-Example:
-```go
-import "log/slog"
-
-func ProcessRequest(ctx context.Context, id string) error {
-    slog.Debug("processing request", "id", id)
-    
-    if err := doWork(ctx, id); err != nil {
-        slog.Error("failed to process request", "id", id, "error", err)
-        return err
-    }
-    
-    slog.Debug("request processed successfully", "id", id)
-    return nil
-}
-```
-
-**Logger Selection in CLI**:
-```go
-// In pkg/cli/root.go
-switch {
-case c.Bool("log-json"):
-    logging.SetDefaultStructuredLoggerWithLevel(name, version, logLevel)
-case isDebug:
-    logging.SetDefaultLoggerWithLevel(name, version, logLevel)
-default:
-    logging.SetDefaultCLILogger(logLevel)  // Clean output for users
-}
-```
-
-### Context Propagation
-
-- Pass `context.Context` as the first parameter to functions performing I/O
-- Respect context cancellation in long-running operations
-- Use `context.WithTimeout` or `context.WithDeadline` for time-bound operations
-- Avoid storing context in structs (except for special cases)
-
-### Dependencies
-
-- **Minimize**: Use standard library when possible
-- **Vet carefully**: Review licenses and maintenance status
-- **Keep updated**: Regularly update dependencies (`make upgrade`)
-- **Document**: Explain why external dependencies are needed in PR description
-
-Current key dependencies:
-- `github.com/urfave/cli/v3` - CLI framework
-- `k8s.io/client-go` - Kubernetes API client
-- `k8s.io/api` - Kubernetes API types
-- `golang.org/x/sync/errgroup` - Concurrent error handling
-- `golang.org/x/time/rate` - Rate limiting
-- `gopkg.in/yaml.v3` - YAML parsing and generation
-- `github.com/stretchr/testify` - Testing assertions
-- Standard library for most core functionality
 
 ## Pull Request Process
 
@@ -1345,12 +400,7 @@ Current key dependencies:
 make qualify
 ```
 
-**2. Ensure license headers are present:**
-```bash
-make license
-```
-
-**3. Update documentation:**
+**2. Update documentation:**
 - [ ] README.md for user-facing changes
 - [ ] CONTRIBUTING.md for developer workflow changes
 - [ ] Code comments and godoc
@@ -1371,17 +421,11 @@ Fixes #123"
 
 **Important**: Always use `-s` flag for DCO sign-off.
 
-**5. Push to your fork:**
-```bash
-git push origin feature/your-feature-name
-```
-
 ### Creating the Pull Request
 
-1. Navigate to [NVIDIA/eidos](https://github.com/NVIDIA/eidos)
-2. Click "New Pull Request"
-3. Select your branch
-4. Fill out the PR template:
+1. Navigate to your fork of [NVIDIA/eidos](https://github.com/NVIDIA/eidos)
+2. Click "Create Pull Request"
+3. Fill out the PR template:
 
 **Title**: Clear, concise (e.g., "Add network collector" or "Fix GPU detection crash")
 
@@ -1460,221 +504,6 @@ git branch -d feature/your-feature-name
 git push origin --delete feature/your-feature-name
 ```
 
-## GitHub Actions & CI/CD
-
-Eidos uses a comprehensive CI/CD pipeline powered by GitHub Actions with a three-layer composite actions architecture.
-
-### CI/CD Workflows
-
-#### on-push.yaml (Continuous Integration)
-
-**Trigger**: Push to `main` branch or pull requests to `main`
-
-**Purpose**: Validate code quality on every commit/PR
-
-**Steps**:
-1. **Checkout Code** - Clone repository with full history
-2. **Go CI Pipeline** - Uses `.github/actions/go-ci` composite action:
-   - Setup Go (version 1.25)
-   - Run tests with coverage
-   - Upload coverage to Codecov (on main branch)
-   - Run golangci-lint (version v2.6)
-3. **Security Scan** - Uses `.github/actions/security-scan` composite action:
-   - Trivy filesystem scan
-   - Check for vulnerabilities (MEDIUM, HIGH, CRITICAL)
-   - Upload SARIF results to GitHub Security tab
-
-**Permissions**:
-- `contents: read` - Read repository files
-- `id-token: write` - OIDC token for attestations
-- `security-events: write` - Upload security scan results
-
-#### on-tag.yaml (Release Pipeline)
-
-**Trigger**: Semantic version tags matching `v[0-9]+.[0-9]+.[0-9]+` (e.g., v0.8.12)
-
-**Purpose**: Build, release, attest, and deploy production artifacts
-
-**Steps**:
-1. **Checkout Code** - Clone tagged release
-2. **Go CI Pipeline** - Validate code before release (tests + lint)
-3. **Build and Release** - Uses `.github/actions/go-build-release` composite action:
-   - Authenticate to GHCR
-   - Install build tools (ko, syft, crane, goreleaser)
-   - Run `make release` (builds binaries + container images)
-   - Generate binary SBOMs (SPDX format via GoReleaser)
-   - Generate container SBOMs (SPDX format via Syft)
-   - Publish to GitHub Releases and ghcr.io
-4. **Attest Images** - Uses `.github/actions/attest-image-from-tag` composite action:
-   - Resolve image digest from tag using crane
-   - Generate SBOM attestations (Cosign)
-   - Generate build provenance (GitHub Attestation API)
-   - Sign with Sigstore keyless signing (Fulcio + Rekor)
-   - Achieves **SLSA Build Level 3** compliance
-5. **Deploy to Cloud Run** - Uses `.github/actions/cloud-run-deploy` composite action:
-   - Authenticate using Workload Identity Federation (keyless)
-   - Deploy eidosd to Google Cloud Run
-   - Update service with new image version
-
-**Permissions**:
-- `attestations: write` - Generate attestations
-- `contents: write` - Create GitHub releases
-- `id-token: write` - OIDC authentication
-- `packages: write` - Push to GHCR
-
-### Composite Actions Architecture
-
-Eidos uses a **three-layer architecture** for maximum reusability:
-
-#### Layer 1: Primitives (Single-Purpose Building Blocks)
-
-- **ghcr-login** - GHCR authentication with github.token
-- **setup-build-tools** - Modular tool installer (ko, syft, crane, goreleaser)
-- **security-scan** - Trivy vulnerability scanning with SARIF upload
-
-#### Layer 2: Composed Actions (Combine Primitives)
-
-- **go-ci** - Complete Go CI pipeline:
-  - Setup Go environment
-  - Run tests with race detector
-  - Upload coverage to Codecov (optional)
-  - Run golangci-lint
-  
-- **go-build-release** - Full build and release pipeline:
-  - Authenticate to GHCR (uses ghcr-login)
-  - Install build tools (uses setup-build-tools)
-  - Run `make release`
-  - Output: `release_outcome` (success/failure)
-  
-- **attest-image-from-tag** - Resolve digest and generate attestations:
-  - Install crane (uses setup-build-tools)
-  - Authenticate to GHCR (uses ghcr-login)
-  - Resolve digest from tag
-  - Generate SBOM and provenance (uses sbom-and-attest)
-  - Output: `image_digest`
-  
-- **sbom-and-attest** - Generate SBOM and attestations for known digest:
-  - Install syft (uses setup-build-tools)
-  - Generate SPDX SBOM
-  - Sign with Cosign (keyless)
-  - Generate GitHub attestation (provenance)
-  
-- **cloud-run-deploy** - Deploy to Google Cloud Run:
-  - Authenticate with Workload Identity Federation
-  - Deploy service with gcloud
-  - Verify deployment
-
-#### Layer 3: Workflows (Orchestrate Actions)
-
-- **on-push.yaml** - CI validation for PRs and main branch
-- **on-tag.yaml** - Release, attestation, and deployment
-
-### Supply Chain Security
-
-All releases include comprehensive supply chain security artifacts:
-
-#### SLSA Build Provenance
-
-- **Level**: SLSA Build Level 3
-- **Format**: SLSA v1.0 attestation
-- **Signing**: GitHub OIDC (keyless)
-- **Transparency**: Rekor transparency log
-- **Contents**:
-  - Build trigger (tag push event)
-  - Builder identity (GitHub Actions workflow)
-  - Source repository and commit SHA
-  - Workflow file path and run ID
-  - Build parameters and environment
-  - Resolved dependencies
-
-#### SBOM Attestations
-
-- **Binary SBOMs**: SPDX v2.3 format (GoReleaser)
-- **Container SBOMs**: SPDX JSON format (Syft)
-- **Signing**: Cosign keyless signing (Fulcio + Rekor)
-- **Verification**: `gh attestation verify` or `cosign verify-attestation`
-- **Contents**:
-  - All Go module dependencies
-  - Transitive dependencies
-  - Package licenses (SPDX identifiers)
-  - Package URLs (purl)
-  - Container base image layers
-
-#### Verification
-
-```bash
-# Get latest release tag
-export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
-
-# Verify image attestations (GitHub CLI - Recommended)
-gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG} --owner nvidia
-
-# Verify with Cosign
-cosign verify-attestation \
-  --type spdxjson \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp 'https://github.com/NVIDIA/eidos/.github/workflows/.*' \
-  ghcr.io/nvidia/eidos:${TAG}
-```
-
-For complete verification instructions, see [SECURITY.md](SECURITY.md).
-
-### Best Practices
-
-#### For Contributors
-
-1. **Test Locally First**:
-   ```bash
-   make qualify  # Run tests + lint + scan (same as CI)
-   ```
-
-2. **Use Composite Actions**:
-   - Reuse existing actions when possible
-   - Follow single responsibility principle
-   - Document inputs/outputs clearly
-
-3. **Security**:
-   - Pin external actions by SHA, not tag
-   - Use minimal required permissions
-   - Never log secrets or tokens
-   - Use OIDC for cloud authentication (no stored credentials)
-
-4. **Testing Actions**:
-   ```bash
-   # Test locally with act (GitHub Actions runner)
-   act -j validate --secret GITHUB_TOKEN="$GITHUB_TOKEN"
-   ```
-
-#### For Maintainers
-
-1. **Release Process**:
-   ```bash
-   # Create semantic version tag
-   git tag v0.9.0
-   git push origin v0.9.0
-   
-   # GitHub Actions automatically:
-   # 1. Runs tests and lints
-   # 2. Builds binaries and images
-   # 3. Generates SBOMs and attestations
-   # 4. Publishes to GitHub Releases and GHCR
-   # 5. Deploys to Cloud Run
-   ```
-
-2. **Monitoring**:
-   - Check GitHub Actions tab for workflow status
-   - Review Security tab for vulnerability scan results
-   - Monitor Cloud Run deployment health
-   - Verify attestations after release
-
-3. **Troubleshooting**:
-   - Enable debug logging: Set `ACTIONS_STEP_DEBUG=true` in repo secrets
-   - Re-run failed jobs from GitHub Actions UI
-   - Check composite action logs for detailed errors
-   - Verify OIDC token claims for authentication issues
-
-For detailed GitHub Actions architecture documentation, see [.github/actions/README.md](.github/actions/README.md).
-
 ## Developer Certificate of Origin
 
 All contributions must include a DCO sign-off to certify that you have the right to submit the contribution under the project's license.
@@ -1737,10 +566,29 @@ git push --force-with-lease origin feature/your-branch
 
 ### First-Time Contributors
 
-- Start with "good first issue" labeled issues
-- Read through existing code to understand patterns
-- Don't hesitate to ask questions in issues or PRs
-- Test thoroughly before submitting
+**Recommended starting points:**
+1. Start with issues labeled `good first issue`
+2. Read existing code in the package you're modifying (required before writing)
+3. Run `make tools-check` to verify your environment matches expected versions
+4. Study the [Design Principles](#design-principles) section before writing code
+
+**Before writing any code:**
+```bash
+# 1. Verify your setup
+make tools-check
+
+# 2. Read existing code in the target package
+# Look for patterns: error handling, context usage, test structure
+
+# 3. Run tests to understand expected behavior
+go test -v ./pkg/<package>/... -run TestSpecific
+```
+
+**Common first-contribution areas:**
+- Documentation improvements (typos, clarifications)
+- Adding test cases to existing tests
+- Improving error messages with better context
+- Adding debug logging to collectors
 
 ### Writing Good Commit Messages
 
@@ -1755,24 +603,6 @@ Explain the problem being solved and why this approach was chosen.
 - Reference issues: "Fixes #123" or "Related to #456"
 
 Signed-off-by: Your Name <your@email.com>
-```
-
-### Debugging Tips
-
-```bash
-# Enable debug logging
-./dist/eidos_*/eidos --debug snapshot
-
-# Run specific test with verbose output
-go test -v ./pkg/collector/ -run TestGPUCollector
-
-# Print test coverage by function
-go test -coverprofile=coverage.out ./pkg/collector/
-go tool cover -func=coverage.out
-
-# Profile CPU usage
-go test -cpuprofile=cpu.prof ./pkg/collector/
-go tool pprof cpu.prof
 ```
 
 ## Additional Resources
@@ -1802,4 +632,3 @@ If you have questions about contributing:
 - Look at recent merged PRs for examples
 
 Thank you for contributing to NVIDIA Eidos! Your efforts help improve GPU-accelerated infrastructure for everyone.
-

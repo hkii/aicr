@@ -49,6 +49,12 @@ outputs:
   grype:
     description: 'Grype version'
     value: ${{ steps.versions.outputs.grype }}
+  yamllint:
+    description: 'yamllint version'
+    value: ${{ steps.versions.outputs.yamllint }}
+  kubectl:
+    description: 'kubectl version'
+    value: ${{ steps.versions.outputs.kubectl }}
 
 runs:
   using: 'composite'
@@ -67,12 +73,14 @@ runs:
 
         # Linting
         echo "golangci_lint=$(yq eval '.linting.golangci_lint' .versions.yaml)" >> $GITHUB_OUTPUT
+        echo "yamllint=$(yq eval '.linting.yamllint' .versions.yaml)" >> $GITHUB_OUTPUT
         echo "addlicense=$(yq eval '.linting.addlicense' .versions.yaml)" >> $GITHUB_OUTPUT
 
         # Security tools
         echo "grype=$(yq eval '.security_tools.grype' .versions.yaml)" >> $GITHUB_OUTPUT
 
         # Testing tools
+        echo "kubectl=$(yq eval '.testing_tools.kubectl' .versions.yaml)" >> $GITHUB_OUTPUT
         echo "kind=$(yq eval '.testing_tools.kind' .versions.yaml)" >> $GITHUB_OUTPUT
         echo "ctlptl=$(yq eval '.testing_tools.ctlptl' .versions.yaml)" >> $GITHUB_OUTPUT
         echo "tilt=$(yq eval '.testing_tools.tilt' .versions.yaml)" >> $GITHUB_OUTPUT
@@ -87,8 +95,10 @@ runs:
         echo "  ko: ${{ steps.versions.outputs.ko }}"
         echo "  crane: ${{ steps.versions.outputs.crane }}"
         echo "  golangci_lint: ${{ steps.versions.outputs.golangci_lint }}"
+        echo "  yamllint: ${{ steps.versions.outputs.yamllint }}"
         echo "  addlicense: ${{ steps.versions.outputs.addlicense }}"
         echo "  grype: ${{ steps.versions.outputs.grype }}"
+        echo "  kubectl: ${{ steps.versions.outputs.kubectl }}"
         echo "  kind: ${{ steps.versions.outputs.kind }}"
         echo "  ctlptl: ${{ steps.versions.outputs.ctlptl }}"
         echo "  tilt: ${{ steps.versions.outputs.tilt }}"

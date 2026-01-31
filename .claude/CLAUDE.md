@@ -42,8 +42,9 @@ Act as a Principal Distributed Systems Architect with deep expertise in Go and c
 2. **Tests must pass** — `make test` with race detector; never skip tests
 3. **Use project patterns** — Learn existing code before inventing new approaches
 4. **3-strike rule** — After 3 failed fix attempts, stop and reassess
-5. **Structured errors** — Use `pkg/errors` with error codes
+5. **Structured errors** — Use `pkg/errors` with error codes (never `fmt.Errorf`)
 6. **Context timeouts** — All I/O operations need context with timeout
+7. **Check context in loops** — Always check `ctx.Done()` in long-running operations
 
 ## Git Configuration
 
@@ -214,9 +215,26 @@ slog.Error("operation failed", "error", err, "component", "gpu-collector")
 
 **Note:** A component must have either `helm` OR `kustomize` configuration, not both.
 
+## Development Setup
+
+```bash
+# First-time setup
+make tools-setup    # Install all required tools
+make tools-check    # Verify versions match .versions.yaml
+
+# Auto-mode for CI/scripts
+AUTO_MODE=true make tools-setup
+```
+
+Tool versions are centralized in `.versions.yaml` (single source of truth for local dev and CI).
+
 ## Commands
 
 ```bash
+# Tools Management
+make tools-setup  # Install all required development tools
+make tools-check  # Check installed tools and compare versions
+
 # Development
 make qualify      # Full check: test + lint + scan (run before PR)
 make test         # Unit tests with -race
@@ -240,6 +258,8 @@ eidos bundle -r recipe.yaml -b gpu-operator \
 
 ## Design Principles
 
+### Operational Principles
+
 **Resilience by Design:**
 - Partial failure is the steady state
 - Design for: partitions, timeouts, bounded retries, circuit breakers, backpressure
@@ -252,6 +272,34 @@ eidos bundle -r recipe.yaml -b gpu-operator \
 **Observability Is Mandatory:**
 - A system is incomplete without: structured logging, metrics, tracing
 - Observability is part of the API and runtime contract
+
+### Foundational Principles
+
+**Local Development Equals CI:**
+- Same tools, same versions, same validation locally and in CI
+- `.versions.yaml` is the single source of truth
+- If `make qualify` passes locally, CI passes
+
+**Correctness Must Be Reproducible:**
+- Same inputs → same outputs, always
+- No hidden state, no implicit defaults, no non-deterministic behavior
+
+**Metadata Is Separate from Consumption:**
+- Recipes define *what* is correct
+- Bundlers/deployers determine *how* to deliver it
+- Recipe validity is independent of deployment mechanism
+
+**Recipe Specialization Requires Explicit Intent:**
+- Generic intent never silently resolves to specialized configurations
+- Users must explicitly opt-in to more specific variants
+
+**Trust Requires Verifiable Provenance:**
+- Evidence, not assertions (SLSA, SBOM, Sigstore)
+- Every artifact must carry verifiable proof of origin
+
+**Adoption Comes from Idiomatic Experience:**
+- Output standard formats (Helm, K8s manifests)
+- Integrate into existing workflows, don't replace them
 
 ## Response Contract
 
@@ -300,9 +348,33 @@ When choosing between approaches, prioritize in this order:
 | `.goreleaser.yaml` | Release configuration |
 | `go.mod` | Dependencies |
 
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `CONTRIBUTING.md` | Development setup, design principles, PR process, DCO |
+| `RELEASING.md` | Release process for maintainers (tags, workflows, verification) |
+| `.versions.yaml` | Tool versions (single source of truth) |
+| `pkg/recipe/data/registry.yaml` | Declarative component configuration |
+| `api/eidos/v1/server.yaml` | OpenAPI spec |
+| `.goreleaser.yaml` | Release configuration |
+
 ## Full Reference
 
-See `.github/copilot-instructions.md` for extended documentation:
+See `CONTRIBUTING.md` for contributor documentation:
+- Design principles (reproducibility, provenance, idiomatic experience)
+- Development setup and tool installation
+- Project architecture and key components
+- PR process and code review checklist
+- DCO sign-off requirements
+
+See `RELEASING.md` for maintainer documentation:
+- Release methods (automatic, manual, hotfix)
+- Verification commands for attestations and checksums
+- Cloud Run deployment and rollback procedures
+- Emergency hotfix procedure
+
+See `.github/copilot-instructions.md` for extended technical documentation:
 - Detailed code examples for collectors, bundlers, API endpoints
 - GitHub Actions architecture (three-layer composite actions)
 - CI/CD workflows (on-push.yaml, on-tag.yaml)
