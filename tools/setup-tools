@@ -441,10 +441,12 @@ if [[ "${SKIP_TOOLS}" == "false" ]]; then
                 brew install ko
             elif [[ "${OS}" == "linux" ]]; then
                 # Install from binary release (go install has module path issues)
+                # Strip 'v' prefix for URL construction (version in .versions.yaml includes 'v')
+                KO_VERSION_NUM="${KO_VERSION#v}"
                 KO_TMP=$(mktemp -d)
-                KO_URL="https://github.com/ko-build/ko/releases/download/v${KO_VERSION}/ko_${KO_VERSION}_Linux_x86_64.tar.gz"
+                KO_URL="https://github.com/ko-build/ko/releases/download/v${KO_VERSION_NUM}/ko_${KO_VERSION_NUM}_Linux_x86_64.tar.gz"
                 if [[ "${GO_ARCH}" == "arm64" ]]; then
-                    KO_URL="https://github.com/ko-build/ko/releases/download/v${KO_VERSION}/ko_${KO_VERSION}_Linux_arm64.tar.gz"
+                    KO_URL="https://github.com/ko-build/ko/releases/download/v${KO_VERSION_NUM}/ko_${KO_VERSION_NUM}_Linux_arm64.tar.gz"
                 fi
                 if verify_download_url "$KO_URL" "ko ${KO_VERSION} for Linux ${GO_ARCH}"; then
                     curl -fsSL "$KO_URL" | tar -xzC "$KO_TMP"
