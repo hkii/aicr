@@ -41,6 +41,9 @@ inputs:
     description: 'Image name in target registry (e.g., eidosd)'
     required: false
     default: 'eidosd'
+  ghcr_token:
+    description: 'GitHub token for GHCR authentication (use github.token)'
+    required: true
 
 runs:
   using: 'composite'
@@ -97,6 +100,13 @@ runs:
         sudo mv "$CRANE_TMP/crane" /usr/local/bin/crane
         sudo chmod +x /usr/local/bin/crane
         rm -rf "$CRANE_TMP"
+
+    - name: Authenticate to GHCR
+      shell: bash
+      env:
+        GHCR_TOKEN: ${{ inputs.ghcr_token }}
+      run: |
+        echo "${GHCR_TOKEN}" | crane auth login ghcr.io -u oauth2accesstoken --password-stdin
 
     - name: Copy image to Artifact Registry
       id: copy

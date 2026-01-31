@@ -184,7 +184,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - name: Deploy API to Cloud Run
+      - name: Deploy Demo API Server
         uses: ./.github/actions/cloud-run-deploy
         with:
           project_id: ${{ env.PROJECT_ID }}
@@ -195,3 +195,4 @@ jobs:
           source_image: "${{ env.SOURCE_IMAGE }}:${{ github.ref_name }}"
           target_registry: ${{ env.TARGET_REGISTRY }}
           image_name: 'eidosd'
+          ghcr_token: ${{ github.token }}
