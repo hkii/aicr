@@ -71,8 +71,17 @@ runs:
 
     - name: Upload SARIF to GitHub Security
       if: steps.check_sarif.outputs.exists == 'true'
+      id: upload_sarif
       uses: github/codeql-action/upload-sarif@b20883b0cd1f46c72ae0ba6d1090936928f9fa30  # v4.32.0
       with:
         sarif_file: ${{ inputs.output_file }}
         category: ${{ inputs.category }}
       continue-on-error: true  # Don't fail if code scanning is unavailable
+
+    - name: SARIF upload status
+      if: steps.check_sarif.outputs.exists == 'true'
+      shell: bash
+      run: |
+        if [[ "${{ steps.upload_sarif.outcome }}" == "failure" ]]; then
+          echo "::notice::SARIF upload skipped - GitHub Advanced Security may not be enabled for this repository"
+        fi
