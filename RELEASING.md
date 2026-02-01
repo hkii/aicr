@@ -7,14 +7,35 @@ This document outlines the release process for NVIDIA Eidos. For contribution gu
 - Repository admin access with write permissions
 - Understanding of semantic versioning (vMAJOR.MINOR.PATCH)
 - Access to GitHub Actions workflows
+- [git-cliff](https://git-cliff.org/) installed (run `make tools-setup` to install)
 
 ## Release Methods
 
-### Method 1: Automatic Release (Recommended)
+### Method 1: Version Bump (Recommended)
 
-For standard releases from the main branch.
+Use Makefile targets for standard releases:
 
-**Steps**:
+```bash
+make bump-patch   # v1.2.3 → v1.2.4
+make bump-minor   # v1.2.3 → v1.3.0
+make bump-major   # v1.2.3 → v2.0.0
+```
+
+**What happens automatically**:
+
+1. Validates working directory is clean with no unpushed commits
+2. Calculates the new version based on bump type
+3. Generates/updates `CHANGELOG.md` using [git-cliff](https://git-cliff.org/)
+4. Commits the changelog update
+5. Creates an annotated tag
+6. Pushes both commit and tag to origin
+7. Triggers release workflows (see [Workflow Pipeline](#workflow-pipeline))
+
+**Note**: Manual edits to `CHANGELOG.md` (e.g., corrections to previous releases) are preserved. The bump process prepends new entries without overwriting existing content.
+
+### Method 2: Manual Tag (Advanced)
+
+For cases where you need more control over the release process:
 
 1. **Ensure main is ready**:
    ```bash
@@ -23,33 +44,21 @@ For standard releases from the main branch.
    make qualify  # All checks must pass
    ```
 
-2. **Create and push a version tag**:
+2. **Generate changelog manually** (optional):
    ```bash
-   git tag v1.2.3
+   git-cliff --tag v1.2.3 -o CHANGELOG.md
+   git add CHANGELOG.md
+   git commit -m "chore: update CHANGELOG for v1.2.3"
+   git push origin main
+   ```
+
+3. **Create and push a version tag**:
+   ```bash
+   git tag -a v1.2.3 -m "Release v1.2.3"
    git push origin v1.2.3
    ```
 
-3. **Automatic workflows trigger** (via `on-tag.yaml`):
-   - Go CI validates code quality (tests, lint)
-   - GoReleaser builds binaries and container images
-   - SBOM generation for all artifacts
-   - Attestations signed with Sigstore
-   - GitHub Release created with changelog
-   - Demo Cloud Run deployment (eidosd API server example)
-
-4. **Verify artifacts** (see [Verification](#verification) below)
-
-### Method 2: Version Bump Helpers
-
-For convenience, use Makefile targets:
-
-```bash
-make bump-patch   # v1.2.3 → v1.2.4
-make bump-minor   # v1.2.3 → v1.3.0
-make bump-major   # v1.2.3 → v2.0.0
-```
-
-These create and push the tag automatically.
+4. **Automatic workflows trigger** (via `on-tag.yaml`)
 
 ### Method 3: Manual Workflow Trigger
 
@@ -59,6 +68,8 @@ For rebuilding from existing tags or emergency releases:
 2. Click **Run workflow**
 3. Enter the existing tag (e.g., `v1.2.3`)
 4. Click **Run workflow**
+
+This is useful when you need to re-run the release pipeline without creating a new tag.
 
 ## Workflow Pipeline
 
@@ -218,8 +229,7 @@ For urgent fixes:
    ```bash
    git checkout main
    git pull origin main
-   git tag v1.2.4
-   git push origin v1.2.4  # Triggers automatic release
+   make bump-patch  # Generates changelog, tags, and pushes
    ```
 
 3. **For patching older releases** (rare):
@@ -227,19 +237,22 @@ For urgent fixes:
    git checkout v1.2.3
    git checkout -b hotfix/v1.2.4
    git cherry-pick <commit-hash-from-main>
-   git tag v1.2.4
-   git push origin v1.2.4
+   git-cliff --tag v1.2.4 --unreleased --prepend CHANGELOG.md
+   git add CHANGELOG.md
+   git commit -m "chore: update CHANGELOG for v1.2.4"
+   git tag -a v1.2.4 -m "Release v1.2.4"
+   git push origin hotfix/v1.2.4 v1.2.4
    ```
 
 ## Release Checklist
 
-Before creating a release tag:
+Before running `make bump-*`:
 
 - [ ] All CI checks pass on main (`make qualify`)
-- [ ] CHANGELOG or release notes prepared (auto-generated from commits)
-- [ ] Breaking changes documented
-- [ ] Version follows semantic versioning
-- [ ] No uncommitted changes
+- [ ] Working directory is clean (no uncommitted changes)
+- [ ] All commits are pushed to origin
+- [ ] Breaking changes documented in commit messages (use `feat!:` or `fix!:` prefix)
+- [ ] Version bump type is correct (major for breaking, minor for features, patch for fixes)
 
 After release:
 
