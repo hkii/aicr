@@ -76,7 +76,13 @@ bump_version() {
 
   # Generate changelog for the new version
   msg "Generating CHANGELOG.md for $new_version..."
-  git-cliff --tag "$new_version" -o "${ROOT}/CHANGELOG.md"
+  if [ -f "${ROOT}/CHANGELOG.md" ]; then
+    # Prepend new entries to preserve manual edits
+    git-cliff --tag "$new_version" --unreleased --prepend "${ROOT}/CHANGELOG.md"
+  else
+    # Create new changelog with full history
+    git-cliff --tag "$new_version" -o "${ROOT}/CHANGELOG.md"
+  fi
 
   # Commit the changelog update
   git add "${ROOT}/CHANGELOG.md"
