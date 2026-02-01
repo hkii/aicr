@@ -4,9 +4,10 @@ This document lists the maintainers of the NVIDIA Eidos project.
 
 ## Current Maintainers
 
-| Name | GitHub | Role | Affiliation |
-|------|--------|------|-------------|
-| Mark Chmarny | [@mchmarny](https://github.com/mchmarny) | Maintainer | NVIDIA |
+| Name             | GitHub                                   | Role       | Affiliation |
+|------------------|------------------------------------------|------------|-------------|
+| Davanum Srinivas | [@dims](https://github.com/dims)         | Maintainer | NVIDIA      |
+| Mark Chmarny.    | [@mchmarny](https://github.com/mchmarny) | Maintainer | NVIDIA      |
 
 ## Maintainer Responsibilities
 
