@@ -228,6 +228,7 @@ CTLPTL_VERSION=$(yq '.testing_tools.ctlptl' .versions.yaml)
 TILT_VERSION=$(yq '.testing_tools.tilt' .versions.yaml)
 HELM_VERSION=$(yq '.testing_tools.helm' .versions.yaml)
 KO_VERSION=$(yq '.build_tools.ko' .versions.yaml)
+GIT_CLIFF_VERSION=$(yq '.build_tools.git_cliff' .versions.yaml)
 
 echo ""
 log_info "Target Versions:"
@@ -237,6 +238,7 @@ echo "  grype:           ${GRYPE_VERSION}"
 echo "  kind:            ${KIND_VERSION}"
 echo "  tilt:            ${TILT_VERSION}"
 echo "  helm:            ${HELM_VERSION}"
+echo "  git-cliff:       ${GIT_CLIFF_VERSION}"
 echo ""
 
 # ============================================================================
@@ -477,6 +479,34 @@ if [[ "${SKIP_TOOLS}" == "false" ]]; then
         fi
     fi
 
+    # git-cliff (changelog generator)
+    if command_exists git-cliff; then
+        log_success "git-cliff already installed: $(git-cliff --version 2>/dev/null | awk '{print $2}')"
+    else
+        log_info "Installing git-cliff ${GIT_CLIFF_VERSION}..."
+        if prompt_continue; then
+            if [[ "${OS}" == "darwin" ]]; then
+                brew install git-cliff
+            elif [[ "${OS}" == "linux" ]]; then
+                GIT_CLIFF_TMP=$(mktemp -d)
+                GIT_CLIFF_URL="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+                if [[ "${GO_ARCH}" == "arm64" ]]; then
+                    GIT_CLIFF_URL="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}-aarch64-unknown-linux-gnu.tar.gz"
+                fi
+                if verify_download_url "$GIT_CLIFF_URL" "git-cliff ${GIT_CLIFF_VERSION} for Linux ${GO_ARCH}"; then
+                    curl -fsSL "$GIT_CLIFF_URL" | tar -xzC "$GIT_CLIFF_TMP"
+                    sudo mv "$GIT_CLIFF_TMP/git-cliff-${GIT_CLIFF_VERSION}"*/git-cliff /usr/local/bin/git-cliff
+                    sudo chmod +x /usr/local/bin/git-cliff
+                    rm -rf "$GIT_CLIFF_TMP"
+                else
+                    log_error "Failed to install git-cliff. Please install manually."
+                    rm -rf "$GIT_CLIFF_TMP"
+                fi
+            fi
+            log_success "git-cliff installed"
+        fi
+    fi
+
     echo ""
 fi
 
@@ -538,6 +568,7 @@ TOOLS=(
     "ctlptl:ctlptl version 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+'"
     "ko:ko version 2>/dev/null | head -1"
     "goreleaser:goreleaser --version 2>/dev/null | sed -n 's/^GitVersion:[[:space:]]*//p'"
+    "git-cliff:git-cliff --version 2>/dev/null | awk '{print \$2}'"
     "golangci-lint:golangci-lint version --short 2>/dev/null"
     "addlicense:echo installed"
 )

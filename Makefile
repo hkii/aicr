@@ -63,11 +63,13 @@ else
 	else \
 		printf "%-20s %-15s %-15s %s\n" "go" "$$expected" "-" "✗"; \
 	fi
-	@# golangci-lint
+	@# golangci-lint (major version match is sufficient)
 	@expected=$$($(YQ) '.linting.golangci_lint' .versions.yaml); \
 	if command -v golangci-lint >/dev/null 2>&1; then \
 		installed=$$(golangci-lint version --short 2>/dev/null || echo "unknown"); \
-		if echo "$$installed" | grep -q "$${expected#v}"; then \
+		exp_major=$$(echo "$$expected" | sed 's/^v//' | cut -d. -f1); \
+		inst_major=$$(echo "$$installed" | cut -d. -f1); \
+		if [ "$$exp_major" = "$$inst_major" ]; then \
 			printf "%-20s %-15s %-15s %s\n" "golangci-lint" "$$expected" "$$installed" "✓"; \
 		else \
 			printf "%-20s %-15s %-15s %s\n" "golangci-lint" "$$expected" "$$installed" "⚠"; \
@@ -83,11 +85,13 @@ else
 	else \
 		printf "%-20s %-15s %-15s %s\n" "grype" "$$expected" "-" "✗"; \
 	fi
-	@# ko
+	@# ko (major.minor match is sufficient)
 	@expected=$$($(YQ) '.build_tools.ko' .versions.yaml); \
 	if command -v ko >/dev/null 2>&1; then \
 		installed=$$(ko version 2>/dev/null | head -1); \
-		if echo "$$installed" | grep -q "$${expected#v}"; then \
+		exp_mm=$$(echo "$$expected" | sed 's/^v//' | cut -d. -f1,2); \
+		inst_mm=$$(echo "$$installed" | cut -d. -f1,2); \
+		if [ "$$exp_mm" = "$$inst_mm" ]; then \
 			printf "%-20s %-15s %-15s %s\n" "ko" "$$expected" "$$installed" "✓"; \
 		else \
 			printf "%-20s %-15s %-15s %s\n" "ko" "$$expected" "$$installed" "⚠"; \
@@ -103,11 +107,27 @@ else
 	else \
 		printf "%-20s %-15s %-15s %s\n" "goreleaser" "$$expected" "-" "✗"; \
 	fi
-	@# helm
+	@# git-cliff (major version match is sufficient)
+	@expected=$$($(YQ) '.build_tools.git_cliff' .versions.yaml); \
+	if command -v git-cliff >/dev/null 2>&1; then \
+		installed=$$(git-cliff --version 2>/dev/null | awk '{print $$2}'); \
+		exp_major=$$(echo "$$expected" | cut -d. -f1); \
+		inst_major=$$(echo "$$installed" | cut -d. -f1); \
+		if [ "$$exp_major" = "$$inst_major" ]; then \
+			printf "%-20s %-15s %-15s %s\n" "git-cliff" "$$expected" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "git-cliff" "$$expected" "$$installed" "⚠"; \
+		fi; \
+	else \
+		printf "%-20s %-15s %-15s %s\n" "git-cliff" "$$expected" "-" "✗"; \
+	fi
+	@# helm (major version match is sufficient)
 	@expected=$$($(YQ) '.testing_tools.helm' .versions.yaml); \
 	if command -v helm >/dev/null 2>&1; then \
 		installed=$$(helm version --short 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'); \
-		if echo "$$installed" | grep -q "$$expected"; then \
+		exp_major=$$(echo "$$expected" | sed 's/^v//' | cut -d. -f1); \
+		inst_major=$$(echo "$$installed" | sed 's/^v//' | cut -d. -f1); \
+		if [ "$$exp_major" = "$$inst_major" ]; then \
 			printf "%-20s %-15s %-15s %s\n" "helm" "$$expected" "$$installed" "✓"; \
 		else \
 			printf "%-20s %-15s %-15s %s\n" "helm" "$$expected" "$$installed" "⚠"; \
@@ -115,11 +135,13 @@ else
 	else \
 		printf "%-20s %-15s %-15s %s\n" "helm" "$$expected" "-" "✗"; \
 	fi
-	@# kind
+	@# kind (major.minor match is sufficient)
 	@expected=$$($(YQ) '.testing_tools.kind' .versions.yaml); \
 	if command -v kind >/dev/null 2>&1; then \
-		installed=$$(kind version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | sed 's/v//'); \
-		if echo "$$installed" | grep -q "$$expected"; then \
+		installed=$$(kind version 2>/dev/null | awk '{print $$2}' | sed 's/^v//'); \
+		exp_mm=$$(echo "$$expected" | sed 's/^v//' | cut -d. -f1,2); \
+		inst_mm=$$(echo "$$installed" | cut -d. -f1,2); \
+		if [ "$$exp_mm" = "$$inst_mm" ]; then \
 			printf "%-20s %-15s %-15s %s\n" "kind" "$$expected" "$$installed" "✓"; \
 		else \
 			printf "%-20s %-15s %-15s %s\n" "kind" "$$expected" "$$installed" "⚠"; \
@@ -127,11 +149,13 @@ else
 	else \
 		printf "%-20s %-15s %-15s %s\n" "kind" "$$expected" "-" "✗"; \
 	fi
-	@# yamllint
+	@# yamllint (major version match is sufficient)
 	@expected=$$($(YQ) '.linting.yamllint' .versions.yaml); \
 	if command -v yamllint >/dev/null 2>&1; then \
 		installed=$$(yamllint --version 2>/dev/null | awk '{print $$2}'); \
-		if echo "$$installed" | grep -q "$$expected"; then \
+		exp_major=$$(echo "$$expected" | cut -d. -f1); \
+		inst_major=$$(echo "$$installed" | cut -d. -f1); \
+		if [ "$$exp_major" = "$$inst_major" ]; then \
 			printf "%-20s %-15s %-15s %s\n" "yamllint" "$$expected" "$$installed" "✓"; \
 		else \
 			printf "%-20s %-15s %-15s %s\n" "yamllint" "$$expected" "$$installed" "⚠"; \
@@ -139,11 +163,13 @@ else
 	else \
 		printf "%-20s %-15s %-15s %s\n" "yamllint" "$$expected" "-" "✗"; \
 	fi
-	@# kubectl
+	@# kubectl (major.minor match is sufficient, kubectl supports +/- 1 minor version skew)
 	@expected=$$($(YQ) '.testing_tools.kubectl' .versions.yaml); \
 	if command -v kubectl >/dev/null 2>&1; then \
 		installed=$$(kubectl version --client -o json 2>/dev/null | grep gitVersion | grep -oE 'v[0-9]+\.[0-9]+' || echo "installed"); \
-		if echo "$$installed" | grep -q "$$expected"; then \
+		exp_major=$$(echo "$$expected" | sed 's/^v//' | cut -d. -f1); \
+		inst_major=$$(echo "$$installed" | sed 's/^v//' | cut -d. -f1); \
+		if [ "$$exp_major" = "$$inst_major" ]; then \
 			printf "%-20s %-15s %-15s %s\n" "kubectl" "$$expected" "$$installed" "✓"; \
 		else \
 			printf "%-20s %-15s %-15s %s\n" "kubectl" "$$expected" "$$installed" "⚠"; \
@@ -153,8 +179,12 @@ else
 	fi
 	@# docker (no version requirement)
 	@if command -v docker >/dev/null 2>&1; then \
-		installed=$$(docker version --format '{{.Server.Version}}' 2>/dev/null || echo "not running"); \
-		printf "%-20s %-15s %-15s %s\n" "docker" "-" "$$installed" "✓"; \
+		installed=$$(docker version --format '{{.Server.Version}}' 2>/dev/null | tr -d '\n' || true); \
+		if [ -n "$$installed" ]; then \
+			printf "%-20s %-15s %-15s %s\n" "docker" "-" "$$installed" "✓"; \
+		else \
+			printf "%-20s %-15s %-15s %s\n" "docker" "-" "not running" "⚠"; \
+		fi; \
 	else \
 		printf "%-20s %-15s %-15s %s\n" "docker" "-" "-" "✗"; \
 	fi
@@ -329,6 +359,10 @@ bump-minor: ## Bumps minor version (1.2.3 → 1.3.0)
 .PHONY: bump-patch
 bump-patch: ## Bumps patch version (1.2.3 → 1.2.4)
 	tools/bump patch
+
+.PHONY: changelog
+changelog: ## Previews changelog for next release (does not commit)
+	@git-cliff --unreleased --strip header
 
 .PHONY: clean
 clean: ## Cleans build artifacts (dist, coverage files)

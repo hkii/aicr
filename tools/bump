@@ -7,7 +7,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT=$(dirname "${DIR}")
 
 # Check if required tools are installed
-has_tools git
+has_tools git git-cliff
 
 # Bump git tag version
 bump_version() {
@@ -73,6 +73,21 @@ bump_version() {
   fi
   
   msg "Bumping $bump_type version: $current_version → $new_version"
+
+  # Generate changelog for the new version
+  msg "Generating CHANGELOG.md for $new_version..."
+  git-cliff --tag "$new_version" -o "${ROOT}/CHANGELOG.md"
+
+  # Commit the changelog update
+  git add "${ROOT}/CHANGELOG.md"
+  if git diff --cached --quiet; then
+    msg "No changelog changes to commit"
+  else
+    git commit -m "chore: update CHANGELOG for $new_version"
+    msg "Committed CHANGELOG.md update"
+  fi
+
+  # Create tag and push
   git tag -a "$new_version" -m "Release $new_version"
   git push origin HEAD
   git push origin "$new_version"
