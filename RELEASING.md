@@ -199,21 +199,6 @@ This demo deployment only occurs if the build step succeeds and serves as an exa
 
 Use manual workflow trigger with the existing tag. No need to delete and recreate tags.
 
-### Rollback Demo Deployment
-
-To rollback the demo Cloud Run deployment (maintainers only):
-
-```bash
-# List revisions
-gcloud run revisions list --service=api --region=us-west1 --project=eidosx
-
-# Rollback to previous revision
-gcloud run services update-traffic api \
-  --to-revisions=api-PREVIOUS_REVISION=100 \
-  --region=us-west1 \
-  --project=eidosx
-```
-
 ## Emergency Hotfix Procedure
 
 For urgent fixes:
