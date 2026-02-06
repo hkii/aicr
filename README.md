@@ -46,18 +46,13 @@ This separation allows the same validated configuration to be applied consistent
 
 ### Installation
 
-This is a private repository. Installation requires a GitHub token with `repo` scope:
+Install the latest version using the installation script:
 
-```shell
-GITHUB_TOKEN=<your-token> curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | GITHUB_TOKEN=$GITHUB_TOKEN bash -s --
-```
-
-Or if `GITHUB_TOKEN` is already exported in your environment:
+> Note: Temporally, while the repo is private, make sure to include your GitHub token first:
 
 ```shell
 curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | GITHUB_TOKEN=$GITHUB_TOKEN bash -s --
+  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
 ```
 
 See [Installation Guide](docs/user-guide/installation.md) for manual installation, building from source, and container images.

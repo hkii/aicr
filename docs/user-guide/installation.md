@@ -17,14 +17,9 @@ This guide describes how to install Eidos (Eidos) CLI tool (`eidos`) on Linux, m
 
 Install the latest version using the installation script:
 
-```shell
-curl -sfL https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
-```
-
-**Private Repository Access**: If the repository is private, set your GitHub token first:
+> Note: Temporally, while the repo is private, make sure to include your GitHub token first:
 
 ```shell
-export GITHUB_TOKEN="your_github_token"
 curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
   https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
 ```

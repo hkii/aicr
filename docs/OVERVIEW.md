@@ -143,9 +143,14 @@ Eidos prioritizes trust in the software supply chain.
 
 ### Install CLI
 
+> Note: Temporally, while the repo is private, make sure to include your GitHub token first:
+
 ```shell
-curl -sfL https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
+curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
 ```
+
+See [Installation Guide](docs/user-guide/installation.md) for manual installation, building from source, and container images.
 
 ### Generate Recipe
 
