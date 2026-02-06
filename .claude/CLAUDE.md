@@ -234,6 +234,11 @@ Tool versions are centralized in `.versions.yaml` (single source of truth for lo
 
 ## Commands
 
+**Important:** When running e2e tests locally, unset `GITLAB_TOKEN` to avoid goreleaser token conflicts:
+```bash
+unset GITLAB_TOKEN && ./tools/e2e
+```
+
 ```bash
 # Tools Management
 make tools-setup  # Install all required development tools

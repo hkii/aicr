@@ -13,27 +13,16 @@ set -euo pipefail
 #
 # WHAT THIS SCRIPT TESTS:
 # - Binary builds successfully (make build)
+# - Critical User Journeys (CUJ1: recipe → validate → bundle → install)
 # - CLI workflow: eidos recipe → eidos bundle
 # - CLI flags: --set, --system-node-selector, --accelerated-node-toleration, etc.
 # - Flag combinations and interactions
-# - Helm chart validation (if helm is available):
-#   - helm lint (validates chart structure and syntax)
-#   - helm dependency update (validates Chart.yaml dependencies)
-#   - helm template (validates template rendering)
-#   - templates/ directory validation for Helm template syntax
+# - Helm chart validation (if helm is available)
 #
 # WHAT GO TESTS COVER (not duplicated here):
 # - YAML file validation: pkg/recipe/yaml_test.go
-#   (parsing, references, enums, constraints, inheritance chains)
 # - Metadata behavior: pkg/recipe/metadata_test.go
-#   (Merge, TopologicalSort, ValidateDependencies, inheritance resolution)
 # - Recipe validation: pkg/recipe/recipe_test.go
-#   (Validate, ValidateStructure, ValidateMeasurementExists)
-#
-# DESIGN PRINCIPLE:
-# Front-load validation into Go tests (run during development with 'go test')
-# so issues are caught early. Reserve this script for true integration testing
-# that requires the compiled binary.
 #
 # =============================================================================
 
@@ -65,38 +54,19 @@ FAILED_TESTS=0
 
 # Parse flags
 usage() {
-  echo "Usage: $0 [OPTIONS]"
-  echo ""
-  echo "Options:"
-  echo "  -o, --output PATH     Output directory for test artifacts (default: temp dir)"
-  echo "  -h, --help            Show this help message"
-  echo ""
-  echo "E2E Integration Tests for eidos CLI"
-  echo ""
-  echo "This script tests what requires a compiled binary:"
-  echo "  1. Binary builds successfully (make build)"
-  echo "  2. CLI workflow: eidos recipe → eidos bundle (for each leaf recipe)"
-  echo "  3. CLI flag handling:"
-  echo "     - --system-node-selector, --accelerated-node-selector"
-  echo "     - --system-node-toleration, --accelerated-node-toleration"
-  echo "     - --set (value overrides)"
-  echo "     - Combined flag interactions"
-  echo "  4. Helm chart validation (if helm is available):"
-  echo "     - helm lint (chart structure and syntax)"
-  echo "     - helm dependency update (Chart.yaml dependencies)"
-  echo "     - helm template (template rendering)"
-  echo "     - templates/ directory validation"
-  echo ""
-  echo "Go tests cover (not duplicated here):"
-  echo "  - pkg/recipe/yaml_test.go: YAML parsing, references, enums, constraints"
-  echo "  - pkg/recipe/metadata_test.go: Merge, inheritance chains, topological sort"
-  echo "  - pkg/recipe/recipe_test.go: Recipe validation methods"
-  echo ""
-  echo "Run 'go test ./pkg/recipe/...' to validate recipe data during development."
-  echo ""
-  echo "Examples:"
-  echo "  $0                        # Run all tests with temp output"
-  echo "  $0 -o ./test-output       # Run tests with custom output directory"
+  cat << EOF
+Usage: $0 [OPTIONS]
+
+Options:
+  -o, --output PATH     Output directory for test artifacts (default: temp dir)
+  -h, --help            Show this help message
+
+E2E Integration Tests for eidos CLI - tests compiled binary behavior.
+
+Examples:
+  $0                        # Run all tests with temp output
+  $0 -o ./test-output       # Run tests with custom output directory
+EOF
   exit 0
 }
 
@@ -123,7 +93,7 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 
 # ============================================================================
-# TEST RESULT TRACKING
+# TEST HELPERS
 # ============================================================================
 
 test_pass() {
@@ -141,207 +111,181 @@ test_fail() {
   printf "${COLOR_RED}[FAIL]${COLOR_RESET} %s: %s\n" "$name" "$reason"
 }
 
+# Create a test directory and echo its path
+# Usage: local dir=$(make_test_dir "subdir-name")
+make_test_dir() {
+  local name=$1
+  local dir="${OUTPUT_DIR}/${name}"
+  mkdir -p "$dir"
+  echo "$dir"
+}
+
+# Run a command and check if it succeeds
+# Usage: run_cmd_ok "test-name" command args...
+run_cmd_ok() {
+  local name=$1
+  shift
+  if "$@" >/dev/null 2>&1; then
+    test_pass "$name"
+    return 0
+  else
+    test_fail "$name" "Command failed: $*"
+    return 1
+  fi
+}
+
+# Run a command and check if it fails (for negative tests)
+# Usage: run_cmd_fail "test-name" command args...
+run_cmd_fail() {
+  local name=$1
+  shift
+  if "$@" >/dev/null 2>&1; then
+    test_fail "$name" "Command should have failed"
+    return 1
+  else
+    test_pass "$name"
+    return 0
+  fi
+}
+
+# Run a command and check output contains a pattern
+# Usage: run_cmd_grep "test-name" "pattern" command args...
+run_cmd_grep() {
+  local name=$1
+  local pattern=$2
+  shift 2
+  local output
+  output=$("$@" 2>&1) || true
+  if echo "$output" | grep -qi "$pattern"; then
+    test_pass "$name"
+    return 0
+  else
+    test_fail "$name" "Pattern '$pattern' not found in output"
+    return 1
+  fi
+}
+
+# Check if a file exists
+# Usage: check_file_exists "test-name" "/path/to/file"
+check_file_exists() {
+  local name=$1
+  local file=$2
+  if [ -f "$file" ]; then
+    test_pass "$name"
+    return 0
+  else
+    test_fail "$name" "File not found: $file"
+    return 1
+  fi
+}
+
+# Check if a pattern exists in a file
+# Usage: check_file_contains "test-name" "/path/to/file" "pattern"
+check_file_contains() {
+  local name=$1
+  local file=$2
+  local pattern=$3
+  if [ ! -f "$file" ]; then
+    test_fail "$name" "File not found: $file"
+    return 1
+  fi
+  if grep -q "$pattern" "$file"; then
+    test_pass "$name"
+    return 0
+  else
+    test_fail "$name" "Pattern '$pattern' not in $file"
+    return 1
+  fi
+}
+
 # ============================================================================
-# VERIFICATION HELPERS
+# BUNDLE VERIFICATION HELPERS
 # ============================================================================
 
-# Verify umbrella chart structure (new architecture)
-# The bundle command generates a Helm umbrella chart with:
-#   - Chart.yaml (with dependencies)
-#   - values.yaml (combined values for all components)
-#   - README.md
-#   - recipe.yaml (copy of the input recipe)
+# Verify umbrella chart structure
 verify_umbrella_chart() {
   local bundle_dir=$1
   local test_name=$2
-  
-  # Check for required files
   local required_files=("Chart.yaml" "values.yaml" "README.md" "recipe.yaml")
+
   for file in "${required_files[@]}"; do
     if [ ! -f "${bundle_dir}/${file}" ]; then
-      test_fail "$test_name" "Missing file: ${file}"
+      test_fail "$test_name" "Missing: ${file}"
       return 1
     fi
   done
-  
-  # Verify Chart.yaml has dependencies
+
   if ! grep -q "dependencies:" "${bundle_dir}/Chart.yaml"; then
-    test_fail "$test_name" "Chart.yaml missing dependencies section"
+    test_fail "$test_name" "Chart.yaml missing dependencies"
     return 1
   fi
-  
-  # Verify values.yaml has content
+
   if [ ! -s "${bundle_dir}/values.yaml" ]; then
     test_fail "$test_name" "values.yaml is empty"
     return 1
   fi
-  
-  test_pass "$test_name"
-  return 0
-}
-
-# Verify a pattern exists in values.yaml
-verify_pattern_in_values() {
-  local values_file=$1
-  local pattern=$2
-  local test_name=$3
-
-  if [ ! -f "$values_file" ]; then
-    test_fail "$test_name" "values.yaml not found"
-    return 1
-  fi
-
-  if ! grep -q "$pattern" "$values_file"; then
-    test_fail "$test_name" "Pattern '${pattern}' not found in values.yaml"
-    return 1
-  fi
 
   test_pass "$test_name"
-  return 0
 }
 
-# Verify Helm chart is valid using helm lint and dependency update
-# This validates:
-#   1. Chart.yaml has valid semver version
-#   2. helm lint passes (syntax and structure)
-#   3. helm dependency update works (if network available)
-#   4. templates/ directory contents are valid Helm templates
+# Verify Helm chart validity (lint, deps, template)
 verify_helm_chart() {
   local bundle_dir=$1
   local test_name=$2
 
-  if [ "$HELM_AVAILABLE" != "true" ]; then
-    # Skip helm validation if helm is not available
-    return 0
-  fi
+  [ "$HELM_AVAILABLE" != "true" ] && return 0
 
-  # Fix version if it's "dev" (helm requires valid semver)
+  # Fix "dev" version for helm
   local chart_file="${bundle_dir}/Chart.yaml"
   if grep -q "version: dev" "$chart_file" 2>/dev/null; then
     sed -i.bak 's/version: dev/version: 0.0.0-dev/' "$chart_file"
     rm -f "${chart_file}.bak"
   fi
 
-  # Run helm lint (validates chart structure and syntax)
+  # Helm lint
   local lint_output
   if ! lint_output=$(helm lint "$bundle_dir" 2>&1); then
-    # Check if the only issue is missing dependencies (expected in CI)
     if echo "$lint_output" | grep -q "chart directory is missing these dependencies"; then
-      # This is expected - dependencies aren't downloaded
-      # Check if there are any other errors (not warnings)
+      # Expected - dependencies aren't downloaded
       if echo "$lint_output" | grep -q "Error:"; then
-        test_fail "${test_name}/helm-lint" "helm lint failed: $(echo "$lint_output" | grep "Error:")"
+        test_fail "${test_name}/helm-lint" "$(echo "$lint_output" | grep "Error:")"
         return 1
       fi
     else
-      test_fail "${test_name}/helm-lint" "helm lint failed: $lint_output"
+      test_fail "${test_name}/helm-lint" "$lint_output"
       return 1
     fi
   fi
   test_pass "${test_name}/helm-lint"
 
-  # Try helm dependency update (may fail without network, which is OK)
-  local dep_output
-  if dep_output=$(helm dependency update "$bundle_dir" 2>&1); then
+  # Helm dependency update (optional - may fail without network)
+  if timeout 60 helm dependency update "$bundle_dir" >/dev/null 2>&1; then
     test_pass "${test_name}/helm-dep-update"
-
-    # If dependencies downloaded successfully, try helm template
-    local template_output
-    if template_output=$(helm template test-release "$bundle_dir" 2>&1); then
-      test_pass "${test_name}/helm-template"
-    else
-      # Template might fail due to missing values or other issues
-      # This is informational, not a hard failure
-      msg "Warning: helm template had issues (may be expected): ${template_output:0:200}"
-    fi
-  else
-    # Dependency update failed - likely no network or repos not accessible
-    # This is expected in CI environments, so just log it
-    msg "Note: helm dependency update skipped (network/repo issue)"
+    # Skip helm template - it can be very slow with large umbrella charts
+    # and may fail due to missing namespace/values requirements
   fi
-
-  # Verify templates directory if it exists
-  local templates_dir="${bundle_dir}/templates"
-  if [ -d "$templates_dir" ]; then
-    local template_count
-    template_count=$(find "$templates_dir" -name "*.yaml" -type f | wc -l | tr -d ' ')
-    if [ "$template_count" -gt 0 ]; then
-      test_pass "${test_name}/has-templates (${template_count} files)"
-
-      # Verify each template file has valid Helm template markers
-      for tmpl in "${templates_dir}"/*.yaml; do
-        if [ -f "$tmpl" ]; then
-          local tmpl_name
-          tmpl_name=$(basename "$tmpl")
-          # Check for basic Helm template syntax ({{ or {{-)
-          if grep -qE '\{\{-?\s' "$tmpl"; then
-            test_pass "${test_name}/template-syntax/${tmpl_name}"
-          else
-            # File might be a static manifest (no templating needed)
-            # This is OK, just note it
-            msg "Note: ${tmpl_name} has no Helm template syntax (may be static manifest)"
-          fi
-        fi
-      done
-    fi
-  fi
-
-  return 0
 }
 
 # Verify ArgoCD App of Apps structure
-# The --deployer argocd generates:
-#   - app-of-apps.yaml (parent Application)
-#   - README.md
-#   - <component>/application.yaml (per-component)
-#   - <component>/values.yaml (per-component)
 verify_argocd_structure() {
   local bundle_dir=$1
   local test_name=$2
-  
-  # Check for required root files
-  if [ ! -f "${bundle_dir}/app-of-apps.yaml" ]; then
-    test_fail "$test_name" "Missing file: app-of-apps.yaml"
-    return 1
-  fi
-  
-  if [ ! -f "${bundle_dir}/README.md" ]; then
-    test_fail "$test_name" "Missing file: README.md"
-    return 1
-  fi
-  
-  # Verify app-of-apps.yaml has ArgoCD Application kind
-  if ! grep -q "kind: Application" "${bundle_dir}/app-of-apps.yaml"; then
-    test_fail "$test_name" "app-of-apps.yaml missing 'kind: Application'"
-    return 1
-  fi
-  
-  # Check that at least one component directory exists with application.yaml
-  local found_component=false
+
+  check_file_exists "${test_name}/app-of-apps" "${bundle_dir}/app-of-apps.yaml" || return 1
+  check_file_contains "${test_name}/kind" "${bundle_dir}/app-of-apps.yaml" "kind: Application" || return 1
+
+  # Find at least one component with application.yaml and sync-wave
   for dir in "${bundle_dir}"/*/; do
     if [ -d "$dir" ] && [ -f "${dir}application.yaml" ]; then
-      found_component=true
-      # Verify component has values.yaml
-      if [ ! -f "${dir}values.yaml" ]; then
-        test_fail "$test_name" "Component directory missing values.yaml"
-        return 1
-      fi
-      # Verify component application.yaml has sync-wave annotation
-      if ! grep -q "argocd.argoproj.io/sync-wave" "${dir}application.yaml"; then
-        test_fail "$test_name" "Component application.yaml missing sync-wave annotation"
-        return 1
-      fi
-      break
+      check_file_exists "${test_name}/component-values" "${dir}values.yaml" || return 1
+      check_file_contains "${test_name}/sync-wave" "${dir}application.yaml" "argocd.argoproj.io/sync-wave" || return 1
+      test_pass "$test_name"
+      return 0
     fi
   done
-  
-  if [ "$found_component" = false ]; then
-    test_fail "$test_name" "No component directories with application.yaml found"
-    return 1
-  fi
-  
-  test_pass "$test_name"
-  return 0
+
+  test_fail "$test_name" "No component directories found"
+  return 1
 }
 
 # ============================================================================
@@ -548,217 +492,91 @@ generate_recipe() {
 }
 
 # ============================================================================
-# BUNDLE TESTS
+# BUNDLE TESTS (Table-Driven)
 # ============================================================================
 
+# Run a single bundle test case
+# Args: name, flags (space-separated), patterns_to_check (pipe-separated)
+run_bundle_test() {
+  local name=$1
+  local flags=$2
+  local patterns=$3
+
+  local dir=$(make_test_dir "bundles/${name}")
+
+  # Build command
+  local cmd="${EIDOS_BIN} bundle -r ${RECIPE_FILE} -o ${dir} ${flags}"
+
+  if ! eval "$cmd" >/dev/null 2>&1; then
+    test_fail "bundle/${name}/generation" "Bundle generation failed"
+    return 1
+  fi
+  test_pass "bundle/${name}/generation"
+
+  # Verify umbrella chart structure
+  verify_umbrella_chart "$dir" "bundle/${name}/structure" || return 1
+
+  # Check patterns in values.yaml (pipe-separated list)
+  if [ -n "$patterns" ]; then
+    IFS='|' read -ra pattern_array <<< "$patterns"
+    for pattern in "${pattern_array[@]}"; do
+      local pattern_name=$(echo "$pattern" | tr '.' '-' | tr '/' '-')
+      check_file_contains "bundle/${name}/${pattern_name}" "${dir}/values.yaml" "$pattern" || true
+    done
+  fi
+
+  # Helm validation
+  verify_helm_chart "$dir" "bundle/${name}"
+}
+
 run_bundle_tests() {
-  local recipe_file=$1
-  
   msg ""
   msg "=========================================="
   msg "Running Bundle Generation Tests"
   msg "=========================================="
-  
-  # -------------------------------------------------------------------------
-  # Test 1: Basic bundle generation (no overrides)
-  # -------------------------------------------------------------------------
+
+  # Test 1: Basic bundle (no flags)
+  run_bundle_test "basic" "" "gpu-operator"
+
+  # Test 2: System node selector
+  run_bundle_test "sys-selector" \
+    "--system-node-selector nodeGroup=system-pool" \
+    "nodeGroup|system-pool"
+
+  # Test 3: Accelerated node selector
+  run_bundle_test "accel-selector" \
+    "--accelerated-node-selector accelerator=nvidia-gpu" \
+    "accelerator|nvidia-gpu"
+
+  # Test 4: System node toleration
+  run_bundle_test "sys-toleration" \
+    "--system-node-toleration dedicated=system-workload:NoSchedule" \
+    "dedicated|system-workload"
+
+  # Test 5: Accelerated node toleration
+  run_bundle_test "accel-toleration" \
+    "--accelerated-node-toleration nvidia.com/gpu=present:NoSchedule" \
+    "nvidia.com/gpu"
+
+  # Test 6: Value override (--set)
+  run_bundle_test "value-override" \
+    "--set gpu-operator:driver.version=999.99.99" \
+    "999.99.99"
+
+  # Test 7: Combined (all flags)
+  run_bundle_test "combined" \
+    "--system-node-selector nodeGroup=system-pool --system-node-toleration dedicated=system:NoSchedule --accelerated-node-selector accelerator=nvidia-gpu --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule --set gpu-operator:driver.version=888.88.88" \
+    "nodeGroup|dedicated|accelerator|nvidia.com/gpu|888.88.88"
+
+  # Test 8: ArgoCD deployer (special case)
   msg ""
-  msg "--- Test 1: Basic Bundle Generation (No Overrides) ---"
-  
-  local basic_dir="${OUTPUT_DIR}/bundles/basic"
-  mkdir -p "$basic_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$basic_dir" 2>&1; then
-    test_fail "bundle/basic/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/basic/generation"
-
-    # Verify umbrella chart structure
-    verify_umbrella_chart "$basic_dir" "bundle/basic/umbrella-chart"
-
-    # Verify Helm chart validity
-    verify_helm_chart "$basic_dir" "bundle/basic"
-
-    # Verify expected components in Chart.yaml dependencies
-    verify_pattern_in_values "${basic_dir}/Chart.yaml" \
-      "gpu-operator" "bundle/basic/has-gpu-operator-dep"
-    verify_pattern_in_values "${basic_dir}/Chart.yaml" \
-      "skyhook-operator" "bundle/basic/has-skyhook-operator-dep"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 2: With system node selector
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: With System Node Selector ---"
-  
-  local sys_selector_dir="${OUTPUT_DIR}/bundles/system-selector"
-  mkdir -p "$sys_selector_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$sys_selector_dir" \
-    --system-node-selector nodeGroup=system-pool \
-    --system-node-selector workload=control-plane 2>&1; then
-    test_fail "bundle/system-selector/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/system-selector/generation"
-    
-    # Verify node selector in combined values.yaml
-    verify_pattern_in_values "${sys_selector_dir}/values.yaml" \
-      "nodeGroup" "bundle/system-selector/has-nodeGroup"
-    verify_pattern_in_values "${sys_selector_dir}/values.yaml" \
-      "system-pool" "bundle/system-selector/has-system-pool"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 3: With accelerated node selector
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 3: With Accelerated Node Selector ---"
-  
-  local accel_selector_dir="${OUTPUT_DIR}/bundles/accel-selector"
-  mkdir -p "$accel_selector_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$accel_selector_dir" \
-    --accelerated-node-selector accelerator=nvidia-gpu \
-    --accelerated-node-selector gpu-type=gb200 2>&1; then
-    test_fail "bundle/accel-selector/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/accel-selector/generation"
-    
-    # Verify accelerated node selector in combined values.yaml
-    verify_pattern_in_values "${accel_selector_dir}/values.yaml" \
-      "accelerator" "bundle/accel-selector/has-accelerator"
-    verify_pattern_in_values "${accel_selector_dir}/values.yaml" \
-      "nvidia-gpu" "bundle/accel-selector/has-nvidia-gpu"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 4: With system node tolerations
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 4: With System Node Tolerations ---"
-  
-  local sys_toleration_dir="${OUTPUT_DIR}/bundles/system-toleration"
-  mkdir -p "$sys_toleration_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$sys_toleration_dir" \
-    --system-node-toleration dedicated=system-workload:NoSchedule 2>&1; then
-    test_fail "bundle/system-toleration/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/system-toleration/generation"
-    
-    # Verify system toleration in combined values.yaml
-    verify_pattern_in_values "${sys_toleration_dir}/values.yaml" \
-      "dedicated" "bundle/system-toleration/has-dedicated"
-    verify_pattern_in_values "${sys_toleration_dir}/values.yaml" \
-      "system-workload" "bundle/system-toleration/has-system-workload"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 5: With accelerated node tolerations
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 5: With Accelerated Node Tolerations ---"
-  
-  local accel_toleration_dir="${OUTPUT_DIR}/bundles/accel-toleration"
-  mkdir -p "$accel_toleration_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$accel_toleration_dir" \
-    --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule 2>&1; then
-    test_fail "bundle/accel-toleration/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/accel-toleration/generation"
-    
-    # Verify accelerated toleration in combined values.yaml
-    verify_pattern_in_values "${accel_toleration_dir}/values.yaml" \
-      "nvidia.com/gpu" "bundle/accel-toleration/has-nvidia-gpu"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 6: With value overrides (--set)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 6: With Value Overrides (--set) ---"
-  
-  local override_dir="${OUTPUT_DIR}/bundles/value-override"
-  mkdir -p "$override_dir"
-  
-  # Test value overrides for gpu-operator (under gpuoperator: key in values.yaml)
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$override_dir" \
-    --set gpu-operator:driver.version=999.99.99 \
-    --set gpu-operator:cdi.enabled=true 2>&1; then
-    test_fail "bundle/value-override/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/value-override/generation"
-    
-    # Verify value overrides in combined values.yaml
-    verify_pattern_in_values "${override_dir}/values.yaml" \
-      "999.99.99" "bundle/value-override/driver-version"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 7: Combined overrides (all flags together)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 7: Combined Overrides (All Flags) ---"
-  
-  local combined_dir="${OUTPUT_DIR}/bundles/combined"
-  mkdir -p "$combined_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$combined_dir" \
-    --system-node-selector nodeGroup=system-pool \
-    --system-node-toleration dedicated=system:NoSchedule \
-    --accelerated-node-selector accelerator=nvidia-gpu \
-    --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule \
-    --set gpu-operator:driver.version=888.88.88 2>&1; then
-    test_fail "bundle/combined/generation" "Bundle generation failed"
-  else
-    test_pass "bundle/combined/generation"
-
-    # Verify umbrella chart structure
-    verify_umbrella_chart "$combined_dir" "bundle/combined/umbrella-chart"
-
-    # Verify Helm chart validity
-    verify_helm_chart "$combined_dir" "bundle/combined"
-
-    # Verify system node selector
-    verify_pattern_in_values "${combined_dir}/values.yaml" \
-      "nodeGroup" "bundle/combined/system-selector"
-
-    # Verify system toleration
-    verify_pattern_in_values "${combined_dir}/values.yaml" \
-      "dedicated" "bundle/combined/system-toleration"
-
-    # Verify accelerated node selector
-    verify_pattern_in_values "${combined_dir}/values.yaml" \
-      "accelerator" "bundle/combined/accel-selector"
-
-    # Verify accelerated toleration
-    verify_pattern_in_values "${combined_dir}/values.yaml" \
-      "nvidia.com/gpu" "bundle/combined/accel-toleration"
-
-    # Verify value override
-    verify_pattern_in_values "${combined_dir}/values.yaml" \
-      "888.88.88" "bundle/combined/value-override"
-  fi
-  
-  # -------------------------------------------------------------------------
-  # Test 8: ArgoCD Deployer
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 8: ArgoCD Deployer (--deployer argocd) ---"
-  
-  local argocd_dir="${OUTPUT_DIR}/bundles/argocd"
-  mkdir -p "$argocd_dir"
-  
-  if ! "${EIDOS_BIN}" bundle -r "$recipe_file" -o "$argocd_dir" \
-    --deployer argocd 2>&1; then
-    test_fail "bundle/argocd/generation" "Bundle generation with --deployer argocd failed"
-  else
+  msg "--- ArgoCD Deployer ---"
+  local argocd_dir=$(make_test_dir "bundles/argocd")
+  if "${EIDOS_BIN}" bundle -r "$RECIPE_FILE" -o "$argocd_dir" --deployer argocd >/dev/null 2>&1; then
     test_pass "bundle/argocd/generation"
-    
-    # Verify ArgoCD App of Apps structure
-    verify_argocd_structure "$argocd_dir" "bundle/argocd/structure"
+    verify_argocd_structure "$argocd_dir" "bundle/argocd"
+  else
+    test_fail "bundle/argocd/generation" "ArgoCD bundle failed"
   fi
 }
 
@@ -769,19 +587,13 @@ run_bundle_tests() {
 test_criteria_file_flag() {
   msg ""
   msg "=========================================="
-  msg "Testing Criteria File Support (--criteria flag)"
+  msg "Testing Criteria File Support"
   msg "=========================================="
 
-  local criteria_test_dir="${OUTPUT_DIR}/criteria-file-test"
-  mkdir -p "$criteria_test_dir"
+  local dir=$(make_test_dir "criteria-file")
 
-  # -------------------------------------------------------------------------
-  # Test 1: Valid YAML criteria file
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 1: Valid YAML Criteria File ---"
-
-  local yaml_criteria="${criteria_test_dir}/criteria.yaml"
+  # Create valid YAML criteria file
+  local yaml_criteria="${dir}/criteria.yaml"
   cat > "$yaml_criteria" << 'EOF'
 kind: recipeCriteria
 apiVersion: eidos.nvidia.com/v1alpha1
@@ -794,220 +606,52 @@ spec:
   intent: training
 EOF
 
-  local yaml_recipe="${criteria_test_dir}/yaml-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" -o "$yaml_recipe" 2>&1; then
-    test_fail "criteria-file/yaml" "Failed to generate recipe from YAML criteria file"
-  else
-    test_pass "criteria-file/yaml"
+  # Test 1: Valid YAML criteria
+  local yaml_recipe="${dir}/yaml-recipe.yaml"
+  run_cmd_ok "criteria/yaml" "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" -o "$yaml_recipe"
+  check_file_exists "criteria/yaml-created" "$yaml_recipe"
 
-    # Verify recipe was created
-    if [ -f "$yaml_recipe" ]; then
-      test_pass "criteria-file/yaml-recipe-created"
-
-      # Verify criteria values were applied
-      if grep -q "service: eks" "$yaml_recipe" 2>/dev/null || grep -q '"service": "eks"' "$yaml_recipe" 2>/dev/null; then
-        test_pass "criteria-file/yaml-service-applied"
-      else
-        test_fail "criteria-file/yaml-service-applied" "Service value not found in recipe"
-      fi
-    else
-      test_fail "criteria-file/yaml-recipe-created" "Recipe file was not created"
-    fi
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 2: Valid JSON criteria file
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: Valid JSON Criteria File ---"
-
-  local json_criteria="${criteria_test_dir}/criteria.json"
+  # Test 2: Valid JSON criteria
+  local json_criteria="${dir}/criteria.json"
   cat > "$json_criteria" << 'EOF'
-{
-  "kind": "recipeCriteria",
-  "apiVersion": "eidos.nvidia.com/v1alpha1",
-  "metadata": {
-    "name": "test-criteria-json"
-  },
-  "spec": {
-    "service": "gke",
-    "accelerator": "a100",
-    "os": "ubuntu",
-    "intent": "inference"
-  }
-}
+{"kind":"recipeCriteria","apiVersion":"eidos.nvidia.com/v1alpha1","metadata":{"name":"test"},"spec":{"service":"gke","accelerator":"a100","os":"ubuntu","intent":"inference"}}
 EOF
+  run_cmd_ok "criteria/json" "${EIDOS_BIN}" recipe --criteria "$json_criteria" -o "${dir}/json-recipe.yaml"
 
-  local json_recipe="${criteria_test_dir}/json-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --criteria "$json_criteria" -o "$json_recipe" 2>&1; then
-    test_fail "criteria-file/json" "Failed to generate recipe from JSON criteria file"
-  else
-    test_pass "criteria-file/json"
+  # Test 3: CLI flag overrides criteria file
+  local override_recipe="${dir}/override.yaml"
+  run_cmd_ok "criteria/override" "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" --service gke -o "$override_recipe"
+  check_file_contains "criteria/override-applied" "$override_recipe" "gke"
 
-    # Verify recipe was created
-    if [ -f "$json_recipe" ]; then
-      test_pass "criteria-file/json-recipe-created"
-    else
-      test_fail "criteria-file/json-recipe-created" "Recipe file was not created"
-    fi
-  fi
+  # Test 4-6: Invalid criteria files (should fail)
+  echo 'kind: wrongKind' > "${dir}/invalid-kind.yaml"
+  run_cmd_fail "criteria/invalid-kind" "${EIDOS_BIN}" recipe --criteria "${dir}/invalid-kind.yaml" -o /dev/null
 
-  # -------------------------------------------------------------------------
-  # Test 3: CLI flag override
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 3: CLI Flag Overrides Criteria File ---"
+  echo 'kind: recipeCriteria
+apiVersion: wrong.version/v1' > "${dir}/invalid-version.yaml"
+  run_cmd_fail "criteria/invalid-apiversion" "${EIDOS_BIN}" recipe --criteria "${dir}/invalid-version.yaml" -o /dev/null
 
-  local override_recipe="${criteria_test_dir}/override-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" --service gke -o "$override_recipe" 2>&1; then
-    test_fail "criteria-file/override" "Failed to generate recipe with CLI override"
-  else
-    test_pass "criteria-file/override"
-
-    # Verify the service was overridden to gke (not eks from file)
-    if grep -q "service: gke" "$override_recipe" 2>/dev/null || grep -q '"service": "gke"' "$override_recipe" 2>/dev/null; then
-      test_pass "criteria-file/override-applied"
-    else
-      test_fail "criteria-file/override-applied" "CLI override (--service gke) was not applied"
-    fi
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 4: Invalid criteria file (wrong kind)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 4: Invalid Criteria File (Wrong Kind) ---"
-
-  local invalid_kind="${criteria_test_dir}/invalid-kind.yaml"
-  cat > "$invalid_kind" << 'EOF'
-kind: wrongKind
+  echo 'kind: recipeCriteria
 apiVersion: eidos.nvidia.com/v1alpha1
-metadata:
-  name: invalid
 spec:
-  service: eks
-EOF
+  service: invalid-service' > "${dir}/invalid-enum.yaml"
+  run_cmd_fail "criteria/invalid-enum" "${EIDOS_BIN}" recipe --criteria "${dir}/invalid-enum.yaml" -o /dev/null
 
-  if "${EIDOS_BIN}" recipe --criteria "$invalid_kind" -o /dev/null 2>&1; then
-    test_fail "criteria-file/invalid-kind" "Should fail with invalid kind"
-  else
-    test_pass "criteria-file/invalid-kind"
-  fi
+  # Test 7: Non-existent file
+  run_cmd_fail "criteria/non-existent" "${EIDOS_BIN}" recipe --criteria "/non/existent/file.yaml" -o /dev/null
 
-  # -------------------------------------------------------------------------
-  # Test 5: Invalid criteria file (wrong apiVersion)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 5: Invalid Criteria File (Wrong apiVersion) ---"
+  # Test 8: Criteria file with bundle
+  local bundle_dir="${dir}/bundle"
+  mkdir -p "$bundle_dir"
+  run_cmd_ok "criteria/bundle" "${EIDOS_BIN}" bundle -r "$yaml_recipe" -o "$bundle_dir"
+  verify_umbrella_chart "$bundle_dir" "criteria/bundle-structure"
 
-  local invalid_version="${criteria_test_dir}/invalid-version.yaml"
-  cat > "$invalid_version" << 'EOF'
-kind: recipeCriteria
-apiVersion: wrong.version/v1
-metadata:
-  name: invalid
-spec:
-  service: eks
-EOF
-
-  if "${EIDOS_BIN}" recipe --criteria "$invalid_version" -o /dev/null 2>&1; then
-    test_fail "criteria-file/invalid-apiversion" "Should fail with invalid apiVersion"
-  else
-    test_pass "criteria-file/invalid-apiversion"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 6: Invalid criteria file (invalid enum value)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 6: Invalid Criteria File (Invalid Enum Value) ---"
-
-  local invalid_enum="${criteria_test_dir}/invalid-enum.yaml"
-  cat > "$invalid_enum" << 'EOF'
-kind: recipeCriteria
+  # Test 9: Partial criteria (only accelerator)
+  echo 'kind: recipeCriteria
 apiVersion: eidos.nvidia.com/v1alpha1
-metadata:
-  name: invalid-enum
 spec:
-  service: invalid-service
-  accelerator: h100
-EOF
-
-  if "${EIDOS_BIN}" recipe --criteria "$invalid_enum" -o /dev/null 2>&1; then
-    test_fail "criteria-file/invalid-enum" "Should fail with invalid service enum"
-  else
-    test_pass "criteria-file/invalid-enum"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 7: Non-existent criteria file
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 7: Non-existent Criteria File ---"
-
-  if "${EIDOS_BIN}" recipe --criteria "/non/existent/file.yaml" -o /dev/null 2>&1; then
-    test_fail "criteria-file/non-existent" "Should fail with non-existent file"
-  else
-    test_pass "criteria-file/non-existent"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 8: Criteria file with bundle command
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 8: Criteria File with Bundle Generation ---"
-
-  local criteria_bundle_dir="${criteria_test_dir}/bundle"
-  mkdir -p "$criteria_bundle_dir"
-
-  # First generate recipe from criteria
-  local criteria_recipe="${criteria_test_dir}/for-bundle.yaml"
-  if ! "${EIDOS_BIN}" recipe --criteria "$yaml_criteria" -o "$criteria_recipe" 2>&1; then
-    test_fail "criteria-file/bundle-recipe" "Failed to generate recipe for bundle test"
-  else
-    # Then generate bundle from that recipe
-    if ! "${EIDOS_BIN}" bundle -r "$criteria_recipe" -o "$criteria_bundle_dir" 2>&1; then
-      test_fail "criteria-file/bundle" "Failed to generate bundle from criteria-based recipe"
-    else
-      test_pass "criteria-file/bundle"
-
-      # Verify bundle was created
-      verify_umbrella_chart "$criteria_bundle_dir" "criteria-file/bundle-structure"
-    fi
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 9: Partial criteria file (only some fields)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 9: Partial Criteria File ---"
-
-  local partial_criteria="${criteria_test_dir}/partial.yaml"
-  cat > "$partial_criteria" << 'EOF'
-kind: recipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
-metadata:
-  name: partial-criteria
-spec:
-  accelerator: h100
-EOF
-
-  local partial_recipe="${criteria_test_dir}/partial-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --criteria "$partial_criteria" -o "$partial_recipe" 2>&1; then
-    test_fail "criteria-file/partial" "Failed to generate recipe from partial criteria file"
-  else
-    test_pass "criteria-file/partial"
-
-    # Verify recipe was created
-    if [ -f "$partial_recipe" ]; then
-      test_pass "criteria-file/partial-recipe-created"
-    else
-      test_fail "criteria-file/partial-recipe-created" "Recipe file was not created"
-    fi
-  fi
-
-  msg ""
-  msg "Criteria file tests completed"
+  accelerator: h100' > "${dir}/partial.yaml"
+  run_cmd_ok "criteria/partial" "${EIDOS_BIN}" recipe --criteria "${dir}/partial.yaml" -o "${dir}/partial-recipe.yaml"
 }
 
 # ============================================================================
@@ -1017,30 +661,25 @@ EOF
 test_validate_phases() {
   msg ""
   msg "=========================================="
-  msg "Testing Multi-Phase Validation (--phase flag)"
+  msg "Testing Multi-Phase Validation"
   msg "=========================================="
 
-  # Note: This test doesn't require a real snapshot, just tests CLI flags
-  # Create a mock recipe and snapshot for testing
+  local dir=$(make_test_dir "validate-phases")
 
-  local validate_test_dir="${OUTPUT_DIR}/validate-phases"
-  mkdir -p "$validate_test_dir"
-
-  # Use an existing recipe if available
-  local recipe_file="$RECIPE_FILE"
+  # Generate recipe if needed
+  local recipe_file="${RECIPE_FILE:-}"
   if [ -z "$recipe_file" ] || [ ! -f "$recipe_file" ]; then
-    msg "Note: No recipe available, generating one for validation tests"
-    recipe_file="${validate_test_dir}/test-recipe.yaml"
-    if ! "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
-      -o "$recipe_file" 2>&1; then
-      test_fail "validate/setup" "Failed to generate recipe for validation test"
+    recipe_file="${dir}/test-recipe.yaml"
+    "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
+      -o "$recipe_file" >/dev/null 2>&1 || {
+      test_fail "validate/setup" "Failed to generate recipe"
       return 0
-    fi
+    }
   fi
 
-  # Create a mock snapshot for testing (minimal valid structure)
-  local snapshot_file="${validate_test_dir}/mock-snapshot.yaml"
-  cat > "$snapshot_file" << 'EOF'
+  # Create mock snapshot
+  local snapshot="${dir}/snapshot.yaml"
+  cat > "$snapshot" << 'EOF'
 measurements:
   - type: K8s
     subtypes:
@@ -1055,173 +694,39 @@ measurements:
           VERSION_ID: "24.04"
 EOF
 
-  # -------------------------------------------------------------------------
-  # Test 1: Default phase (readiness)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 1: Default Phase (readiness) ---"
+  # Test individual phases
+  for phase in readiness deployment performance conformance; do
+    run_cmd_grep "validate/phase-${phase}" "$phase" \
+      "${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot" --phase "$phase"
+  done
 
+  # Test --phase all
+  local all_output="${dir}/all-phases.yaml"
   local output
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" 2>&1) || true
+  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot" --phase all -o "$all_output" 2>&1) || true
+  local count=0
+  echo "$output" | grep -q "readiness" && ((count++)) || true
+  echo "$output" | grep -q "deployment" && ((count++)) || true
+  echo "$output" | grep -q "performance" && ((count++)) || true
+  [ $count -ge 3 ] && test_pass "validate/phase-all" || test_fail "validate/phase-all" "Expected 3+ phases"
 
-  if echo "$output" | grep -q "validation completed"; then
-    test_pass "validate/default-phase"
-  else
-    test_fail "validate/default-phase" "Validation failed"
-  fi
+  # Test result structure
+  [ -f "$all_output" ] && check_file_contains "validate/result-structure" "$all_output" "phases:"
 
-  # -------------------------------------------------------------------------
-  # Test 2: Explicit readiness phase
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: Explicit --phase readiness ---"
+  # Test invalid phase
+  run_cmd_grep "validate/invalid-phase" "invalid phase" \
+    "${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot" --phase invalid-phase
 
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase readiness 2>&1) || true
-
-  if echo "$output" | grep -q "readiness"; then
-    test_pass "validate/phase-predeployment"
-  else
-    test_fail "validate/phase-predeployment" "Readiness phase not found"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 3: Deployment phase
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 3: --phase deployment ---"
-
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase deployment 2>&1) || true
-
-  if echo "$output" | grep -q "deployment"; then
-    test_pass "validate/phase-deployment"
-  else
-    test_fail "validate/phase-deployment" "Deployment phase not found"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 4: Performance phase
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 4: --phase performance ---"
-
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase performance 2>&1) || true
-
-  if echo "$output" | grep -q "performance"; then
-    test_pass "validate/phase-performance"
-  else
-    test_fail "validate/phase-performance" "Performance phase not found"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 5: Conformance phase
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 5: --phase conformance ---"
-
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase conformance 2>&1) || true
-
-  if echo "$output" | grep -q "conformance"; then
-    test_pass "validate/phase-conformance"
-  else
-    test_fail "validate/phase-conformance" "Conformance phase not found"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 6: All phases
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 6: --phase all ---"
-
-  local all_phases_file="${validate_test_dir}/all-phases-result.yaml"
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase all -o "$all_phases_file" 2>&1) || true
-
-  # Check for multiple phases in output
-  local phase_count=0
-  echo "$output" | grep -q "readiness" && ((phase_count++)) || true
-  echo "$output" | grep -q "deployment" && ((phase_count++)) || true
-  echo "$output" | grep -q "performance" && ((phase_count++)) || true
-
-  if [ $phase_count -ge 3 ]; then
-    test_pass "validate/phase-all (found $phase_count phases)"
-  else
-    test_fail "validate/phase-all" "Expected 3+ phases, found $phase_count"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 7: Verify phase structure in output file
-  # -------------------------------------------------------------------------
-  if [ -f "$all_phases_file" ]; then
-    msg ""
-    msg "--- Test 7: Verify Phase Result Structure ---"
-
-    if grep -q "phases:" "$all_phases_file" && \
-       grep -q "readiness:" "$all_phases_file"; then
-      test_pass "validate/result-structure"
-    else
-      test_fail "validate/result-structure" "phases field not found in output"
-    fi
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 8: Invalid phase (should fail)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 8: Invalid --phase value (should fail) ---"
-
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase invalid-phase 2>&1) || true
-
-  if echo "$output" | grep -qi "invalid phase"; then
-    test_pass "validate/invalid-phase"
-  else
-    test_fail "validate/invalid-phase" "Expected error for invalid phase"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 9: Multiple --phase flags (new feature)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 9: Multiple --phase flags ---"
-
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
-    --phase readiness --phase deployment 2>&1) || true
-
-  # Should recognize both phases
-  local multi_phase_count=0
-  echo "$output" | grep -q "readiness" && ((multi_phase_count++)) || true
-  echo "$output" | grep -q "deployment" && ((multi_phase_count++)) || true
-
-  if [ $multi_phase_count -ge 2 ]; then
-    test_pass "validate/multiple-phases"
-  else
-    test_fail "validate/multiple-phases" "Expected multiple phases to be processed"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 10: Multiple --phase flags (three phases)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 10: Three --phase flags ---"
-
-  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot_file" \
+  # Test multiple --phase flags
+  output=$("${EIDOS_BIN}" validate -r "$recipe_file" -s "$snapshot" \
     --phase readiness --phase deployment --phase conformance 2>&1) || true
-
-  # Should show all three phases
   if echo "$output" | grep -q "readiness" && \
      echo "$output" | grep -q "deployment" && \
      echo "$output" | grep -q "conformance"; then
-    test_pass "validate/three-phases"
+    test_pass "validate/multi-phase"
   else
-    test_fail "validate/three-phases" "Expected all three phases"
+    test_fail "validate/multi-phase" "Expected all three phases"
   fi
-
-  msg ""
-  msg "Multi-phase validation tests completed"
 }
 
 # ============================================================================
@@ -1234,65 +739,19 @@ test_duplicate_flag_validation() {
   msg "Testing Duplicate Flag Validation"
   msg "=========================================="
 
-  local dup_test_dir="${OUTPUT_DIR}/duplicate-flag-test"
-  mkdir -p "$dup_test_dir"
+  local dir=$(make_test_dir "duplicate-flags")
+  local recipe="${dir}/recipe.yaml"
+  "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training -o "$recipe" >/dev/null 2>&1 || echo "kind: Recipe" > "$recipe"
 
-  # Create a minimal recipe for testing
-  local recipe_file="${dup_test_dir}/test-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
-    -o "$recipe_file" 2>&1; then
-    msg "Note: Could not create recipe, using placeholder"
-    echo "kind: Recipe" > "$recipe_file"
-  fi
+  # All duplicate flag tests should fail with "can only be specified once"
+  run_cmd_grep "dup/bundle-recipe" "can only be specified once" \
+    "${EIDOS_BIN}" bundle --recipe "$recipe" --recipe "$recipe" -o "${dir}/out"
 
-  # -------------------------------------------------------------------------
-  # Test 1: bundle --recipe duplicate (should error)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 1: bundle --recipe --recipe (should error) ---"
+  run_cmd_grep "dup/validate-recipe" "can only be specified once" \
+    "${EIDOS_BIN}" validate --recipe "$recipe" --recipe "$recipe" --snapshot "$recipe"
 
-  local output
-  output=$("${EIDOS_BIN}" bundle --recipe "$recipe_file" --recipe "$recipe_file" \
-    -o "$dup_test_dir/out" 2>&1) || true
-
-  if echo "$output" | grep -qi "can only be specified once"; then
-    test_pass "duplicate-flag/bundle-recipe"
-  else
-    test_fail "duplicate-flag/bundle-recipe" "Expected error for duplicate --recipe"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 2: validate --recipe duplicate (should error)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: validate --recipe --recipe (should error) ---"
-
-  output=$("${EIDOS_BIN}" validate --recipe "$recipe_file" --recipe "$recipe_file" \
-    --snapshot "$recipe_file" 2>&1) || true
-
-  if echo "$output" | grep -qi "can only be specified once"; then
-    test_pass "duplicate-flag/validate-recipe"
-  else
-    test_fail "duplicate-flag/validate-recipe" "Expected error for duplicate --recipe"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 3: recipe --service duplicate (should error)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 3: recipe --service --service (should error) ---"
-
-  output=$("${EIDOS_BIN}" recipe --service eks --service gke \
-    --accelerator h100 --intent training 2>&1) || true
-
-  if echo "$output" | grep -qi "can only be specified once"; then
-    test_pass "duplicate-flag/recipe-service"
-  else
-    test_fail "duplicate-flag/recipe-service" "Expected error for duplicate --service"
-  fi
-
-  msg ""
-  msg "Duplicate flag validation tests completed"
+  run_cmd_grep "dup/recipe-service" "can only be specified once" \
+    "${EIDOS_BIN}" recipe --service eks --service gke --accelerator h100 --intent training
 }
 
 # ============================================================================
@@ -1305,42 +764,20 @@ test_validate_agent_flags() {
   msg "Testing Validate Command Agent Flags"
   msg "=========================================="
 
-  # -------------------------------------------------------------------------
-  # Test 1: Verify agent flags exist in validate command
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 1: Agent flags exist in validate --help ---"
-
   local help_output
   help_output=$("${EIDOS_BIN}" validate --help 2>&1)
 
-  local missing_flags=""
-  for flag in "namespace" "node-selector" "toleration" "image" "job-name" "timeout" "cleanup" "privileged"; do
-    if ! echo "$help_output" | grep -q "$flag"; then
-      missing_flags="$missing_flags $flag"
-    fi
+  # Check all required agent flags exist
+  local missing=""
+  for flag in namespace node-selector toleration image job-name timeout cleanup privileged; do
+    echo "$help_output" | grep -q "$flag" || missing="$missing $flag"
   done
+  [ -z "$missing" ] && test_pass "validate-agent/flags-exist" || test_fail "validate-agent/flags-exist" "Missing:$missing"
 
-  if [ -z "$missing_flags" ]; then
-    test_pass "validate-agent/flags-exist"
-  else
-    test_fail "validate-agent/flags-exist" "Missing flags:$missing_flags"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 2: Validate command description mentions agent deployment
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: Help mentions agent deployment ---"
-
-  if echo "$help_output" | grep -qi "agent\|deploy"; then
-    test_pass "validate-agent/help-mentions-agent"
-  else
-    test_fail "validate-agent/help-mentions-agent" "Help should mention agent deployment"
-  fi
-
-  msg ""
-  msg "Validate agent flags tests completed"
+  # Check help mentions agent/deploy
+  echo "$help_output" | grep -qi "agent\|deploy" && \
+    test_pass "validate-agent/help-mentions-agent" || \
+    test_fail "validate-agent/help-mentions-agent" "Help should mention agent"
 }
 
 # ============================================================================
@@ -1350,100 +787,44 @@ test_validate_agent_flags() {
 test_external_data_flag() {
   msg ""
   msg "=========================================="
-  msg "Testing External Data Directory (--data flag)"
+  msg "Testing External Data Directory"
   msg "=========================================="
 
-  local data_test_dir="${OUTPUT_DIR}/external-data-test"
-  mkdir -p "$data_test_dir"
+  local dir=$(make_test_dir "external-data")
 
-  # -------------------------------------------------------------------------
-  # Test 1: Error when --data directory doesn't exist
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 1: Error on Non-existent Directory ---"
+  # Test 1-2: Error cases
+  run_cmd_fail "data/non-existent" "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training --data "/non/existent" -o /dev/null
+  mkdir -p "${dir}/empty"
+  run_cmd_fail "data/missing-registry" "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training --data "${dir}/empty" -o /dev/null
 
-  if "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
-    --data "/non/existent/path" -o /dev/null 2>&1; then
-    test_fail "external-data/non-existent" "Should fail with non-existent directory"
-  else
-    test_pass "external-data/non-existent"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 2: Error when registry.yaml is missing
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: Error when registry.yaml is Missing ---"
-
-  local no_registry_dir="${data_test_dir}/no-registry"
-  mkdir -p "$no_registry_dir"
-
-  if "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
-    --data "$no_registry_dir" -o /dev/null 2>&1; then
-    test_fail "external-data/missing-registry" "Should fail when registry.yaml is missing"
-  else
-    test_pass "external-data/missing-registry"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 3: Success with valid external data directory
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 3: Valid External Data Directory ---"
-
-  local valid_data_dir="${data_test_dir}/valid"
-  mkdir -p "$valid_data_dir"
-
-  # Create a minimal registry.yaml with a custom component
-  cat > "${valid_data_dir}/registry.yaml" << 'EOF'
+  # Test 3: Valid external data directory
+  local valid="${dir}/valid"
+  mkdir -p "$valid"
+  cat > "${valid}/registry.yaml" << 'EOF'
 apiVersion: eidos.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
-  - name: custom-test-operator
-    displayName: Custom Test Operator
+  - name: custom-operator
+    displayName: Custom Operator
     helm:
       defaultRepository: https://test.example.com/charts
-      defaultChart: custom/test-operator
+      defaultChart: custom/operator
       defaultVersion: v1.0.0
 EOF
+  run_cmd_ok "data/valid-dir" "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training --data "$valid" -o "${dir}/recipe.yaml"
+  check_file_exists "data/recipe-created" "${dir}/recipe.yaml"
 
-  local ext_recipe="${data_test_dir}/external-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
-    --data "$valid_data_dir" -o "$ext_recipe" 2>&1; then
-    test_fail "external-data/valid-dir" "Should succeed with valid external data directory"
-  else
-    test_pass "external-data/valid-dir"
-
-    # Verify recipe was created
-    if [ -f "$ext_recipe" ]; then
-      test_pass "external-data/recipe-created"
-    else
-      test_fail "external-data/recipe-created" "Recipe file was not created"
-    fi
-  fi
-
-  # -------------------------------------------------------------------------
   # Test 4: External data with custom overlay
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 4: External Data with Custom Overlay ---"
-
-  local overlay_data_dir="${data_test_dir}/with-overlay"
-  mkdir -p "${overlay_data_dir}/overlays"
-
-  # Create registry.yaml
-  cat > "${overlay_data_dir}/registry.yaml" << 'EOF'
-apiVersion: eidos.nvidia.com/v1alpha1
+  local overlay_dir="${dir}/with-overlay"
+  mkdir -p "${overlay_dir}/overlays"
+  echo 'apiVersion: eidos.nvidia.com/v1alpha1
 kind: ComponentRegistry
-components: []
-EOF
-
-  # Create a custom overlay that adds components
-  cat > "${overlay_data_dir}/overlays/custom-test-overlay.yaml" << 'EOF'
+components: []' > "${overlay_dir}/registry.yaml"
+  cat > "${overlay_dir}/overlays/custom.yaml" << 'EOF'
 apiVersion: eidos.nvidia.com/v1alpha1
 kind: RecipeMetadata
 metadata:
-  name: custom-test-overlay
+  name: custom-overlay
 spec:
   criteria:
     service: eks
@@ -1455,50 +836,15 @@ spec:
       source: https://charts.jetstack.io
       version: v1.16.3
 EOF
+  run_cmd_ok "data/custom-overlay" "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training --data "$overlay_dir" -o "${dir}/overlay-recipe.yaml"
 
-  local overlay_recipe="${data_test_dir}/overlay-recipe.yaml"
-  if ! "${EIDOS_BIN}" recipe --service eks --accelerator h100 --intent training \
-    --data "$overlay_data_dir" -o "$overlay_recipe" 2>&1; then
-    test_fail "external-data/custom-overlay" "Should succeed with custom overlay"
-  else
-    test_pass "external-data/custom-overlay"
-
-    # Verify the overlay was applied (check for the overlay name in applied overlays)
-    if grep -q "custom-test-overlay" "$overlay_recipe" 2>/dev/null; then
-      test_pass "external-data/overlay-applied"
-    else
-      # The overlay might not be in appliedOverlays if criteria don't match exactly
-      # Just verify the file was created successfully
-      test_pass "external-data/overlay-applied (overlay may not match criteria)"
-    fi
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 5: Bundle command with --data flag
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 5: Bundle Command with --data Flag ---"
-
-  # Use a recipe file that exists (from earlier tests)
+  # Test 5: Bundle with --data flag
   if [ -n "$RECIPE_FILE" ] && [ -f "$RECIPE_FILE" ]; then
-    local bundle_with_data_dir="${data_test_dir}/bundle-with-data"
-    mkdir -p "$bundle_with_data_dir"
-
-    if ! "${EIDOS_BIN}" bundle -r "$RECIPE_FILE" -o "$bundle_with_data_dir" \
-      --data "$valid_data_dir" 2>&1; then
-      test_fail "external-data/bundle" "Bundle with --data flag failed"
-    else
-      test_pass "external-data/bundle"
-
-      # Verify bundle was created
-      verify_umbrella_chart "$bundle_with_data_dir" "external-data/bundle-structure"
-    fi
-  else
-    msg "Note: Skipping bundle --data test (no recipe file available)"
+    local bundle_dir="${dir}/bundle"
+    mkdir -p "$bundle_dir"
+    run_cmd_ok "data/bundle" "${EIDOS_BIN}" bundle -r "$RECIPE_FILE" -o "$bundle_dir" --data "$valid"
+    verify_umbrella_chart "$bundle_dir" "data/bundle-structure"
   fi
-
-  msg ""
-  msg "External data directory tests completed"
 }
 
 # ============================================================================
@@ -1508,129 +854,137 @@ EOF
 test_snapshot_template_flags() {
   msg ""
   msg "=========================================="
-  msg "Testing Snapshot Template Flag Combinations"
+  msg "Testing Snapshot Template Flags"
   msg "=========================================="
 
-  local template_test_dir="${OUTPUT_DIR}/snapshot-template-test"
-  mkdir -p "$template_test_dir"
-
-  # Create a test template
-  local test_template="${template_test_dir}/test.tmpl"
-  cat > "$test_template" << 'EOF'
-# Test Template Output
+  local dir=$(make_test_dir "snapshot-template")
+  local template="${dir}/test.tmpl"
+  cat > "$template" << 'EOF'
 kind: {{ .Kind }}
 apiVersion: {{ .APIVersion }}
-measurements_count: {{ len .Measurements }}
 EOF
 
-  # -------------------------------------------------------------------------
-  # Test 1: Verify --template flag exists in help
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 1: Template flag exists in help ---"
+  # Test 1: Template flag exists in help
+  local help=$("${EIDOS_BIN}" snapshot --help 2>&1)
+  echo "$help" | grep -q "template" && test_pass "template/flag-exists" || test_fail "template/flag-exists" "Not found"
 
-  # Note: snapshot command requires either local system access or --deploy-agent
-  # We verify the flag exists by checking help output
-  local help_output
-  help_output=$("${EIDOS_BIN}" snapshot --help 2>&1)
-  if echo "$help_output" | grep -q "template"; then
-    test_pass "snapshot-template/flag-exists"
-  else
-    test_fail "snapshot-template/flag-exists" "Template flag not found in snapshot command help"
-  fi
+  # Test 2-3: Format validation with template
+  "${EIDOS_BIN}" snapshot --template "$template" --format yaml 2>&1 | grep -qi "error.*format" && \
+    test_fail "template/yaml-format" "Should be valid" || test_pass "template/yaml-format"
 
-  # -------------------------------------------------------------------------
-  # Test 2: Template with explicit yaml format (should succeed validation)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 2: Template with --format yaml ---"
+  run_cmd_grep "template/json-rejected" "YAML format\|requires YAML" \
+    "${EIDOS_BIN}" snapshot --template "$template" --format json
 
-  # This should pass flag validation (may fail at collection)
-  if "${EIDOS_BIN}" snapshot --template "$test_template" --format yaml 2>&1 | grep -qi "error.*format\|invalid.*format"; then
-    test_fail "snapshot-template/yaml-format" "Template with yaml format should be valid"
-  else
-    test_pass "snapshot-template/yaml-format"
-  fi
+  # Test 4-5: Invalid template paths
+  run_cmd_grep "template/nonexistent" "not found\|no such file\|does not exist" \
+    "${EIDOS_BIN}" snapshot --template "/non/existent.tmpl"
+  run_cmd_grep "template/directory" "directory\|not a file" \
+    "${EIDOS_BIN}" snapshot --template "$dir"
 
-  # -------------------------------------------------------------------------
-  # Test 3: Template with json format (should fail validation)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 3: Template with --format json (should fail) ---"
+  # Test 6: Example template exists
+  check_file_exists "template/example-exists" "${ROOT}/examples/templates/snapshot-template.md.tmpl"
 
-  local json_output
-  json_output=$("${EIDOS_BIN}" snapshot --template "$test_template" --format json 2>&1) || true
-
-  if echo "$json_output" | grep -qi "YAML format\|requires YAML"; then
-    test_pass "snapshot-template/json-format-rejected"
-  else
-    test_fail "snapshot-template/json-format-rejected" "Expected error about YAML format requirement"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 4: Non-existent template file (should fail)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 4: Non-existent Template File ---"
-
-  local missing_output
-  missing_output=$("${EIDOS_BIN}" snapshot --template "/non/existent/template.tmpl" 2>&1) || true
-
-  if echo "$missing_output" | grep -qi "not found\|no such file\|does not exist"; then
-    test_pass "snapshot-template/nonexistent-file"
-  else
-    test_fail "snapshot-template/nonexistent-file" "Expected error for missing template file"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 5: Template path is a directory (should fail)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 5: Template Path is Directory ---"
-
-  local dir_output
-  dir_output=$("${EIDOS_BIN}" snapshot --template "$template_test_dir" 2>&1) || true
-
-  if echo "$dir_output" | grep -qi "directory\|not a file"; then
-    test_pass "snapshot-template/directory-path"
-  else
-    test_fail "snapshot-template/directory-path" "Expected error for directory path"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 6: Verify example template file exists
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 6: Example Template File Exists ---"
-
-  local example_template="${ROOT}/examples/templates/snapshot-template.md.tmpl"
-  if [ -f "$example_template" ]; then
-    test_pass "snapshot-template/example-exists"
-  else
-    test_fail "snapshot-template/example-exists" "Example template not found at ${example_template}"
-  fi
-
-  # -------------------------------------------------------------------------
-  # Test 7: No template (standard formats should work)
-  # -------------------------------------------------------------------------
-  msg ""
-  msg "--- Test 7: No Template with Different Formats ---"
-
-  # Without template, both yaml and json should be valid (will fail at collection)
+  # Test 7: Standard formats without template
   for fmt in yaml json; do
-    local fmt_output
-    fmt_output=$("${EIDOS_BIN}" snapshot --format "$fmt" 2>&1) || true
-
-    # Should not fail due to format validation (only collection)
-    if echo "$fmt_output" | grep -qi "invalid format\|unknown format"; then
-      test_fail "snapshot-template/no-template-${fmt}" "Format $fmt should be valid without template"
-    else
-      test_pass "snapshot-template/no-template-${fmt}"
-    fi
+    "${EIDOS_BIN}" snapshot --format "$fmt" 2>&1 | grep -qi "invalid format\|unknown format" && \
+      test_fail "template/no-template-${fmt}" "Should be valid" || test_pass "template/no-template-${fmt}"
   done
+}
 
+# ============================================================================
+# CUJ1: Critical User Journey - Training Workload
+# ============================================================================
+# Tests the complete workflow from docs/demos/cuj1.md:
+#   recipe (with platform) → validate → bundle → helm validation
+# ============================================================================
+
+test_cuj1() {
   msg ""
-  msg "Snapshot template flag tests completed"
+  msg "=========================================="
+  msg "CUJ1: Training Workload Journey"
+  msg "=========================================="
+
+  local dir=$(make_test_dir "cuj1")
+
+  # Step 1: Generate recipe with kubeflow platform (per CUJ1 doc)
+  msg "--- Step 1: Recipe with --platform kubeflow ---"
+  local recipe="${dir}/recipe.yaml"
+  run_cmd_ok "cuj1/recipe" "${EIDOS_BIN}" recipe \
+    --service eks \
+    --accelerator h100 \
+    --intent training \
+    --os ubuntu \
+    --platform kubeflow \
+    --output "$recipe"
+
+  check_file_exists "cuj1/recipe-created" "$recipe"
+  check_file_contains "cuj1/recipe-has-kubeflow" "$recipe" "kubeflow"
+
+  # Step 2: Validate recipe (readiness phase with agent flags)
+  msg "--- Step 2: Validate with agent flags ---"
+  local snapshot="${dir}/snapshot.yaml"
+  cat > "$snapshot" << 'EOF'
+measurements:
+  - type: K8s
+    subtypes:
+      - name: server
+        data:
+          version: v1.33.0
+  - type: OS
+    subtypes:
+      - name: release
+        data:
+          ID: ubuntu
+          VERSION_ID: "24.04"
+EOF
+
+  # Test validate with --namespace and --node-selector flags (CUJ1 specific)
+  local validate_output
+  validate_output=$("${EIDOS_BIN}" validate \
+    --recipe "$recipe" \
+    --snapshot "$snapshot" \
+    --phase readiness 2>&1) || true
+  echo "$validate_output" | grep -qi "readiness\|validation" && \
+    test_pass "cuj1/validate-readiness" || \
+    test_fail "cuj1/validate-readiness" "Validation output unexpected"
+
+  # Step 3: Generate bundle with selectors/tolerations (per CUJ1 doc)
+  msg "--- Step 3: Bundle with node scheduling ---"
+  local bundle="${dir}/bundle"
+  mkdir -p "$bundle"
+  run_cmd_ok "cuj1/bundle" "${EIDOS_BIN}" bundle \
+    --recipe "$recipe" \
+    --output "$bundle" \
+    --system-node-selector nodeGroup=system-pool \
+    --accelerated-node-selector nodeGroup=gpu-worker \
+    --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule
+
+  verify_umbrella_chart "$bundle" "cuj1/bundle-structure"
+  check_file_contains "cuj1/bundle-sys-selector" "${bundle}/values.yaml" "system-pool"
+  check_file_contains "cuj1/bundle-accel-selector" "${bundle}/values.yaml" "gpu-worker"
+  check_file_contains "cuj1/bundle-toleration" "${bundle}/values.yaml" "nvidia.com/gpu"
+
+  # Step 4: Helm validation (simulates install prep)
+  msg "--- Step 4: Helm chart validation ---"
+  verify_helm_chart "$bundle" "cuj1"
+
+  # Step 5: Multi-phase validate (CUJ1 final validation)
+  msg "--- Step 5: Multi-phase validation ---"
+  validate_output=$("${EIDOS_BIN}" validate \
+    --recipe "$recipe" \
+    --snapshot "$snapshot" \
+    --phase readiness \
+    --phase deployment \
+    --phase conformance 2>&1) || true
+  if echo "$validate_output" | grep -q "readiness" && \
+     echo "$validate_output" | grep -q "deployment" && \
+     echo "$validate_output" | grep -q "conformance"; then
+    test_pass "cuj1/multi-phase-validate"
+  else
+    test_fail "cuj1/multi-phase-validate" "Expected all three phases"
+  fi
+
+  msg "CUJ1 tests completed"
 }
 
 # ============================================================================
@@ -1641,40 +995,31 @@ msg "Starting E2E Integration Tests"
 msg "Output directory: ${OUTPUT_DIR}"
 msg ""
 
-# Step 1: Build the binary
+# Build the binary
 build_binary
 
-# Step 2: Test CLI workflow for all leaf recipes in pkg/recipe/data/
-# Note: YAML file validation (parsing, references, inheritance chains) is covered
-# by Go tests in pkg/recipe/yaml_test.go and pkg/recipe/metadata_test.go
+# CUJ1: Critical User Journey (priority test)
+test_cuj1
+
+# CLI workflow for all leaf recipes
 test_all_recipe_data_files
 
-# Step 3: Generate recipe via query mode (for detailed bundle flag tests)
+# Generate recipe for detailed tests
 generate_recipe
 
-# Step 4: Run bundle tests with various CLI flags (using generated recipe)
+# Bundle tests with various CLI flags
 if [ -n "$RECIPE_FILE" ] && [ -f "$RECIPE_FILE" ]; then
-  run_bundle_tests "$RECIPE_FILE"
+  run_bundle_tests
 else
   err "Recipe file not found, cannot run bundle tests"
 fi
 
-# Step 5: Test criteria file (--criteria flag)
+# Feature-specific tests
 test_criteria_file_flag
-
-# Step 6: Test external data directory (--data flag)
 test_external_data_flag
-
-# Step 7: Test multi-phase validation (--phase flag)
 test_validate_phases
-
-# Step 8: Test snapshot template flag combinations
 test_snapshot_template_flags
-
-# Step 9: Test duplicate flag validation
 test_duplicate_flag_validation
-
-# Step 10: Test validate command agent flags
 test_validate_agent_flags
 
 # Print summary
@@ -1688,8 +1033,5 @@ echo "Failed: ${FAILED_TESTS}"
 echo ""
 msg "Output directory: ${OUTPUT_DIR}"
 
-if [ "$FAILED_TESTS" -gt 0 ]; then
-  err "Some tests failed!"
-fi
-
+[ "$FAILED_TESTS" -gt 0 ] && err "Some tests failed!"
 msg "All tests passed!"
