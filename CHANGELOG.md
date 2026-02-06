@@ -2,6 +2,100 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-02-06
+
+### Bug Fixes
+
+- *(e2e-test)* Create snapshot namespace before RBAC resources  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(tools)* Make check-tools compatible with bash 3.x  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Correct manifest path in external overlay example by [@mchmarny](https://github.com/mchmarny)
+- Add NetworkPolicy workaround for nvsentinel metrics-access restriction  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Disable aws-ebs-csi-driver by default on EKS  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Prevent driver OOMKill during kernel module compilation  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Update CDI configuration and DEVICE_LIST_STRATEGY for gpu-operator  by [@yuanchen8911](https://github.com/yuanchen8911)
+
+### Build
+
+- V0.3.2 release by [@mchmarny](https://github.com/mchmarny)
+- Release v0.3.3 by [@mchmarny](https://github.com/mchmarny)
+
+### Features
+
+- Add aws-efa component  by [@Kevin-Hawkins](https://github.com/Kevin-Hawkins)
+- Fix and improve ConfigMap and CR deployment  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Skyhook, split customizations to their own component and add training  by [@ayuskauskas](https://github.com/ayuskauskas)
+- Add skeleton multi-phase validation framework  by [@xdu31](https://github.com/xdu31)
+- Custom resources must explicity set their helm hooks OR opt out  by [@ayuskauskas](https://github.com/ayuskauskas)
+- Enhance validate command with multi-phase and agent support  by [@mchmarny](https://github.com/mchmarny)
+
+### Other
+
+- Fix skyhook deployment: post-install approach for CRD-dependent resources
+
+The Skyhook CR (customization-ubuntu.yaml) depends on the Skyhook CRD
+which is installed by the skyhook-operator subchart. Helm validates ALL
+manifests before installing ANY resources, so the CR fails validation
+when placed in templates/ because the CRD doesn't exist yet.
+
+Changes:
+1. Move manifests from templates/ to post-install/ directory
+2. Process Helm template syntax to plain YAML for kubectl apply
+3. Add post-install step to deployment instructions
+4. Fix customization-ubuntu.yaml: add required image and version fields
+
+The deployment flow is now:
+1. helm install - installs all subcharts including skyhook-operator (with CRD)
+2. kubectl apply -f post-install/ - applies CRD-dependent resources
+
+This approach ensures CRDs exist before their dependent resources are applied.
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com> by [@yuanchen8911](https://github.com/yuanchen8911)
+- Add kind service type and overlay recipe for local cluster testing 
+
+Co-authored-by: Claude Opus 4.5 <noreply@anthropic.com> by [@yuanchen8911](https://github.com/yuanchen8911)
+- Add .claude/GITHUB.md to gitignore by [@mchmarny](https://github.com/mchmarny)
+- Add platform criteria support to recipe generation  by [@mchmarny](https://github.com/mchmarny)
+- Disable cert-manager startupapicheck as nvsentinel workaround 
+
+Co-authored-by: Claude Opus 4.5 <noreply@anthropic.com>
+Co-authored-by: Mark Chmarny <mchmarny@users.noreply.github.com> by [@yuanchen8911](https://github.com/yuanchen8911)
+- Add k8s-ephemeral-storage-metrics component to base configuration 
+
+Signed-off-by: Patrick Christopher <pchristopher@nvidia.com>
+Co-authored-by: Mark Chmarny <mchmarny@users.noreply.github.com> by [@coffeepac](https://github.com/coffeepac)
+- Add tilt instructions by [@mchmarny](https://github.com/mchmarny)
+- Update releasing by [@mchmarny](https://github.com/mchmarny)
+- Initial draft of adding kwok  by [@cullenmcdermott](https://github.com/cullenmcdermott)
+
+### Refactor
+
+- Use structured errors and improve test coverage by [@mchmarny](https://github.com/mchmarny)
+- Rename platform pytorch to kubeflow and add kubeflow-trainer component  by [@mchmarny](https://github.com/mchmarny)
+- Reduce e2e test duplication and add CUJ1 coverage by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Update CHANGELOG for v0.3.0 by [@mchmarny](https://github.com/mchmarny)
+- Remove daily scan from blocking prs by [@mchmarny](https://github.com/mchmarny)
+- Add Claude instructions to not co-authored commits by [@mchmarny](https://github.com/mchmarny)
+- Allow attribution but not co-authoring by [@mchmarny](https://github.com/mchmarny)
+- Moved coauthoring into main claude doc by [@mchmarny](https://github.com/mchmarny)
+- Update CHANGELOG for v0.3.1 by [@mchmarny](https://github.com/mchmarny)
+- Include non-conventional commits in changelog by [@mchmarny](https://github.com/mchmarny)
+- Update release commit message format by [@mchmarny](https://github.com/mchmarny)
+- Adjust release commit message order by [@mchmarny](https://github.com/mchmarny)
+- Exclude the change log commit itself from the release notes by [@mchmarny](https://github.com/mchmarny)
+- Add cuj1 demo by [@mchmarny](https://github.com/mchmarny)
+- Update cuj1 by [@mchmarny](https://github.com/mchmarny)
+- Update cuj1 demo by [@mchmarny](https://github.com/mchmarny)
+- Update cuj1 demo by [@mchmarny](https://github.com/mchmarny)
+- Exclude docs form vuln scanner by [@mchmarny](https://github.com/mchmarny)
+- Add paths-ignore to codeql pull_request trigger by [@mchmarny](https://github.com/mchmarny)
+- Update cuj1 demo by [@mchmarny](https://github.com/mchmarny)
+- Update cuj1 demo by [@mchmarny](https://github.com/mchmarny)
+- Update cuj1 demo by [@mchmarny](https://github.com/mchmarny)
+- Update cuj demo by [@mchmarny](https://github.com/mchmarny)
+
 ## [Unreleased]
 
 ### Features
