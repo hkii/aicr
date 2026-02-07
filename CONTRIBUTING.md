@@ -297,6 +297,6 @@ Signed-off-by: Your Name <your@email.com>
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Development setup, architecture, and tooling
 - [README.md](README.md) - Project overview and quick start
 - [docs/OVERVIEW.md](docs/OVERVIEW.md) - System overview and glossary
-- [docs/architecture/README.md](docs/architecture/README.md) - Architecture documentation
+- [docs/contributor/README.md](docs/contributor/README.md) - Architecture documentation
 
 Thank you for contributing to NVIDIA Eidos! Your efforts help improve GPU-accelerated infrastructure for everyone.
