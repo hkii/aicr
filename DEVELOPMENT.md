@@ -170,8 +170,9 @@ eidos/
 │   ├── snapshotter/    # Snapshot orchestration
 │   └── validator/      # Constraint evaluation
 ├── docs/
-│   ├── architecture/   # System design docs
-│   └── user-guide/     # User documentation
+│   ├── contributor/    # System design docs (architecture)
+│   ├── integrator/     # CI/CD and API integration docs
+│   └── user/           # User documentation (CLI)
 ├── tools/              # Development scripts
 └── tilt/               # Local dev environment
 ```

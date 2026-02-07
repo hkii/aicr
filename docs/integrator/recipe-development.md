@@ -27,7 +27,7 @@ Recipe metadata files define component configurations for GPU-accelerated Kubern
 
 Recipe files are located in `pkg/recipe/data/` and are embedded into the CLI binary and API server at compile time.
 
-For details on how the recipe generation process works (query matching, overlay merging), see the [Data Architecture](../architecture/data.md) document.
+For details on how the recipe generation process works (query matching, overlay merging), see the [Data Architecture](../contributor/data.md) document.
 
 ## Multi-Level Inheritance
 
@@ -999,7 +999,7 @@ make qualify
 
 ## See Also
 
-- [Data Architecture](../architecture/data.md) - Recipe generation process, overlay system, query matching algorithm
-- [Bundler Development Guide](../architecture/component.md) - Creating new bundlers
-- [CLI Reference](../user-guide/cli-reference.md) - CLI commands for recipe and bundle generation
-- [API Reference](api-reference.md) - Programmatic recipe access
+- [Data Architecture](../contributor/data.md) - Recipe generation process, overlay system, query matching algorithm
+- [Bundler Development Guide](../contributor/component.md) - Creating new bundlers
+- [CLI Reference](../user/cli-reference.md) - CLI commands for recipe and bundle generation
+- [API Reference](../user/api-reference.md) - Programmatic recipe access
