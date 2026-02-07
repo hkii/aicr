@@ -135,7 +135,7 @@ You integrate Eidos into CI/CD pipelines, GitOps workflows, or larger platforms.
 
 - **[Documentation](/docs)** – Documentation, guides, and examples.
 - **[Roadmap](ROADMAP.md)** – Feature priorities and development timeline
-- **[Overview](docs/OVERVIEW.md)** - Detailed system overview and glossary
+- **[Overview](docs/README.md)** - Detailed system overview and glossary
 - **[Security](SECURITY.md)** - Security-related resources 
 - **[Releases](https://github.com/NVIDIA/eidos/releases)** - Binaries, SBOMs, and other artifacts
 - **[Issues](https://github.com/NVIDIA/eidos/issues)** - Bugs, feature requests, and questions
