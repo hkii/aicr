@@ -72,8 +72,9 @@ make tools-check  # Verify versions match .versions.yaml
 ## Git Configuration
 
 - Commit to `main` branch (not `master`)
+- Do use `-S` to cryptographically sign the commit
 - Do NOT add `Co-Authored-By` lines (organization policy)
-- Use DCO sign-off: `git commit -s -m "message"`
+- Do not sign-off commits (no `-s` flag) unless the commit can't be cryptographically signed
 
 ## Key Packages
 
