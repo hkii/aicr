@@ -25,6 +25,7 @@ WORKDIR /workspace
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Note: Exclude unnecessary files for validation (e.g., docs, examples) via .dockerignore.
 COPY . .
 
 # Pre-compile test binaries for faster Job startup
