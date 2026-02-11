@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.14] - 2026-02-11
+
+### Bug Fixes
+
+- Resolve EKS deployment issues for multiple components  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Preserve version prefix in deploy.sh for helm install  by [@yuanchen8911](https://github.com/yuanchen8911)
+
+### Tasks
+
+- Clean up changelog by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.13] - 2026-02-11
 
 ### Features
