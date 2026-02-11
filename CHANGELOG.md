@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4] - 2026-02-11
+
+### Bug Fixes
+
+- Add docker buildx setup for dockers_v2 attestation support by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.3] - 2026-02-11
 
 ### Bug Fixes
