@@ -12,28 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Build stage: runs on the host platform, cross-compiles via GOOS/GOARCH
-# This avoids slow QEMU emulation for the non-native architecture.
-FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS builder
-
-ARG TARGETOS TARGETARCH
-
-WORKDIR /workspace
-
-# Copy go mod files first for better caching
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Cross-compile test binaries for the target platform
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/readiness.test ./pkg/validator/checks/readiness && \
-    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/deployment.test ./pkg/validator/checks/deployment && \
-    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/performance.test ./pkg/validator/checks/performance && \
-    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/conformance.test ./pkg/validator/checks/conformance || true
-
-# Runtime stage: full Go toolchain needed because agent/job.go runs "go test" at runtime
+# Validator image includes Go toolchain for running validation tests in-cluster.
+# Built natively per-arch via CI (no cross-compilation or QEMU needed).
 FROM golang:1.25-bookworm
 
 RUN apt-get update && apt-get install -y \
@@ -43,15 +23,15 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /workspace
 
-# Copy source for runtime "go test" execution
-COPY --from=builder /workspace/go.mod /workspace/go.sum ./
-COPY --from=builder /workspace/pkg/ pkg/
-COPY --from=builder /workspace/cmd/ cmd/
-
-# Copy pre-compiled test binaries
-COPY --from=builder /tmp/*.test /usr/local/bin/
-
-# Pre-warm module cache for runtime
+COPY go.mod go.sum ./
 RUN go mod download
+
+COPY . .
+
+# Pre-compile test binaries for faster Job startup
+RUN go test -c -o /usr/local/bin/readiness.test ./pkg/validator/checks/readiness && \
+    go test -c -o /usr/local/bin/deployment.test ./pkg/validator/checks/deployment && \
+    go test -c -o /usr/local/bin/performance.test ./pkg/validator/checks/performance && \
+    go test -c -o /usr/local/bin/conformance.test ./pkg/validator/checks/conformance || true
 
 CMD ["/bin/bash"]
