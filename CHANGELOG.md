@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.11] - 2026-02-11
+
+### Bug Fixes
+
+- Add --amend to docker manifest create for manifest list sources by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Stop building universal binaries for mac by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.10] - 2026-02-11
 
 ### Bug Fixes
