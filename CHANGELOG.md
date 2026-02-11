@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.13] - 2026-02-11
+
+### Bug Fixes
+
+- Move publish after attestation to prevent unattested releases by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Remove temporary test-manifest workflow by [@mchmarny](https://github.com/mchmarny)
+- Add .dockerignore and clean up Dockerfile.validator by [@mchmarny](https://github.com/mchmarny)
+- Add comments about ignored files by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.12] - 2026-02-11
 
 ### Bug Fixes
