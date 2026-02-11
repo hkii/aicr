@@ -4,112 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [0.5.13] - 2026-02-11
 
-### Bug Fixes
-
-- Move publish after attestation to prevent unattested releases by [@mchmarny](https://github.com/mchmarny)
-
-### Tasks
-
-- Remove temporary test-manifest workflow by [@mchmarny](https://github.com/mchmarny)
-- Add .dockerignore and clean up Dockerfile.validator by [@mchmarny](https://github.com/mchmarny)
-- Add comments about ignored files by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.12] - 2026-02-11
-
-### Bug Fixes
-
-- Use buildx imagetools for multi-arch manifest creation by [@mchmarny](https://github.com/mchmarny)
-
-### Tasks
-
-- Readme by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.11] - 2026-02-11
-
-### Bug Fixes
-
-- Add --amend to docker manifest create for manifest list sources by [@mchmarny](https://github.com/mchmarny)
-
-### Tasks
-
-- Stop building universal binaries for mac by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.10] - 2026-02-11
-
-### Bug Fixes
-
-- Use correct GitHub ARM64 runner label ubuntu-24.04-arm by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.9] - 2026-02-11
-
-### Bug Fixes
-
-- Add packages:write permission to attest job for cosign by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.8] - 2026-02-11
-
 ### Features
 
-- Split Docker builds from GoReleaser into native CI jobs by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.7] - 2026-02-11
-
-### Bug Fixes
-
-- Use native cross-compilation in validator Dockerfile by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.6] - 2026-02-11
-
-### Bug Fixes
-
-- Increase goreleaser release timeout from 30m to 60m by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.5] - 2026-02-11
-
-### Bug Fixes
-
-- Increase goreleaser release timeout from 10m to 30m by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.4] - 2026-02-11
-
-### Bug Fixes
-
-- Add docker buildx setup for dockers_v2 attestation support by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.3] - 2026-02-11
-
-### Bug Fixes
-
-- Increase RunID entropy to prevent flaky uniqueness test by [@mchmarny](https://github.com/mchmarny)
-
-### Features
-
+- Implement Job-based validation framework with test wrapper infrastructure  by [@xdu31](https://github.com/xdu31)
+- Add kai-scheduler component for gang scheduling  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Add dynamo-platform and dynamo-crds for AI inference serving   by [@yuanchen8911](https://github.com/yuanchen8911)
 - Add kgateway for CNCF AI Conformance inference gateway  by [@yuanchen8911](https://github.com/yuanchen8911)
 - Add basic spec parsing  by [@cullenmcdermott](https://github.com/cullenmcdermott)
 - Add undeploy.sh script to Helm bundle deployer  by [@mchmarny](https://github.com/mchmarny)
-
-### Tasks
-
-- Add license headers to build testdata files by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.2] - 2026-02-10
-
-### Bug Fixes
-
-- Add actions:read permission for codeql-action SARIF upload by [@mchmarny](https://github.com/mchmarny)
-- Migrate validator docker build to dockers_v2 with extra_files by [@mchmarny](https://github.com/mchmarny)
-
-### Features
-
-- Add dynamo-platform and dynamo-crds for AI inference serving   by [@yuanchen8911](https://github.com/yuanchen8911)
-
-## [0.5.1] - 2026-02-10
-
-### Bug Fixes
-
-- Split validator docker build into per-arch images with manifest list by [@mchmarny](https://github.com/mchmarny)
-
-## [0.5.0] - 2026-02-10
 
 ### Bug Fixes
 
@@ -117,22 +19,11 @@ All notable changes to this project will be documented in this file.
 - Resolve staticcheck SA5011 and prealloc lint errors  by [@yuanchen8911](https://github.com/yuanchen8911)
 - Fix deploy.sh failing when run from within the bundle directory.  by [@yuanchen8911](https://github.com/yuanchen8911)
 - Use upstream default namespaces for components  by [@yuanchen8911](https://github.com/yuanchen8911)
-
-### Features
-
-- Implement Job-based validation framework with test wrapper infrastructure  by [@xdu31](https://github.com/xdu31)
-- Add kai-scheduler component for gang scheduling  by [@yuanchen8911](https://github.com/yuanchen8911)
-
-### Other
-
-- Harden workflows for OpenSSF scorecard 
-
-Signed-off-by: Davanum Srinivas <dsrinivas@nvidia.com> by [@dims](https://github.com/dims)
+- Update kubeflow paths  by [@coffeepac](https://github.com/coffeepac)
 
 ### Tasks
 
-- Update claude git instructions by [@mchmarny](https://github.com/mchmarny)
-- Update kubeflow paths  by [@coffeepac](https://github.com/coffeepac)
+- Split validator docker build into per-arch images with manifest list by [@mchmarny](https://github.com/mchmarny)
 
 ## [0.4.1] - 2026-02-08
 
