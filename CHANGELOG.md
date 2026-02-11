@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3] - 2026-02-11
+
+### Bug Fixes
+
+- Increase RunID entropy to prevent flaky uniqueness test by [@mchmarny](https://github.com/mchmarny)
+
+### Features
+
+- Add kgateway for CNCF AI Conformance inference gateway  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Add basic spec parsing  by [@cullenmcdermott](https://github.com/cullenmcdermott)
+- Add undeploy.sh script to Helm bundle deployer  by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Add license headers to build testdata files by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.2] - 2026-02-10
 
 ### Bug Fixes
