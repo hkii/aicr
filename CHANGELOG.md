@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.10] - 2026-02-11
+
+### Bug Fixes
+
+- Use correct GitHub ARM64 runner label ubuntu-24.04-arm by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.9] - 2026-02-11
 
 ### Bug Fixes
