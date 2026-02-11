@@ -12,16 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Validator image includes Go toolchain for running validation tests in-cluster
-FROM golang:1.25-bookworm
+# Build stage: runs on the host platform, cross-compiles via GOOS/GOARCH
+# This avoids slow QEMU emulation for the non-native architecture.
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS builder
 
-# Install basic dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+ARG TARGETOS TARGETARCH
 
-# Set working directory
 WORKDIR /workspace
 
 # Copy go mod files first for better caching
@@ -31,12 +27,31 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Pre-compile test binaries to speed up Job execution
-# This is optional but improves startup time
-RUN go test -c -o /tmp/readiness.test ./pkg/validator/checks/readiness && \
-    go test -c -o /tmp/deployment.test ./pkg/validator/checks/deployment && \
-    go test -c -o /tmp/performance.test ./pkg/validator/checks/performance && \
-    go test -c -o /tmp/conformance.test ./pkg/validator/checks/conformance || true
+# Cross-compile test binaries for the target platform
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/readiness.test ./pkg/validator/checks/readiness && \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/deployment.test ./pkg/validator/checks/deployment && \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/performance.test ./pkg/validator/checks/performance && \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go test -c -o /tmp/conformance.test ./pkg/validator/checks/conformance || true
 
-# Default command runs bash for debugging
+# Runtime stage: full Go toolchain needed because agent/job.go runs "go test" at runtime
+FROM golang:1.25-bookworm
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Copy source for runtime "go test" execution
+COPY --from=builder /workspace/go.mod /workspace/go.sum ./
+COPY --from=builder /workspace/pkg/ pkg/
+COPY --from=builder /workspace/cmd/ cmd/
+
+# Copy pre-compiled test binaries
+COPY --from=builder /tmp/*.test /usr/local/bin/
+
+# Pre-warm module cache for runtime
+RUN go mod download
+
 CMD ["/bin/bash"]
