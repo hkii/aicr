@@ -239,7 +239,7 @@ jobs:
 
           # Create and push manifest for each tag
           for MANIFEST_TAG in "$TAG" "$MAJOR" "$MAJOR_MINOR" "latest"; do
-            docker manifest create "$VALIDATOR_IMAGE:$MANIFEST_TAG" \
+            docker manifest create --amend "$VALIDATOR_IMAGE:$MANIFEST_TAG" \
               "$VALIDATOR_IMAGE:$TAG-amd64" \
               "$VALIDATOR_IMAGE:$TAG-arm64"
             docker manifest push "$VALIDATOR_IMAGE:$MANIFEST_TAG"
