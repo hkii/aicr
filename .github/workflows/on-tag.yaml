@@ -233,35 +233,14 @@ jobs:
           tag: ${{ github.ref_name }}
 
   # =============================================================================
-  # Publish: Flip draft release to public after all artifacts are ready
-  # =============================================================================
-
-  publish:
-    name: Publish Release
-    runs-on: ubuntu-latest
-    needs: [build, docker-manifest]
-    if: needs.build.outputs.release_outcome == 'success'
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    steps:
-      - name: Publish GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release edit "${{ github.ref_name }}" \
-            --repo "${{ github.repository }}" \
-            --draft=false
-
-  # =============================================================================
-  # Attestation Job (runs after release is published)
+  # Attestation Job (runs after all images are pushed)
   # =============================================================================
 
   attest:
     name: Attest Images
     runs-on: ubuntu-latest
-    needs: [publish]
+    needs: [build, docker-manifest]
+    if: needs.build.outputs.release_outcome == 'success'
     timeout-minutes: 10
     permissions:
       contents: read
@@ -298,13 +277,34 @@ jobs:
           crane_version: ${{ steps.versions.outputs.crane }}
 
   # =============================================================================
-  # Deploy Job (runs after attestation succeeds)
+  # Publish: Flip draft release to public after attestation succeeds
+  # =============================================================================
+
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [attest]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release edit "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --draft=false
+
+  # =============================================================================
+  # Deploy Job (runs after release is published)
   # =============================================================================
 
   deploy:
     name: Deploy API Server
     runs-on: ubuntu-latest
-    needs: [attest]
+    needs: [publish]
     timeout-minutes: 10
     permissions:
       contents: read
