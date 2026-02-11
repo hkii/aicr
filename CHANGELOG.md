@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.8] - 2026-02-11
+
+### Features
+
+- Split Docker builds from GoReleaser into native CI jobs by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.5.7] - 2026-02-11
 
 ### Bug Fixes
