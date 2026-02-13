@@ -44,6 +44,10 @@ inputs:
   ghcr_token:
     description: 'GitHub token for GHCR authentication (use github.token)'
     required: true
+  crane_version:
+    description: 'crane version (e.g. v0.20.6)'
+    required: false
+    default: 'v0.20.6'
 
 runs:
   using: 'composite'
@@ -93,7 +97,9 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        CRANE_VERSION="0.20.6"
+        # Strip 'v' prefix for URL construction
+        CRANE_VERSION="${{ inputs.crane_version }}"
+        CRANE_VERSION="${CRANE_VERSION#v}"
         CRANE_URL="https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
         CRANE_TMP="$(mktemp -d)"
         curl -fsSL "$CRANE_URL" | tar -xzC "$CRANE_TMP"

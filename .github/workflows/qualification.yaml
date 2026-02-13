@@ -73,6 +73,7 @@ jobs:
         uses: ./.github/actions/integration
         with:
           go_version: ${{ steps.versions.outputs.go }}
+          chainsaw_version: ${{ steps.versions.outputs.chainsaw }}
 
   chainsaw:
     name: Conformance
@@ -89,30 +90,11 @@ jobs:
         id: versions
         uses: ./.github/actions/load-versions
 
-      - name: Setup Go
-        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5  # v6.2.0
+      - name: Run Conformance Tests
+        uses: ./.github/actions/chainsaw
         with:
-          go-version: '${{ steps.versions.outputs.go }}'
-          cache: true
-          cache-dependency-path: |
-            go.sum
-            vendor/modules.txt
-          check-latest: true
-
-      - name: Install Chainsaw
-        run: go install github.com/kyverno/chainsaw@v0.2.14
-
-      - name: Build eidos binary
-        env:
-          GOFLAGS: -mod=vendor
-        run: go build -o dist/e2e/eidos ./cmd/eidos
-
-      - name: Run AI-conformance offline tests
-        run: |
-          EIDOS_BIN=$(pwd)/dist/e2e/eidos chainsaw test \
-            --no-cluster \
-            --config tests/chainsaw/chainsaw-config.yaml \
-            --test-dir tests/chainsaw/ai-conformance/offline/
+          go_version: ${{ steps.versions.outputs.go }}
+          chainsaw_version: ${{ steps.versions.outputs.chainsaw }}
 
   e2e:
     name: E2E

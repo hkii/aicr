@@ -47,3 +47,20 @@ jobs:
       contents: read
     with:
       coverage_report: 'true'
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Security Scan
+        uses: ./.github/actions/security-scan
+        with:
+          severity: 'MEDIUM'
+          category: 'trivy-fs'

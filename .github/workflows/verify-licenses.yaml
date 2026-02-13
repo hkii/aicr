@@ -18,7 +18,15 @@ on:
   push:
     branches:
       - main
-      - "pull-request/[0-9]+"
+      - "pull-request/*"
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'vendor/'
+      - '.github/workflows/verify-licenses.yaml'
+  pull_request:
+    branches:
+      - main
     paths:
       - 'go.mod'
       - 'go.sum'

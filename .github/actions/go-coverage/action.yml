@@ -53,9 +53,6 @@ runs:
         COVERAGE_FILE="${{ inputs.coverage_file }}"
         THRESHOLD="${{ inputs.threshold }}"
         if [[ -z "$THRESHOLD" ]]; then
-          THRESHOLD=$(yq eval '.quality.coverage_threshold' .settings.yaml 2>/dev/null)
-        fi
-        if [[ -z "$THRESHOLD" ]]; then
           THRESHOLD=70
         fi
 

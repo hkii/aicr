@@ -20,6 +20,10 @@ inputs:
     description: 'Install ko (true/false)'
     required: false
     default: 'false'
+  ko_version:
+    description: 'ko version (e.g. v0.18.0)'
+    required: false
+    default: 'v0.18.0'
   install_syft:
     description: 'Install syft (true/false)'
     required: false
@@ -46,7 +50,9 @@ runs:
       run: |
         set -euo pipefail
         # Install ko from binary release (go install puts in GOPATH which isn't in PATH)
-        KO_VERSION="0.18.0"  # From .settings.yaml
+        # Strip 'v' prefix for URL construction
+        KO_VERSION="${{ inputs.ko_version }}"
+        KO_VERSION="${KO_VERSION#v}"
         KO_URL="https://github.com/ko-build/ko/releases/download/v${KO_VERSION}/ko_${KO_VERSION}_Linux_x86_64.tar.gz"
         KO_TMP="$(mktemp -d)"
         curl -fsSL "$KO_URL" | tar -xzC "$KO_TMP"

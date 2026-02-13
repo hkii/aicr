@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 'Integration Tests'
-description: 'Build binary and run CLI integration tests (tools/e2e)'
+name: 'Chainsaw Conformance Tests'
+description: 'Build eidos binary and run AI-conformance offline tests with Chainsaw'
 
 inputs:
   go_version:
@@ -21,8 +21,7 @@ inputs:
     required: true
   chainsaw_version:
     description: 'Chainsaw version to install (e.g., v0.2.14)'
-    required: false
-    default: 'v0.2.14'
+    required: true
 
 runs:
   using: 'composite'
@@ -37,23 +36,20 @@ runs:
           vendor/modules.txt
         check-latest: true
 
-    - name: Setup build tools
-      uses: ./.github/actions/setup-build-tools
-      with:
-        install_goreleaser: 'true'
-
-    - name: Install Helm
-      shell: bash
-      run: |
-        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
     - name: Install Chainsaw
       shell: bash
-      run: |
-        go install github.com/kyverno/chainsaw@${{ inputs.chainsaw_version }}
+      run: go install github.com/kyverno/chainsaw@${{ inputs.chainsaw_version }}
 
-    - name: Run Integration Tests
+    - name: Build eidos binary
       shell: bash
       env:
         GOFLAGS: -mod=vendor
-      run: ./tools/e2e
+      run: go build -o dist/e2e/eidos ./cmd/eidos
+
+    - name: Run AI-conformance offline tests
+      shell: bash
+      run: |
+        EIDOS_BIN=$(pwd)/dist/e2e/eidos chainsaw test \
+          --no-cluster \
+          --config tests/chainsaw/chainsaw-config.yaml \
+          --test-dir tests/chainsaw/ai-conformance/offline/

@@ -19,7 +19,7 @@ on:
     - cron: '0 0,6,12,18 * * *'  # Every 6 hours (4x daily)
   push:
     branches:
-      - "pull-request/[0-9]+"
+      - "pull-request/*"
     paths:
       - '.github/workflows/gpu-smoke-test.yaml'
   workflow_dispatch: {}  # Allow manual runs
@@ -167,7 +167,7 @@ jobs:
         env:
           GOFLAGS: -mod=vendor
         run: |
-          go install github.com/google/ko@v0.18.0
+          go install github.com/google/ko@${{ steps.versions.outputs.ko }}
           KO_DOCKER_REPO=ko.local ko build --bare --sbom=none --tags=smoke-test ./cmd/eidos
           kind load docker-image ko.local:smoke-test --name "${KIND_CLUSTER_NAME}"
 
