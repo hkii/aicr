@@ -87,7 +87,7 @@ jobs:
           go_version: ${{ steps.versions.outputs.go }}
 
   chainsaw:
-    name: AI-Conformance
+    name: Conformance Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
