@@ -65,4 +65,4 @@ jobs:
           GOFLAGS: -mod=vendor
         run: |
           set -euo pipefail
-          goreleaser release --snapshot --clean --skip=publish
+          goreleaser release --snapshot --clean --skip=publish,sbom
