@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.2] - 2026-02-13
+
+### CI/CD
+
+- Add actions:read permission to security-scan job by [@mchmarny](https://github.com/mchmarny)
+- Eliminate hardcoded versions and consolidate CI workflows by [@mchmarny](https://github.com/mchmarny)
+- Harden checkout credentials, add checksum verification, fail-fast off by [@mchmarny](https://github.com/mchmarny)
+- Skip SBOM generation in packaging dry run by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Clean up changelog by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.6.1] - 2026-02-13
 
 ### Features
