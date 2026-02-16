@@ -454,3 +454,75 @@ func TestValidationResult(t *testing.T) {
 		t.Errorf("expected gpuCount 8, got %v", result.Details["gpuCount"])
 	}
 }
+
+func TestWaitForJobCompletion_NoPod(t *testing.T) {
+	deployer, clientset := createDeployer()
+	ctx := context.Background()
+
+	// Create a Job but no pod
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deployer.config.JobName,
+			Namespace: deployer.config.Namespace,
+		},
+	}
+	_, err := clientset.BatchV1().Jobs(deployer.config.Namespace).Create(ctx, job, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create test Job: %v", err)
+	}
+
+	// Should timeout because there's no pod
+	err = deployer.WaitForCompletion(ctx, 10*time.Millisecond)
+	if err == nil {
+		t.Error("WaitForCompletion() should fail when no pod exists")
+	}
+}
+
+func TestGetPodForJob_NoPod(t *testing.T) {
+	deployer, _ := createDeployer()
+	ctx := context.Background()
+
+	// getPodForJob should fail when no Job/pod exists
+	_, err := deployer.getPodForJob(ctx)
+	if err == nil {
+		t.Error("getPodForJob() expected error when no Job exists, got nil")
+	}
+}
+
+func TestStreamLogs_NoPod(t *testing.T) {
+	deployer, _ := createDeployer()
+	ctx := context.Background()
+
+	// streamPodLogs should fail when no pod exists
+	err := deployer.streamPodLogs(ctx)
+	if err == nil {
+		t.Error("streamPodLogs() expected error when no pod exists, got nil")
+	}
+}
+
+func TestParseGoTestJSON_InvalidJSON(t *testing.T) {
+	// Invalid JSON lines are skipped; result defaults to pass with no tests
+	result, err := parseGoTestJSON("not valid json")
+	if err != nil {
+		t.Fatalf("parseGoTestJSON() unexpected error: %v", err)
+	}
+	if result.Status != statusPass {
+		t.Errorf("expected status %q for invalid JSON, got %q", statusPass, result.Status)
+	}
+	if len(result.Tests) != 0 {
+		t.Errorf("expected 0 tests for invalid JSON, got %d", len(result.Tests))
+	}
+}
+
+func TestParseGoTestJSON_EmptyOutput(t *testing.T) {
+	result, err := parseGoTestJSON("")
+	if err != nil {
+		t.Fatalf("parseGoTestJSON() unexpected error: %v", err)
+	}
+	if result.Status != statusPass {
+		t.Errorf("expected status %q for empty output, got %q", statusPass, result.Status)
+	}
+	if len(result.Tests) != 0 {
+		t.Errorf("expected 0 tests for empty output, got %d", len(result.Tests))
+	}
+}

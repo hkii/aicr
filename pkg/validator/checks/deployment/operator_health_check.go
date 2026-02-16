@@ -21,15 +21,18 @@ import (
 )
 
 func init() {
+	// Register this check
 	checks.RegisterCheck(&checks.Check{
 		Name:        "operator-health",
 		Description: "Verify GPU operator pods are running and healthy",
 		Phase:       "deployment",
 		Func:        CheckOperatorHealth,
+		TestName:    "TestOperatorHealth",
 	})
 }
 
 // CheckOperatorHealth validates that GPU operator is deployed and healthy.
+// Returns nil if validation passes, error if it fails.
 func CheckOperatorHealth(ctx *checks.ValidationContext) error {
 	if ctx.Clientset == nil {
 		return errors.New(errors.ErrCodeInvalidRequest, "kubernetes client is not available")
