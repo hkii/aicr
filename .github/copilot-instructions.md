@@ -8,9 +8,47 @@ This file contains extended technical documentation for GitHub Copilot. For core
 - Tests must pass with race detector (`make test`)
 - Never disable tests to make CI green (including "temporary" skips)
 - Use structured errors from `pkg/errors` with error codes (never `fmt.Errorf`)
+- Never return bare `err` — always wrap with `errors.Wrap(code, "context message", err)`
 - Context with timeouts for all I/O operations (collectors: 10s, handlers: 30s)
+- Never use `context.Background()` in I/O methods — use `context.WithTimeout()` instead
+- Always use `slog` for logging — never `fmt.Println`/`fmt.Printf` in production code
+- Use named constants from `pkg/defaults` — no magic timeout/limit literals
 - Check `ctx.Done()` in loops and long-running operations
 - Stop after 3 failed attempts at same fix → reassess approach
+
+**Error Wrapping Discipline:**
+```go
+// REQUIRED: Always wrap errors with context
+if err := doThing(); err != nil {
+    return errors.Wrap(errors.ErrCodeInternal, "failed to do thing", err)
+}
+
+// EXCEPTION: Don't re-wrap when inner error already has correct code
+content, err := readContent(ctx, path) // already returns pkg/errors with proper code
+if err != nil {
+    return err // preserve inner error's code
+}
+
+// EXCEPTION: K8s helpers and Close() returns don't need wrapping
+return k8s.IgnoreNotFound(err)
+```
+
+**Context Propagation:**
+```go
+// BAD: unbounded context in I/O method
+func (r *Reader) Read(url string) ([]byte, error) {
+    return r.ReadWithContext(context.Background(), url) // can hang forever
+}
+
+// GOOD: timeout-bounded context
+func (r *Reader) Read(url string) ([]byte, error) {
+    ctx, cancel := context.WithTimeout(context.Background(), r.TotalTimeout)
+    defer cancel()
+    return r.ReadWithContext(ctx, url)
+}
+
+// context.Background() is OK ONLY for: cleanup defers, graceful shutdown, test setup
+```
 
 **Git Configuration:**
 - Commit to `main` branch (not `master`)

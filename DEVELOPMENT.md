@@ -102,14 +102,14 @@ Example `make tools-check` output:
 Tool                 Expected        Installed       Status
 ----                 --------        ---------       ------
 go                   1.25            1.25            ✓
-golangci-lint        v2.6            2.6.0           ✓
+golangci-lint        v2.9.0          2.9.0           ✓
 grype                v0.107.0        0.107.0         ✓
 ko                   v0.18.0         0.18.0          ✓
 goreleaser           v2              2.13.3          ✓
-helm                 v3.17.0         v3.17.0         ✓
-kind                 0.27.0          0.27.0          ✓
+helm                 v4.1.0          v4.1.0          ✓
+kind                 0.31.0          0.31.0          ✓
 yamllint             1.35.0          1.35.0          ✓
-kubectl              v1.32           v1.32           ✓
+kubectl              v1.35.0         v1.35.0         ✓
 docker               -               24.0.7          ✓
 
 Legend: ✓ = installed, ⚠ = version mismatch, ✗ = missing

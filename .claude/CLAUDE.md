@@ -227,6 +227,77 @@ slog.Error("operation failed", "error", err, "component", "gpu-collector")
 
 **Note:** A component must have either `helm` OR `kustomize` configuration, not both.
 
+## Error Wrapping Rules
+
+**Never return bare errors.** Every `return err` must wrap with context:
+```go
+// BAD - bare return loses context
+if err := doSomething(); err != nil {
+    return err
+}
+
+// GOOD - wrapped with context
+if err := doSomething(); err != nil {
+    return errors.Wrap(errors.ErrCodeInternal, "failed to do something", err)
+}
+```
+
+**Don't double-wrap errors that already have proper codes.** If a called function already returns a `pkg/errors` StructuredError with the right code, don't re-wrap and change its code:
+```go
+// BAD - overwrites inner ErrCodeNotFound with ErrCodeInternal
+content, err := readTemplateContent(ctx, path) // returns ErrCodeNotFound
+return errors.Wrap(errors.ErrCodeInternal, "read failed", err)
+
+// GOOD - propagate as-is when inner error already has correct code
+content, err := readTemplateContent(ctx, path)
+return err
+```
+
+**Exception:** Wrapping is unnecessary for `Close()` returns and K8s helpers like `k8s.IgnoreNotFound(err)`.
+
+## Context Propagation Rules
+
+**Never use `context.Background()` in I/O methods.** Use a timeout-bounded context:
+```go
+// BAD - unbounded context
+func (r *Reader) Read(url string) ([]byte, error) {
+    return r.ReadWithContext(context.Background(), url)
+}
+
+// GOOD - timeout-bounded
+func (r *Reader) Read(url string) ([]byte, error) {
+    ctx, cancel := context.WithTimeout(context.Background(), r.TotalTimeout)
+    defer cancel()
+    return r.ReadWithContext(ctx, url)
+}
+```
+
+**`context.Background()` is acceptable ONLY for:** cleanup in deferred functions (when parent context is canceled), graceful shutdown, and test setup.
+
+## Logging Rules
+
+**Always use `slog` for output in production code.** Never use `fmt.Println`, `fmt.Printf`, or `fmt.Fprintln` for logging or streaming output:
+```go
+// BAD
+fmt.Println(scanner.Text())
+
+// GOOD
+slog.Info(scanner.Text())
+```
+
+**Exception:** `fmt.Fprintln(logWriter(), ...)` for agent log output to stderr is acceptable when structured logging would add noise to raw log streaming.
+
+## Constants Rules
+
+**Use named constants from `pkg/defaults` instead of magic literals.** If a timeout, limit, or configuration value is used anywhere, it should be a named constant:
+```go
+// BAD - magic literal
+ExpectContinueTimeout: 1 * time.Second,
+
+// GOOD - named constant
+ExpectContinueTimeout: defaults.HTTPExpectContinueTimeout,
+```
+
 ## Anti-Patterns (Do Not Do)
 
 | Anti-Pattern | Correct Approach |
@@ -235,6 +306,11 @@ slog.Error("operation failed", "error", err, "component", "gpu-collector")
 | Skip or disable tests to make CI pass | Fix the actual issue |
 | Invent new patterns | Study existing code in same package first |
 | Use `fmt.Errorf` for errors | Use `pkg/errors` with error codes |
+| Return bare `err` without wrapping | Always `errors.Wrap()` with context message |
+| Use `context.Background()` in I/O methods | Use `context.WithTimeout()` with bounded deadline |
+| Use `fmt.Println` for logging | Use `slog.Info/Debug/Warn/Error` |
+| Hardcode timeout/limit values | Define in `pkg/defaults` and reference by name |
+| Re-wrap errors that already have correct codes | Return as-is to preserve error code |
 | Ignore context cancellation | Always check `ctx.Done()` in loops/operations |
 | Add features not requested | Implement exactly what was asked |
 | Create new files when editing suffices | Prefer `Edit` over `Write` |

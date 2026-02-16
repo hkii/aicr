@@ -63,4 +63,4 @@ make qualify
 - [ ] I added/updated tests for new functionality
 - [ ] I updated docs if user-facing behavior changed
 - [ ] Changes follow existing patterns in the codebase
-- [ ] Commits are signed off (`git commit -s`) — [DCO info](https://developercertificate.org/)
+- [ ] Commits are cryptographically signed (`git commit -S`) — [GPG signing info](https://docs.github.com/en/authentication/managing-commit-signature-verification)
