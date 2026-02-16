@@ -185,7 +185,7 @@ func (n *NodeSnapshotter) measure(ctx context.Context) error {
 	// Wait for all collectors to complete
 	if err := g.Wait(); err != nil {
 		snapshotCollectionTotal.WithLabelValues("error").Inc()
-		return err
+		return errors.Wrap(errors.ErrCodeInternal, "snapshot collection failed", err)
 	}
 
 	snapshotCollectionTotal.WithLabelValues("success").Inc()

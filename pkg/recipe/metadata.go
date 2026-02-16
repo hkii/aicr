@@ -463,7 +463,7 @@ func (s *RecipeMetadataSpec) ValidateDependencies() error {
 
 	// Check for circular dependencies
 	if err := s.detectCycles(); err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInvalidRequest, "dependency validation failed", err)
 	}
 
 	return nil

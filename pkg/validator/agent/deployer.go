@@ -33,12 +33,12 @@ func (d *Deployer) Deploy(ctx context.Context) error {
 
 	// Create RBAC
 	if err := d.EnsureRBAC(ctx); err != nil {
-		return err
+		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "deploy failed during RBAC setup", err)
 	}
 
 	// Deploy Job
 	if err := d.DeployJob(ctx); err != nil {
-		return err
+		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "deploy failed during Job creation", err)
 	}
 
 	slog.Info("validation agent deployed successfully",

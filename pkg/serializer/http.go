@@ -221,7 +221,7 @@ func newDefaultHTTPTransport() *http.Transport {
 		}).DialContext,
 		TLSHandshakeTimeout:   HTTPReaderDefaultTLSHandshakeTimeout,
 		ResponseHeaderTimeout: HTTPReaderDefaultResponseHeaderTimeout,
-		ExpectContinueTimeout: 1 * time.Second,
+		ExpectContinueTimeout: defaults.HTTPExpectContinueTimeout,
 
 		// Connection reuse
 		IdleConnTimeout:    HTTPReaderDefaultIdleConnTimeout,
@@ -302,8 +302,12 @@ func (r *HTTPReader) apply() {
 }
 
 // Read fetches data from the specified URL and returns it as a byte slice.
+// The request is bounded by the HTTPReader's TotalTimeout.
+// Use ReadWithContext for caller-controlled cancellation.
 func (r *HTTPReader) Read(url string) ([]byte, error) {
-	return r.ReadWithContext(context.Background(), url)
+	ctx, cancel := context.WithTimeout(context.Background(), r.TotalTimeout)
+	defer cancel()
+	return r.ReadWithContext(ctx, url)
 }
 
 // ReadWithContext fetches data from the specified URL and returns it as a byte slice.
@@ -338,15 +342,19 @@ func (r *HTTPReader) ReadWithContext(ctx context.Context, url string) ([]byte, e
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to read response body", err)
 	}
 
 	return data, nil
 }
 
 // Download reads data from the specified URL and writes it to the given file path.
+// The request is bounded by the HTTPReader's TotalTimeout.
+// Use DownloadWithContext for caller-controlled cancellation.
 func (r *HTTPReader) Download(url, filePath string) error {
-	return r.DownloadWithContext(context.Background(), url, filePath)
+	ctx, cancel := context.WithTimeout(context.Background(), r.TotalTimeout)
+	defer cancel()
+	return r.DownloadWithContext(ctx, url, filePath)
 }
 
 // DownloadWithContext reads data from the specified URL and writes it to the given file path.

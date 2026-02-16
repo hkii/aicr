@@ -410,7 +410,7 @@ func hardLinkDir(src, dst string) error {
 
 		if entry.IsDir() {
 			if err := hardLinkDir(srcPath, dstPath); err != nil {
-				return err
+				return apperrors.Wrap(apperrors.ErrCodeInternal, "failed to hard link subdirectory", err)
 			}
 		} else {
 			if err := os.Link(srcPath, dstPath); err != nil {

@@ -278,7 +278,7 @@ Package with explicit tag (overrides CLI version):
 
 			opts, err := parseBundleCmdOptions(cmd)
 			if err != nil {
-				return err
+				return errors.Wrap(errors.ErrCodeInvalidRequest, "invalid bundle command options", err)
 			}
 
 			outputType := "Helm per-component bundle"
@@ -297,7 +297,7 @@ Package with explicit tag (overrides CLI version):
 			rec, err := serializer.FromFileWithKubeconfig[recipe.RecipeResult](opts.recipeFilePath, opts.kubeconfig)
 			if err != nil {
 				slog.Error("failed to load recipe file", "error", err, "path", opts.recipeFilePath)
-				return err
+				return errors.Wrap(errors.ErrCodeInternal, "failed to load recipe file", err)
 			}
 
 			// Create bundler with config

@@ -232,7 +232,7 @@ func (d *Deployer) streamPodLogs(ctx context.Context) error {
 
 	scanner := bufio.NewScanner(stream)
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
+		slog.Info(scanner.Text())
 	}
 
 	return scanner.Err()

@@ -172,7 +172,7 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 	externalFiles := make(map[string]bool)
 	err = filepath.WalkDir(config.ExternalDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk external directory", err)
 		}
 		if d.IsDir() {
 			return nil
@@ -219,7 +219,7 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "external directory validation failed", err)
 	}
 
 	slog.Info("layered data provider initialized",
@@ -280,12 +280,12 @@ func (p *LayeredDataProvider) WalkDir(root string, fn fs.WalkDirFunc) error {
 		slog.Debug("walking external directory", "path", externalRoot)
 		err := filepath.WalkDir(externalRoot, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return err
+				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk external directory", err)
 			}
 
 			relPath, relErr := filepath.Rel(p.externalDir, path)
 			if relErr != nil {
-				return relErr
+				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to compute relative path", relErr)
 			}
 
 			// Strip root prefix if present
@@ -301,7 +301,7 @@ func (p *LayeredDataProvider) WalkDir(root string, fn fs.WalkDirFunc) error {
 			return fn(relPath, d, nil)
 		})
 		if err != nil {
-			return err
+			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk external directory tree", err)
 		}
 	}
 
@@ -310,7 +310,7 @@ func (p *LayeredDataProvider) WalkDir(root string, fn fs.WalkDirFunc) error {
 	// Walk embedded, skipping already-visited paths
 	return p.embedded.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk embedded directory", err)
 		}
 		if visited[path] {
 			slog.Debug("skipping embedded file (external takes precedence)", "path", path)

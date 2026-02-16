@@ -133,7 +133,7 @@ func getOrCreateNestedMap(m map[string]any, path string, strict bool) (map[strin
 func setMapValueByPath(target map[string]any, path, value string) error {
 	parent, key, err := getOrCreateNestedMap(target, path, true)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInvalidRequest, "failed to resolve override path", err)
 	}
 
 	parent[key] = convertMapValue(value)

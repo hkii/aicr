@@ -384,7 +384,7 @@ func WithCriteriaService(s string) CriteriaOption {
 	return func(c *Criteria) error {
 		st, err := ParseCriteriaServiceType(s)
 		if err != nil {
-			return err
+			return errors.Wrap(errors.ErrCodeInvalidRequest, "failed to parse service type", err)
 		}
 		c.Service = st
 		return nil
@@ -396,7 +396,7 @@ func WithCriteriaAccelerator(s string) CriteriaOption {
 	return func(c *Criteria) error {
 		at, err := ParseCriteriaAcceleratorType(s)
 		if err != nil {
-			return err
+			return errors.Wrap(errors.ErrCodeInvalidRequest, "failed to parse accelerator type", err)
 		}
 		c.Accelerator = at
 		return nil
@@ -408,7 +408,7 @@ func WithCriteriaIntent(s string) CriteriaOption {
 	return func(c *Criteria) error {
 		it, err := ParseCriteriaIntentType(s)
 		if err != nil {
-			return err
+			return errors.Wrap(errors.ErrCodeInvalidRequest, "failed to parse intent type", err)
 		}
 		c.Intent = it
 		return nil
@@ -420,7 +420,7 @@ func WithCriteriaOS(s string) CriteriaOption {
 	return func(c *Criteria) error {
 		ot, err := ParseCriteriaOSType(s)
 		if err != nil {
-			return err
+			return errors.Wrap(errors.ErrCodeInvalidRequest, "failed to parse OS type", err)
 		}
 		c.OS = ot
 		return nil
@@ -432,7 +432,7 @@ func WithCriteriaPlatform(s string) CriteriaOption {
 	return func(c *Criteria) error {
 		pt, err := ParseCriteriaPlatformType(s)
 		if err != nil {
-			return err
+			return errors.Wrap(errors.ErrCodeInvalidRequest, "failed to parse platform type", err)
 		}
 		c.Platform = pt
 		return nil
@@ -455,7 +455,7 @@ func BuildCriteria(opts ...CriteriaOption) (*Criteria, error) {
 	c := NewCriteria()
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "failed to apply criteria option", err)
 		}
 	}
 	return c, nil
@@ -483,7 +483,7 @@ func ParseCriteriaFromValues(values url.Values) (*Criteria, error) {
 	if s := values.Get("service"); s != "" {
 		st, err := ParseCriteriaServiceType(s)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid service parameter", err)
 		}
 		c.Service = st
 	}
@@ -496,7 +496,7 @@ func ParseCriteriaFromValues(values url.Values) (*Criteria, error) {
 	if accelParam != "" {
 		at, err := ParseCriteriaAcceleratorType(accelParam)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid accelerator parameter", err)
 		}
 		c.Accelerator = at
 	}
@@ -505,7 +505,7 @@ func ParseCriteriaFromValues(values url.Values) (*Criteria, error) {
 	if s := values.Get("intent"); s != "" {
 		it, err := ParseCriteriaIntentType(s)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid intent parameter", err)
 		}
 		c.Intent = it
 	}
@@ -514,7 +514,7 @@ func ParseCriteriaFromValues(values url.Values) (*Criteria, error) {
 	if s := values.Get("os"); s != "" {
 		ot, err := ParseCriteriaOSType(s)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid os parameter", err)
 		}
 		c.OS = ot
 	}
@@ -523,7 +523,7 @@ func ParseCriteriaFromValues(values url.Values) (*Criteria, error) {
 	if s := values.Get("platform"); s != "" {
 		pt, err := ParseCriteriaPlatformType(s)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid platform parameter", err)
 		}
 		c.Platform = pt
 	}
@@ -608,7 +608,7 @@ func validateAndConvertRawSpec(raw *rawCriteriaSpec) (*Criteria, error) {
 	if raw.Service != "" {
 		st, err := ParseCriteriaServiceType(raw.Service)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid service in criteria spec", err)
 		}
 		c.Service = st
 	}
@@ -616,7 +616,7 @@ func validateAndConvertRawSpec(raw *rawCriteriaSpec) (*Criteria, error) {
 	if raw.Accelerator != "" {
 		at, err := ParseCriteriaAcceleratorType(raw.Accelerator)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid accelerator in criteria spec", err)
 		}
 		c.Accelerator = at
 	}
@@ -624,7 +624,7 @@ func validateAndConvertRawSpec(raw *rawCriteriaSpec) (*Criteria, error) {
 	if raw.Intent != "" {
 		it, err := ParseCriteriaIntentType(raw.Intent)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid intent in criteria spec", err)
 		}
 		c.Intent = it
 	}
@@ -632,7 +632,7 @@ func validateAndConvertRawSpec(raw *rawCriteriaSpec) (*Criteria, error) {
 	if raw.OS != "" {
 		ot, err := ParseCriteriaOSType(raw.OS)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid os in criteria spec", err)
 		}
 		c.OS = ot
 	}
@@ -640,7 +640,7 @@ func validateAndConvertRawSpec(raw *rawCriteriaSpec) (*Criteria, error) {
 	if raw.Platform != "" {
 		pt, err := ParseCriteriaPlatformType(raw.Platform)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(errors.ErrCodeInvalidRequest, "invalid platform in criteria spec", err)
 		}
 		c.Platform = pt
 	}

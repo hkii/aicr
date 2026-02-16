@@ -70,7 +70,7 @@ func (v *Recipe) Validate() error {
 // ValidateStructure performs basic structural validation.
 func (v *Recipe) ValidateStructure() error {
 	if err := v.Validate(); err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInvalidRequest, "recipe structure validation failed", err)
 	}
 
 	// Validate each measurement
@@ -105,7 +105,7 @@ func (v *Recipe) ValidateStructure() error {
 // ValidateMeasurementExists checks if a specific measurement type exists.
 func (v *Recipe) ValidateMeasurementExists(measurementType measurement.Type) error {
 	if err := v.ValidateStructure(); err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInvalidRequest, "measurement existence check failed", err)
 	}
 
 	for _, m := range v.Measurements {
@@ -119,7 +119,7 @@ func (v *Recipe) ValidateMeasurementExists(measurementType measurement.Type) err
 // ValidateSubtypeExists checks if a specific subtype exists within a measurement.
 func (v *Recipe) ValidateSubtypeExists(measurementType measurement.Type, subtypeName string) error {
 	if err := v.ValidateMeasurementExists(measurementType); err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInvalidRequest, "subtype existence check failed", err)
 	}
 
 	for _, m := range v.Measurements {

@@ -62,7 +62,7 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 		// Load all YAML files from data directory
 		err := provider.WalkDir("", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return err
+				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk data directory", err)
 			}
 			if d.IsDir() {
 				return nil

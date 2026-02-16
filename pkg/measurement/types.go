@@ -116,7 +116,7 @@ func (st *Subtype) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, &tmp); err != nil {
-		return err
+		return eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "failed to unmarshal subtype JSON", err)
 	}
 
 	st.Name = tmp.Name
@@ -141,7 +141,7 @@ func (st *Subtype) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if err := node.Decode(&tmp); err != nil {
-		return err
+		return eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "failed to decode subtype YAML", err)
 	}
 
 	st.Name = tmp.Name

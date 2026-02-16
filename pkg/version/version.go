@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	pkgerrors "github.com/NVIDIA/eidos/pkg/errors"
 )
 
 // Error types for version parsing failures
@@ -113,14 +115,14 @@ func ParseVersion(s string) (Version, error) {
 	for i, part := range parts {
 		// Parse the numeric component
 		if part == "" {
-			return Version{}, fmt.Errorf("%w: empty component", ErrNonNumeric)
+			return Version{}, pkgerrors.Wrap(pkgerrors.ErrCodeInvalidRequest, "empty component", ErrNonNumeric)
 		}
 		num, err := strconv.Atoi(part)
 		if err != nil {
-			return Version{}, fmt.Errorf("%w: %q", ErrNonNumeric, part)
+			return Version{}, pkgerrors.Wrap(pkgerrors.ErrCodeInvalidRequest, fmt.Sprintf("non-numeric component: %q", part), ErrNonNumeric)
 		}
 		if num < 0 {
-			return Version{}, fmt.Errorf("%w: %d", ErrNegativeComponent, num)
+			return Version{}, pkgerrors.Wrap(pkgerrors.ErrCodeInvalidRequest, fmt.Sprintf("negative component: %d", num), ErrNegativeComponent)
 		}
 
 		switch i {

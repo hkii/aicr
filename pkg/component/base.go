@@ -138,7 +138,7 @@ func (b *BaseBundler) RenderTemplate(tmplContent, name string, data any) (string
 func (b *BaseBundler) RenderAndWriteTemplate(tmplContent, name, outputPath string, data any, perm os.FileMode) error {
 	content, err := b.RenderTemplate(tmplContent, name, data)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInternal, "failed to render template for writing", err)
 	}
 
 	return b.WriteFileString(outputPath, content, perm)
@@ -149,7 +149,7 @@ func (b *BaseBundler) RenderAndWriteTemplate(tmplContent, name, outputPath strin
 // Each line follows the format: "<hash>  <relative-path>"
 func (b *BaseBundler) GenerateChecksums(ctx context.Context, bundleDir string) error {
 	if err := checksum.GenerateChecksums(ctx, bundleDir, b.Result.Files); err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInternal, "failed to generate checksums", err)
 	}
 
 	// Add checksums.txt to the result files
@@ -166,8 +166,9 @@ func (b *BaseBundler) GenerateChecksums(ctx context.Context, bundleDir string) e
 // This is typically used for shell scripts after writing them.
 func (b *BaseBundler) MakeExecutable(path string) error {
 	if err := os.Chmod(path, 0755); err != nil {
-		b.Result.AddError(errors.Wrap(errors.ErrCodeInternal, fmt.Sprintf("failed to make %s executable", filepath.Base(path)), err))
-		return err
+		wrappedErr := errors.Wrap(errors.ErrCodeInternal, fmt.Sprintf("failed to make %s executable", filepath.Base(path)), err)
+		b.Result.AddError(wrappedErr)
+		return wrappedErr
 	}
 
 	slog.Debug("file made executable", "path", path)
@@ -281,7 +282,7 @@ func (b *BaseBundler) GenerateFileFromTemplate(ctx context.Context, getTemplate 
 	templateName, outputPath string, data any, perm os.FileMode) error {
 
 	if err := b.CheckContext(ctx); err != nil {
-		return err
+		return errors.Wrap(errors.ErrCodeInternal, "context canceled before template generation", err)
 	}
 
 	tmpl, ok := getTemplate(templateName)
