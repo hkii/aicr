@@ -131,7 +131,7 @@ runs:
           --set toolkit.enabled=false \
           --set nfd.enabled=true \
           ${NFD_AFFINITY_FLAG} \
-          --wait --timeout=300s \
+          --wait --timeout=600s \
           gpu-operator nvidia/gpu-operator
 
     - name: Wait for GPU operands to be ready
