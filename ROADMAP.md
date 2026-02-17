@@ -109,10 +109,41 @@ Migrate capabilities from Eidos v1 playbooks.
 
 #### Recipe Creation Tooling
 
-Simplify recipe development and contribution.
+Simplify recipe development and contribution to accelerate MVP recipe matrix completion.
 
-- Interactive recipe builder CLI
-- Recipe contribution workflow (PR template, validation gates)
+**Recipe Validation Framework** — Static validation tool to catch errors before PR submission
+
+Three validation levels:
+- **Syntax validation** — YAML parsing, required fields present, valid apiVersion/kind
+- **Cross-reference validation** — Component refs exist in registry, valueOverrideKeys match, no orphaned components
+- **Semantic validation** — Helm/Kustomize sources reachable, constraint expressions parsable, dependency cycles detected
+
+Implementation options:
+- `eidos recipe validate` CLI command
+- Pre-commit git hook (automatic gating)
+- CI/CD integration (GitHub Actions validation step)
+
+**Recipe Scaffolding Generator** — Template-based recipe creation
+
+- Generate overlay YAML from platform/accelerator/intent parameters
+- Pre-populate common components for recipe type
+- Inline documentation and validation
+- Usage: `eidos recipe scaffold --platform gke --accelerator a100 --intent training`
+
+**Component Reference Checker** — Static analysis for recipe integrity
+
+- Validate all overlay components exist in registry
+- Check valueOverrideKeys consistency
+- Verify required fields (helm.chart OR kustomize.source)
+- Validate node scheduling paths for component type
+
+**Development Workflow Integration**
+
+- Recipe template file (`recipes/overlays/_TEMPLATE.yaml`)
+- Validation script integrated into `make qualify`
+- KWOK test generator (auto-generate `tools/kwok/e2e_<recipe>.sh`)
+- Recipe documentation generator (auto-generate `docs/recipes/*.md`)
+- Contribution guide (`docs/RECIPE_CONTRIBUTION.md`)
 
 ---
 
@@ -160,9 +191,8 @@ Delivered capabilities (reference only).
 
 | Date | Change |
 |------|--------|
+| 2026-02-17 | Expanded Recipe Creation Tooling with validation framework details, scaffolding, and workflow integration |
 | 2026-02-14 | Moved implemented items to Completed: EKS H100 recipes, snapshot-to-recipe, monitoring, Skyhook Ubuntu |
 | 2026-01-26 | Reorganized: removed completed items, streamlined structure |
-| 2026-01-17 | Restructured to JIRA format with Initiatives and Epics |
-| 2026-01-06 | Updated structure |
 | 2026-01-05 | Added Opens section based on architectural decisions |
 | 2026-01-01 | Initial comprehensive roadmap |
