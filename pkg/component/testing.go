@@ -418,7 +418,7 @@ func (rb *RecipeResultBuilder) WithComponentAndSource(name, version, source stri
 // Build creates the RecipeResult.
 func (rb *RecipeResultBuilder) Build() *recipe.RecipeResult {
 	return &recipe.RecipeResult{
-		Kind:          "recipeResult",
+		Kind:          "RecipeResult",
 		APIVersion:    recipe.FullAPIVersion,
 		ComponentRefs: rb.componentRefs,
 		Criteria:      rb.criteria,
@@ -589,7 +589,7 @@ func createStandardTestRecipeResult(componentName string, overrides map[string]a
 	}
 
 	return &recipe.RecipeResult{
-		Kind:       "recipeResult",
+		Kind:       "RecipeResult",
 		APIVersion: recipe.FullAPIVersion,
 		ComponentRefs: []recipe.ComponentRef{
 			{
@@ -612,7 +612,7 @@ func createRecipeResultWithoutComponent(componentName string) *recipe.RecipeResu
 	}
 
 	return &recipe.RecipeResult{
-		Kind:       "recipeResult",
+		Kind:       "RecipeResult",
 		APIVersion: recipe.FullAPIVersion,
 		ComponentRefs: []recipe.ComponentRef{
 			{
