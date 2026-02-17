@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.3] - 2026-02-17
+
+### Bug Fixes
+
+- Wrap bare errors, add context timeouts, use structured logging by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Deduplicate tools, add robustness and consistency improvements by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Increase GPU Operator ClusterPolicy timeout to 10 minutes by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Harden H100 smoke test workflow  by [@dims](https://github.com/dims)
+- Update remaining lowercase kind values to PascalCase by [@mchmarny](https://github.com/mchmarny)
+- Update remaining Kind field literals to PascalCase in Go tests by [@mchmarny](https://github.com/mchmarny)
+
+### Features
+
+- *(ci)* Add CUJ2 inference workflow to H100 smoke test  by [@dims](https://github.com/dims)
+- Add kind-inference overlays and chainsaw health checks  by [@dims](https://github.com/dims)
+-  feat(validator): move generator to standalone tool, add TestName registration, wire image-pull-secret 
+
+Co-authored-by: Mark Chmarny <mchmarny@users.noreply.github.com>
+Co-authored-by: Mark Chmarny <mark@chmarny.com> by [@xdu31](https://github.com/xdu31)
+
+### Other
+
+- Skyhook gb200  by [@ayuskauskas](https://github.com/ayuskauskas)
+- Validator generator, add test coverage, wire image-pull-secret  by [@mchmarny](https://github.com/mchmarny)
+
+### Refactor
+
+- Remove dead code, fix perf hotspots, add test coverage by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Extract gpu-cluster-setup action, let H100 deploy GPU operator via bundle  by [@dims](https://github.com/dims)
+- Standardize kind values to PascalCase  by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Remove claude settings from repo by [@mchmarny](https://github.com/mchmarny)
+- Upgrade deps by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.6.2] - 2026-02-13
 
 ### CI/CD
