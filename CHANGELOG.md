@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-02-18
+
+### Bug Fixes
+
+- Enable GPU resources and upgrade DRA driver to 25.12.0  by [@yuanchen8911](https://github.com/yuanchen8911)
+
+### Features
+
+- Add test isolation to prevent production cluster access by [@mchmarny](https://github.com/mchmarny)
+- Multi-stage Dockerfile.validator with CUDA runtime base by [@mchmarny](https://github.com/mchmarny)
+
+### Refactor
+
+- *(phase1)* Fix best practice violations by [@mchmarny](https://github.com/mchmarny)
+- *(phase2)* Extract duplicated code to pkg/k8s/pod by [@mchmarny](https://github.com/mchmarny)
+- *(phase3)* Optimize Kubernetes API access and simplify HTTPReader by [@mchmarny](https://github.com/mchmarny)
+- *(phase4)* Polish codebase with cleanup and TODO resolution by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Clean up change log by [@mchmarny](https://github.com/mchmarny)
+- Cleanup docker file by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.7.0] - 2026-02-18
 
 ### Bug Fixes
