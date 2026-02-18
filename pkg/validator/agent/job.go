@@ -202,11 +202,14 @@ func testBinaryName(testPackage string) string {
 
 // buildTestCommand constructs the shell command to run pre-compiled test binaries.
 // Test output (JSON format) is sent to stdout for the validator to parse from Job logs.
+//
+// Compiled test binaries don't support -test.json; verbose output is piped through
+// test2json to produce the JSON event stream that parseGoTestJSON expects.
 func (d *Deployer) buildTestCommand() string {
 	binary := testBinaryName(d.config.TestPackage)
 
 	// Build test command - only include -test.run flag if pattern is specified
-	testCmd := fmt.Sprintf("%s -test.v -test.json", binary)
+	testCmd := fmt.Sprintf("%s -test.v", binary)
 	if d.config.TestPattern != "" {
 		testCmd = fmt.Sprintf("%s -test.run '%s'", testCmd, d.config.TestPattern)
 	}
@@ -218,9 +221,11 @@ echo "Binary: %s"
 echo "Pattern: %s"
 echo "--- BEGIN TEST OUTPUT ---"
 
-# Run pre-compiled test binary with JSON output
-# Tee to /tmp/test-output.json for debugging, also send to stdout
-%s 2>&1 | tee /tmp/test-output.json || TEST_EXIT=$?
+# Run pre-compiled test binary with verbose output piped through test2json.
+# Compiled binaries don't support -test.json; test2json converts -test.v
+# output to the JSON event stream.
+# Tee to /tmp/test-output.json for debugging, also send to stdout.
+%s 2>&1 | test2json | tee /tmp/test-output.json || TEST_EXIT=$?
 
 echo "--- END TEST OUTPUT ---"
 

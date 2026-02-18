@@ -52,6 +52,11 @@ RUN set -e; \
 RUN CGO_ENABLED=0 go test -c -o /out/readiness.test ./pkg/validator/checks/readiness && \
     CGO_ENABLED=0 go test -c -o /out/deployment.test ./pkg/validator/checks/deployment
 
+# Build test2json tool — converts verbose test output to JSON event stream.
+# Compiled test binaries don't support -test.json; they require piping through
+# test2json (e.g. readiness.test -test.v | test2json).
+RUN CGO_ENABLED=0 go build -o /out/test2json cmd/test2json
+
 # ---------------------------------------------------------------------------
 # Final stage: CUDA runtime provides nvidia-smi for GPU validation
 # ---------------------------------------------------------------------------
@@ -65,6 +70,7 @@ LABEL org.opencontainers.image.title="eidos-validator" \
 COPY --from=builder /out/eidos /usr/local/bin/eidos
 COPY --from=builder /out/readiness.test /usr/local/bin/readiness.test
 COPY --from=builder /out/deployment.test /usr/local/bin/deployment.test
+COPY --from=builder /out/test2json /usr/local/bin/test2json
 
 # Copy testdata needed by deployment tests at runtime (loaded via os.ReadFile
 # relative to CWD, e.g. testdata/nvidia-smi-verify-pod.yaml)

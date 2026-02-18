@@ -300,8 +300,8 @@ func TestBuildTestCommand(t *testing.T) {
 			wantContain: []string{
 				"readiness.test",
 				"-test.v",
-				"-test.json",
 				"-test.run 'TestGpuHardwareDetection'",
+				"| test2json |",
 				"tee /tmp/test-output.json",
 				"--- BEGIN TEST OUTPUT ---",
 			},
@@ -313,6 +313,7 @@ func TestBuildTestCommand(t *testing.T) {
 			wantContain: []string{
 				"performance.test",
 				"-test.run 'TestGpuPerformance'",
+				"| test2json |",
 			},
 		},
 		{
@@ -329,7 +330,8 @@ func TestBuildTestCommand(t *testing.T) {
 			testPackage: "./pkg/validator/checks/readiness",
 			testPattern: "",
 			wantContain: []string{
-				"readiness.test -test.v -test.json",
+				"readiness.test -test.v",
+				"| test2json |",
 			},
 		},
 	}
