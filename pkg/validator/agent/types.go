@@ -50,8 +50,8 @@ type Config struct {
 	// RecipeConfigMap is the ConfigMap containing the recipe data
 	RecipeConfigMap string
 
-	// TestPackage is the Go package path containing tests to run
-	// Example: "./pkg/validator/checks/readiness"
+	// TestPackage is the Go package path used to derive the pre-compiled test binary name.
+	// filepath.Base(TestPackage) + ".test" gives the binary (e.g. "readiness.test").
 	TestPackage string
 
 	// TestPattern is the test name pattern to run (passed to -run flag)

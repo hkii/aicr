@@ -298,11 +298,10 @@ func TestBuildTestCommand(t *testing.T) {
 			testPackage: "./pkg/validator/checks/readiness",
 			testPattern: "TestGpuHardwareDetection",
 			wantContain: []string{
-				"go test",
-				"-v",
-				"-json",
-				"./pkg/validator/checks/readiness",
-				"-run 'TestGpuHardwareDetection'",
+				"readiness.test",
+				"-test.v",
+				"-test.json",
+				"-test.run 'TestGpuHardwareDetection'",
 				"tee /tmp/test-output.json",
 				"--- BEGIN TEST OUTPUT ---",
 			},
@@ -312,17 +311,25 @@ func TestBuildTestCommand(t *testing.T) {
 			testPackage: "./pkg/validator/checks/performance",
 			testPattern: "TestGpuPerformance",
 			wantContain: []string{
-				"./pkg/validator/checks/performance",
-				"-run 'TestGpuPerformance'",
+				"performance.test",
+				"-test.run 'TestGpuPerformance'",
 			},
 		},
 		{
 			name:        "pattern with regex",
-			testPackage: "./pkg/validator/checks",
+			testPackage: "./pkg/validator/checks/deployment",
 			testPattern: "TestGpu.*",
 			wantContain: []string{
-				"./pkg/validator/checks",
-				"-run 'TestGpu.*'",
+				"deployment.test",
+				"-test.run 'TestGpu.*'",
+			},
+		},
+		{
+			name:        "no pattern",
+			testPackage: "./pkg/validator/checks/readiness",
+			testPattern: "",
+			wantContain: []string{
+				"readiness.test -test.v -test.json",
 			},
 		},
 	}
@@ -339,6 +346,26 @@ func TestBuildTestCommand(t *testing.T) {
 				if !strings.Contains(cmd, want) {
 					t.Errorf("buildTestCommand() should contain %q, got:\n%s", want, cmd)
 				}
+			}
+		})
+	}
+}
+
+func TestTestBinaryName(t *testing.T) {
+	tests := []struct {
+		testPackage string
+		want        string
+	}{
+		{"./pkg/validator/checks/readiness", "readiness.test"},
+		{"./pkg/validator/checks/deployment", "deployment.test"},
+		{"./pkg/validator/checks/performance", "performance.test"},
+		{"./pkg/validator/checks/conformance", "conformance.test"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testPackage, func(t *testing.T) {
+			got := testBinaryName(tt.testPackage)
+			if got != tt.want {
+				t.Errorf("testBinaryName(%q) = %q, want %q", tt.testPackage, got, tt.want)
 			}
 		})
 	}
