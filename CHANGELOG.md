@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2] - 2026-02-18
+
+### Bug Fixes
+
+- Pipe test binary output through test2json for JSON events by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.7.1] - 2026-02-18
 
 ### Bug Fixes
