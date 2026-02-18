@@ -380,7 +380,7 @@ func (v *Validator) validateDeployment(
 	recipeResult *recipe.RecipeResult,
 	snap *snapshotter.Snapshot,
 ) (*ValidationResult, error) {
-	//nolint:dupl
+	//nolint:dupl // Phase validation methods have similar structure by design
 	start := time.Now()
 	slog.Info("running deployment validation phase")
 
@@ -570,7 +570,16 @@ func (v *Validator) validatePerformance(
 					TestPackage:        "./pkg/validator/checks/performance",
 					TestPattern:        "",               // Run all tests in package
 					Timeout:            30 * time.Minute, // Performance tests may take longer
-					// TODO: Add GPU node selector if infrastructure specifies GPU requirements
+					NodeSelector:       nil,              // Will be set below if GPU required
+				}
+
+				// Add GPU node selector if recipe specifies a GPU accelerator
+				if recipeResult != nil && recipeResult.Criteria != nil &&
+					recipeResult.Criteria.Accelerator != "" &&
+					recipeResult.Criteria.Accelerator != recipe.CriteriaAcceleratorAny {
+					jobConfig.NodeSelector = map[string]string{
+						"nvidia.com/gpu.present": "true",
+					}
 				}
 
 				deployer := agent.NewDeployer(clientset, jobConfig)
@@ -632,7 +641,7 @@ func (v *Validator) validateConformance(
 	recipeResult *recipe.RecipeResult,
 	snap *snapshotter.Snapshot,
 ) (*ValidationResult, error) {
-	//nolint:dupl
+	//nolint:dupl // Phase validation methods have similar structure by design
 	start := time.Now()
 	slog.Info("running conformance validation phase")
 
@@ -887,9 +896,9 @@ func (v *Validator) buildTestPattern(recipeResult *recipe.RecipeResult, phase st
 			}
 		}
 	case string(PhasePerformance):
-		// TODO: Implement for performance phase
+		// TODO(#140): Implement for performance phase
 	case string(PhaseConformance):
-		// TODO: Implement for conformance phase
+		// TODO(#141): Implement for conformance phase
 	}
 
 	if len(testNames) == 0 {

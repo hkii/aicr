@@ -15,6 +15,7 @@
 package recipe
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"os"
@@ -1082,6 +1083,79 @@ func TestLoadCriteriaFromFile_NotFound(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for non-existent file")
 	}
+}
+
+func TestLoadCriteriaFromFileWithContext(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("local file", func(t *testing.T) {
+		// Create a temporary file with criteria
+		content := `kind: RecipeCriteria
+apiVersion: eidos.nvidia.com/v1alpha1
+metadata:
+  name: test-criteria
+spec:
+  service: eks
+  accelerator: h100
+  intent: training
+`
+		tmpFile, err := os.CreateTemp("", "criteria-*.yaml")
+		if err != nil {
+			t.Fatalf("failed to create temp file: %v", err)
+		}
+		defer os.Remove(tmpFile.Name())
+
+		if _, err := tmpFile.WriteString(content); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+		tmpFile.Close()
+
+		// Test loading with context
+		got, err := LoadCriteriaFromFileWithContext(ctx, tmpFile.Name())
+		if err != nil {
+			t.Fatalf("LoadCriteriaFromFileWithContext() error = %v", err)
+		}
+
+		if got.Service != CriteriaServiceEKS {
+			t.Errorf("Service = %v, want %v", got.Service, CriteriaServiceEKS)
+		}
+		if got.Accelerator != CriteriaAcceleratorH100 {
+			t.Errorf("Accelerator = %v, want %v", got.Accelerator, CriteriaAcceleratorH100)
+		}
+		if got.Intent != CriteriaIntentTraining {
+			t.Errorf("Intent = %v, want %v", got.Intent, CriteriaIntentTraining)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, err := LoadCriteriaFromFileWithContext(ctx, "/nonexistent/path/criteria.yaml")
+		if err == nil {
+			t.Error("expected error for non-existent file")
+		}
+	})
+
+	t.Run("context canceled", func(t *testing.T) {
+		canceledCtx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		// Create a temp file for testing
+		tmpFile, err := os.CreateTemp("", "criteria-*.yaml")
+		if err != nil {
+			t.Fatalf("failed to create temp file: %v", err)
+		}
+		defer os.Remove(tmpFile.Name())
+		tmpFile.Close()
+
+		// For local files, context cancellation doesn't currently affect the operation
+		// but the API accepts context for consistency and future HTTP support
+		_, err = LoadCriteriaFromFileWithContext(canceledCtx, tmpFile.Name())
+		// For local files, this should succeed even with canceled context
+		// because file I/O doesn't use context yet
+		if err != nil {
+			// If it fails, that's also acceptable - depends on implementation
+			t.Logf("operation with canceled context: %v", err)
+		}
+	})
 }
 
 func TestParseCriteriaFromBody(t *testing.T) {

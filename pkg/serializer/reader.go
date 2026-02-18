@@ -367,10 +367,8 @@ func FromFileWithKubeconfig[T any](path, kubeconfig string) (*T, error) {
 	}
 
 	defer func() {
-		if ser != nil {
-			if closeErr := ser.Close(); closeErr != nil {
-				slog.Warn("failed to close serializer", "error", closeErr)
-			}
+		if closeErr := ser.Close(); closeErr != nil {
+			slog.Warn("failed to close serializer", "error", closeErr)
 		}
 	}()
 

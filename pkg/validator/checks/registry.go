@@ -188,7 +188,7 @@ func GetConstraintValidator(constraintName string) (*ConstraintValidator, bool) 
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 
-	// TODO: Implement pattern matching (e.g., "GPU.*" matches "GPU.smi.count")
+	// TODO(#142): Implement pattern matching (e.g., "GPU.*" matches "GPU.smi.count")
 	// For now, use exact match or prefix match
 	validator, ok := constraintRegistry[constraintName]
 	return validator, ok

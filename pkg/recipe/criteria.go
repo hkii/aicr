@@ -16,6 +16,7 @@
 package recipe
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -672,6 +673,79 @@ func LoadCriteriaFromFile(path string) (*Criteria, error) {
 	raw, err := serializer.FromFile[rawRecipeCriteria](path)
 	if err != nil {
 		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to load criteria file", err)
+	}
+
+	// Validate kind and apiVersion
+	if raw.Kind != "" && raw.Kind != RecipeCriteriaKind {
+		return nil, errors.New(errors.ErrCodeInvalidRequest, fmt.Sprintf("invalid kind %q, expected %q", raw.Kind, RecipeCriteriaKind))
+	}
+	if raw.APIVersion != "" && raw.APIVersion != RecipeCriteriaAPIVersion {
+		return nil, errors.New(errors.ErrCodeInvalidRequest, fmt.Sprintf("invalid apiVersion %q, expected %q", raw.APIVersion, RecipeCriteriaAPIVersion))
+	}
+
+	return validateAndConvertRawSpec(&raw.Spec)
+}
+
+// LoadCriteriaFromFileWithContext loads criteria from a YAML or JSON file with context support.
+// The file format is auto-detected from the file extension.
+// All fields are optional and default to "any" if not specified.
+//
+// For HTTP/HTTPS URLs, the context is used for timeout and cancellation.
+// For local file paths, the context is currently not used but is accepted for API consistency.
+//
+// Example file (YAML):
+//
+//	kind: RecipeCriteria
+//	apiVersion: eidos.nvidia.com/v1alpha1
+//	metadata:
+//	  name: gb200-eks-ubuntu-training
+//	spec:
+//	  service: eks
+//	  os: ubuntu
+//	  accelerator: gb200
+//	  intent: training
+func LoadCriteriaFromFileWithContext(ctx context.Context, path string) (*Criteria, error) {
+	// For HTTP URLs, we need to use context-aware download
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return loadCriteriaFromHTTPWithContext(ctx, path)
+	}
+
+	// For local files, use the existing FromFile which doesn't need context
+	raw, err := serializer.FromFile[rawRecipeCriteria](path)
+	if err != nil {
+		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to load criteria file", err)
+	}
+
+	// Validate kind and apiVersion
+	if raw.Kind != "" && raw.Kind != RecipeCriteriaKind {
+		return nil, errors.New(errors.ErrCodeInvalidRequest, fmt.Sprintf("invalid kind %q, expected %q", raw.Kind, RecipeCriteriaKind))
+	}
+	if raw.APIVersion != "" && raw.APIVersion != RecipeCriteriaAPIVersion {
+		return nil, errors.New(errors.ErrCodeInvalidRequest, fmt.Sprintf("invalid apiVersion %q, expected %q", raw.APIVersion, RecipeCriteriaAPIVersion))
+	}
+
+	return validateAndConvertRawSpec(&raw.Spec)
+}
+
+// loadCriteriaFromHTTPWithContext loads criteria from an HTTP/HTTPS URL with context support.
+func loadCriteriaFromHTTPWithContext(ctx context.Context, url string) (*Criteria, error) {
+	httpReader := serializer.NewHTTPReader()
+	data, err := httpReader.ReadWithContext(ctx, url)
+	if err != nil {
+		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to read criteria from URL", err)
+	}
+
+	// Determine format from URL extension
+	format := serializer.FormatFromPath(url)
+	reader, err := serializer.NewReader(format, strings.NewReader(string(data)))
+	if err != nil {
+		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to create reader for criteria data", err)
+	}
+	defer reader.Close()
+
+	var raw rawRecipeCriteria
+	if err := reader.Deserialize(&raw); err != nil {
+		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to deserialize criteria", err)
 	}
 
 	// Validate kind and apiVersion
