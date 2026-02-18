@@ -90,7 +90,7 @@ func TestValidatePhase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := New(WithVersion("test"))
+			v := New(WithVersion("test"), WithNoCluster(true))
 			result, err := v.ValidatePhase(context.Background(), tt.phase, recipeResult, snapshot)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -175,7 +175,7 @@ func TestValidatePreDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := New(WithVersion("test"))
+			v := New(WithVersion("test"), WithNoCluster(true))
 			recipeResult := &recipe.RecipeResult{
 				Constraints: tt.constraints,
 				Validation:  tt.validationConfig,
@@ -258,7 +258,7 @@ func TestValidateDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := New(WithVersion("test"))
+			v := New(WithVersion("test"), WithNoCluster(true))
 			recipeResult := &recipe.RecipeResult{
 				Validation: tt.validationConfig,
 			}
@@ -324,7 +324,7 @@ func TestValidatePerformance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := New(WithVersion("test"))
+			v := New(WithVersion("test"), WithNoCluster(true))
 			recipeResult := &recipe.RecipeResult{
 				Validation: tt.validationConfig,
 			}
@@ -389,7 +389,7 @@ func TestValidateConformance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := New(WithVersion("test"))
+			v := New(WithVersion("test"), WithNoCluster(true))
 			recipeResult := &recipe.RecipeResult{
 				Validation: tt.validationConfig,
 			}
@@ -429,7 +429,7 @@ func TestValidateAll_PhaseOrder(t *testing.T) {
 	snapshot := createTestSnapshot()
 	recipeResult := createTestRecipeWithValidation()
 
-	v := New(WithVersion("test"))
+	v := New(WithVersion("test"), WithNoCluster(true))
 	result, err := v.validateAll(context.Background(), recipeResult, snapshot)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -474,7 +474,7 @@ func TestValidateAll_PhaseDependencies(t *testing.T) {
 	snapshot := createTestSnapshot()
 	recipeResult := createTestRecipeWithValidation()
 
-	v := New(WithVersion("test"))
+	v := New(WithVersion("test"), WithNoCluster(true))
 	result, err := v.validateAll(context.Background(), recipeResult, snapshot)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

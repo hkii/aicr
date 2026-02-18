@@ -61,7 +61,7 @@ spec:
               WORK="/tmp/chainsaw-validate-phases"
               for phase in readiness deployment performance conformance; do
                 output=$(${EIDOS_BIN} validate -r "${WORK}/recipe.yaml" \
-                  -s "${WORK}/snapshot.yaml" --phase "$phase" 2>&1) || true
+                  -s "${WORK}/snapshot.yaml" --phase "$phase" --no-cluster 2>&1) || true
                 if ! echo "$output" | grep -qi "$phase"; then
                   echo "Phase '$phase' not found in output" >&2
                   exit 1
@@ -78,7 +78,7 @@ spec:
               EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
               WORK="/tmp/chainsaw-validate-phases"
               output=$(${EIDOS_BIN} validate -r "${WORK}/recipe.yaml" \
-                -s "${WORK}/snapshot.yaml" --phase all \
+                -s "${WORK}/snapshot.yaml" --phase all --no-cluster \
                 -o "${WORK}/all-phases.yaml" 2>&1) || true
               count=0
               echo "$output" | grep -q "readiness" && count=$((count+1))
@@ -109,7 +109,7 @@ spec:
               EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
               WORK="/tmp/chainsaw-validate-phases"
               ${EIDOS_BIN} validate -r "${WORK}/recipe.yaml" \
-                -s "${WORK}/snapshot.yaml" --phase invalid-phase 2>&1 || true
+                -s "${WORK}/snapshot.yaml" --phase invalid-phase --no-cluster 2>&1 || true
             check:
               (contains($stderr, 'invalid phase') || contains($stdout, 'invalid phase')): true
 
@@ -121,7 +121,7 @@ spec:
               EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
               WORK="/tmp/chainsaw-validate-phases"
               output=$(${EIDOS_BIN} validate -r "${WORK}/recipe.yaml" \
-                -s "${WORK}/snapshot.yaml" \
+                -s "${WORK}/snapshot.yaml" --no-cluster \
                 --phase readiness --phase deployment --phase conformance 2>&1) || true
               echo "$output" | grep -q "readiness" || { echo "readiness missing" >&2; exit 1; }
               echo "$output" | grep -q "deployment" || { echo "deployment missing" >&2; exit 1; }

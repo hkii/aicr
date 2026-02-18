@@ -56,7 +56,7 @@ spec:
               EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
               WORK="/tmp/chainsaw-duplicate-flags"
               ${EIDOS_BIN} validate --recipe "${WORK}/recipe.yaml" --recipe "${WORK}/recipe.yaml" \
-                --snapshot "${WORK}/recipe.yaml" 2>&1 || true
+                --snapshot "${WORK}/recipe.yaml" --no-cluster 2>&1 || true
             check:
               (contains($stderr, 'can only be specified once') || contains($stdout, 'can only be specified once')): true
 

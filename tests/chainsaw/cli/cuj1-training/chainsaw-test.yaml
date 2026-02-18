@@ -71,6 +71,7 @@ spec:
                 --recipe "${WORK}/recipe.yaml" \
                 --snapshot ./mock-snapshot.yaml \
                 --phase readiness \
+                --no-cluster \
                 --output "${WORK}/validate-readiness-raw.yaml"
               printf 'apiVersion: eidos.nvidia.com/v1alpha1\nkind: ValidationResult\n' > "${WORK}/validate-readiness.yaml"
               sed '/^---$/d' "${WORK}/validate-readiness-raw.yaml" >> "${WORK}/validate-readiness.yaml"
@@ -153,6 +154,7 @@ spec:
                 --phase readiness \
                 --phase deployment \
                 --phase conformance \
+                --no-cluster \
                 --output "${WORK}/validate-multiphase-raw.yaml"
               printf 'apiVersion: eidos.nvidia.com/v1alpha1\nkind: ValidationResult\n' > "${WORK}/validate-multiphase.yaml"
               sed '/^---$/d' "${WORK}/validate-multiphase-raw.yaml" >> "${WORK}/validate-multiphase.yaml"

@@ -84,7 +84,7 @@ func (v *Validator) ValidatePhase(
 
 	// For single phase validation, create RBAC and ConfigMaps before running the phase
 	clientset, _, err := k8sclient.GetKubeClient()
-	if err == nil {
+	if err == nil && !v.NoCluster {
 		// Create RBAC resources for validation Jobs
 		sharedConfig := agent.Config{
 			Namespace:          v.Namespace,
@@ -288,47 +288,59 @@ func (v *Validator) validateReadiness(
 	// For single-phase validation, the CLI/API should call agent.EnsureRBAC() first.
 	//nolint:dupl // Phase validation methods have similar structure by design
 	if recipeResult.Validation != nil && recipeResult.Validation.PreDeployment != nil && len(recipeResult.Validation.PreDeployment.Checks) > 0 {
-		clientset, _, err := k8sclient.GetKubeClient()
-		if err != nil {
-			// If Kubernetes is not available (e.g., running in test mode), skip check execution
-			slog.Warn("Kubernetes client unavailable, skipping check execution",
-				"error", err,
-				"checks", len(recipeResult.Validation.PreDeployment.Checks))
-			// Add skeleton check results
+		if v.NoCluster {
+			slog.Info("no-cluster mode enabled, skipping cluster check execution for readiness phase")
 			for _, checkName := range recipeResult.Validation.PreDeployment.Checks {
 				check := CheckResult{
 					Name:   checkName,
 					Status: ValidationStatusPass,
-					Reason: "skipped - Kubernetes unavailable (test mode)",
+					Reason: "skipped - no-cluster mode (test mode)",
 				}
 				phaseResult.Checks = append(phaseResult.Checks, check)
 			}
 		} else {
-			// ConfigMap names (created once per validation run by validateAll)
-			snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-			recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+			clientset, _, err := k8sclient.GetKubeClient()
+			if err != nil {
+				// If Kubernetes is not available (e.g., running in test mode), skip check execution
+				slog.Warn("Kubernetes client unavailable, skipping check execution",
+					"error", err,
+					"checks", len(recipeResult.Validation.PreDeployment.Checks))
+				// Add skeleton check results
+				for _, checkName := range recipeResult.Validation.PreDeployment.Checks {
+					check := CheckResult{
+						Name:   checkName,
+						Status: ValidationStatusPass,
+						Reason: "skipped - Kubernetes unavailable (test mode)",
+					}
+					phaseResult.Checks = append(phaseResult.Checks, check)
+				}
+			} else {
+				// ConfigMap names (created once per validation run by validateAll)
+				snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
+				recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
 
-			// Deploy ONE Job for ALL readiness checks in this phase
-			jobConfig := agent.Config{
-				Namespace:          v.Namespace,
-				JobName:            fmt.Sprintf("eidos-%s-readiness", v.RunID),
-				Image:              v.Image,
-				ImagePullSecrets:   v.ImagePullSecrets,
-				ServiceAccountName: "eidos-validator",
-				SnapshotConfigMap:  snapshotCMName,
-				RecipeConfigMap:    recipeCMName,
-				TestPackage:        "./pkg/validator/checks/readiness",
-				TestPattern:        "", // Run all tests in package
-				Timeout:            5 * time.Minute,
+				// Deploy ONE Job for ALL readiness checks in this phase
+				jobConfig := agent.Config{
+					Namespace:          v.Namespace,
+					JobName:            fmt.Sprintf("eidos-%s-readiness", v.RunID),
+					Image:              v.Image,
+					ImagePullSecrets:   v.ImagePullSecrets,
+					ServiceAccountName: "eidos-validator",
+					SnapshotConfigMap:  snapshotCMName,
+					RecipeConfigMap:    recipeCMName,
+					TestPackage:        "./pkg/validator/checks/readiness",
+					TestPattern:        "", // Run all tests in package
+					Timeout:            5 * time.Minute,
+				}
+
+				deployer := agent.NewDeployer(clientset, jobConfig)
+
+				// Run the phase Job and aggregate results
+				phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "readiness")
+
+				// Merge Job results into phase result
+				phaseResult.Checks = phaseJobResult.Checks
 			}
-
-			deployer := agent.NewDeployer(clientset, jobConfig)
-
-			// Run the phase Job and aggregate results
-			phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "readiness")
-
-			// Merge Job results into phase result
-			phaseResult.Checks = phaseJobResult.Checks
 		}
 	}
 
@@ -407,51 +419,63 @@ func (v *Validator) validateDeployment(
 		// For multi-phase validation, validateAll() manages RBAC lifecycle.
 		// For single-phase validation, the CLI/API should call agent.EnsureRBAC() first.
 		if len(recipeResult.Validation.Deployment.Checks) > 0 || len(recipeResult.Validation.Deployment.Constraints) > 0 {
-			clientset, _, err := k8sclient.GetKubeClient()
-			if err != nil {
-				// If Kubernetes is not available (e.g., running in test mode), skip check execution
-				slog.Warn("Kubernetes client unavailable, skipping check execution",
-					"error", err,
-					"checks", len(recipeResult.Validation.Deployment.Checks))
-				// Add skeleton check result
-				phaseResult.Checks = append(phaseResult.Checks, CheckResult{
-					Name:   "deployment",
-					Status: ValidationStatusPass,
-					Reason: "skipped - Kubernetes unavailable (test mode)",
-				})
-			} else {
-				// ConfigMap names (created once per validation run by validateAll)
-				snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-				recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
-
-				// Validate that all recipe constraints/checks are registered (logs warnings for missing)
-				v.validateRecipeRegistrations(recipeResult, "deployment")
-
-				// Build test pattern from recipe (constraint names -> test names)
-				patternResult := v.buildTestPattern(recipeResult, "deployment")
-
-				// Deploy ONE Job for ALL deployment checks and constraints in this phase
-				jobConfig := agent.Config{
-					Namespace:          v.Namespace,
-					JobName:            fmt.Sprintf("eidos-%s-deployment", v.RunID),
-					Image:              v.Image,
-					ImagePullSecrets:   v.ImagePullSecrets,
-					ServiceAccountName: "eidos-validator",
-					SnapshotConfigMap:  snapshotCMName,
-					RecipeConfigMap:    recipeCMName,
-					TestPackage:        "./pkg/validator/checks/deployment",
-					TestPattern:        patternResult.Pattern,
-					ExpectedTests:      patternResult.ExpectedTests,
-					Timeout:            10 * time.Minute,
+			if v.NoCluster {
+				slog.Info("no-cluster mode enabled, skipping cluster check execution for deployment phase")
+				// Create stub check results for each check in the recipe
+				for _, checkName := range recipeResult.Validation.Deployment.Checks {
+					phaseResult.Checks = append(phaseResult.Checks, CheckResult{
+						Name:   checkName,
+						Status: ValidationStatusPass,
+						Reason: "skipped - no-cluster mode (test mode)",
+					})
 				}
+			} else {
+				clientset, _, err := k8sclient.GetKubeClient()
+				if err != nil {
+					// If Kubernetes is not available (e.g., running in test mode), skip check execution
+					slog.Warn("Kubernetes client unavailable, skipping check execution",
+						"error", err,
+						"checks", len(recipeResult.Validation.Deployment.Checks))
+					// Add skeleton check result
+					phaseResult.Checks = append(phaseResult.Checks, CheckResult{
+						Name:   "deployment",
+						Status: ValidationStatusPass,
+						Reason: "skipped - Kubernetes unavailable (test mode)",
+					})
+				} else {
+					// ConfigMap names (created once per validation run by validateAll)
+					snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
+					recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
 
-				deployer := agent.NewDeployer(clientset, jobConfig)
+					// Validate that all recipe constraints/checks are registered (logs warnings for missing)
+					v.validateRecipeRegistrations(recipeResult, "deployment")
 
-				// Run the phase Job and aggregate results
-				phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "deployment")
+					// Build test pattern from recipe (constraint names -> test names)
+					patternResult := v.buildTestPattern(recipeResult, "deployment")
 
-				// Merge Job results into phase result
-				phaseResult.Checks = phaseJobResult.Checks
+					// Deploy ONE Job for ALL deployment checks and constraints in this phase
+					jobConfig := agent.Config{
+						Namespace:          v.Namespace,
+						JobName:            fmt.Sprintf("eidos-%s-deployment", v.RunID),
+						Image:              v.Image,
+						ImagePullSecrets:   v.ImagePullSecrets,
+						ServiceAccountName: "eidos-validator",
+						SnapshotConfigMap:  snapshotCMName,
+						RecipeConfigMap:    recipeCMName,
+						TestPackage:        "./pkg/validator/checks/deployment",
+						TestPattern:        patternResult.Pattern,
+						ExpectedTests:      patternResult.ExpectedTests,
+						Timeout:            10 * time.Minute,
+					}
+
+					deployer := agent.NewDeployer(clientset, jobConfig)
+
+					// Run the phase Job and aggregate results
+					phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "deployment")
+
+					// Merge Job results into phase result
+					phaseResult.Checks = phaseJobResult.Checks
+				}
 			}
 		}
 	}
@@ -537,58 +561,71 @@ func (v *Validator) validatePerformance(
 		// For multi-phase validation, validateAll() manages RBAC lifecycle.
 		// For single-phase validation, the CLI/API should call agent.EnsureRBAC() first.
 		if len(recipeResult.Validation.Performance.Checks) > 0 || len(recipeResult.Validation.Performance.Constraints) > 0 {
-			clientset, _, err := k8sclient.GetKubeClient()
-			if err != nil {
-				// If Kubernetes is not available (e.g., running in test mode), skip check execution
-				slog.Warn("Kubernetes client unavailable, skipping check execution",
-					"error", err,
-					"checks", len(recipeResult.Validation.Performance.Checks))
-				// Add skeleton check result
-				phaseResult.Checks = append(phaseResult.Checks, CheckResult{
-					Name:   "performance",
-					Status: ValidationStatusPass,
-					Reason: "skipped - Kubernetes unavailable (test mode)",
-				})
+			if v.NoCluster {
+				slog.Info("no-cluster mode enabled, skipping cluster check execution for performance phase")
+				// Create stub check results for each check in the recipe
+				for _, checkName := range recipeResult.Validation.Performance.Checks {
+					phaseResult.Checks = append(phaseResult.Checks, CheckResult{
+						Name:   checkName,
+						Status: ValidationStatusPass,
+						Reason: "skipped - no-cluster mode (test mode)",
+					})
+				}
 			} else {
-				// ConfigMap names (created once per validation run by validateAll)
-				snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-				recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+				clientset, _, err := k8sclient.GetKubeClient()
+				if err != nil {
+					// If Kubernetes is not available (e.g., running in test mode), skip check execution
+					slog.Warn("Kubernetes client unavailable, skipping check execution",
+						"error", err,
+						"checks", len(recipeResult.Validation.Performance.Checks))
+					// Add skeleton check result
+					phaseResult.Checks = append(phaseResult.Checks, CheckResult{
+						Name:   "performance",
+						Status: ValidationStatusPass,
+						Reason: "skipped - Kubernetes unavailable (test mode)",
+					})
+				} else {
+					// ConfigMap names (created once per validation run by validateAll)
+					snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
+					recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
 
-				// Validate that all recipe constraints/checks are registered (logs warnings for missing)
-				v.validateRecipeRegistrations(recipeResult, "performance")
+					// Validate that all recipe constraints/checks are registered (logs warnings for missing)
+					v.validateRecipeRegistrations(recipeResult, "performance")
 
-				// Deploy ONE Job for ALL performance checks and constraints in this phase
-				// Performance tests may need GPU nodes
-				jobConfig := agent.Config{
-					Namespace:          v.Namespace,
-					JobName:            fmt.Sprintf("eidos-%s-performance", v.RunID),
-					Image:              v.Image,
-					ImagePullSecrets:   v.ImagePullSecrets,
-					ServiceAccountName: "eidos-validator",
-					SnapshotConfigMap:  snapshotCMName,
-					RecipeConfigMap:    recipeCMName,
-					TestPackage:        "./pkg/validator/checks/performance",
-					TestPattern:        "",               // Run all tests in package
-					Timeout:            30 * time.Minute, // Performance tests may take longer
-					NodeSelector:       nil,              // Will be set below if GPU required
-				}
-
-				// Add GPU node selector if recipe specifies a GPU accelerator
-				if recipeResult != nil && recipeResult.Criteria != nil &&
-					recipeResult.Criteria.Accelerator != "" &&
-					recipeResult.Criteria.Accelerator != recipe.CriteriaAcceleratorAny {
-					jobConfig.NodeSelector = map[string]string{
-						"nvidia.com/gpu.present": "true",
+					// Deploy ONE Job for ALL performance checks and constraints in this phase
+					// Performance tests may need GPU nodes
+					jobConfig := agent.Config{
+						Namespace:          v.Namespace,
+						JobName:            fmt.Sprintf("eidos-%s-performance", v.RunID),
+						Image:              v.Image,
+						ImagePullSecrets:   v.ImagePullSecrets,
+						ServiceAccountName: "eidos-validator",
+						SnapshotConfigMap:  snapshotCMName,
+						RecipeConfigMap:    recipeCMName,
+						TestPackage:        "./pkg/validator/checks/performance",
+						TestPattern:        "",               // Run all tests in package
+						Timeout:            30 * time.Minute, // Performance tests may take longer
+						NodeSelector:       nil,              // Will be set below if GPU required
 					}
+
+					// Add GPU node selector if recipe specifies a GPU accelerator
+					if recipeResult != nil && recipeResult.Criteria != nil &&
+						recipeResult.Criteria.Accelerator != "" &&
+						recipeResult.Criteria.Accelerator != recipe.CriteriaAcceleratorAny {
+
+						jobConfig.NodeSelector = map[string]string{
+							"nvidia.com/gpu.present": "true",
+						}
+					}
+
+					deployer := agent.NewDeployer(clientset, jobConfig)
+
+					// Run the phase Job and aggregate results
+					phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "performance")
+
+					// Merge Job results into phase result
+					phaseResult.Checks = phaseJobResult.Checks
 				}
-
-				deployer := agent.NewDeployer(clientset, jobConfig)
-
-				// Run the phase Job and aggregate results
-				phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "performance")
-
-				// Merge Job results into phase result
-				phaseResult.Checks = phaseJobResult.Checks
 			}
 		}
 	}
@@ -668,47 +705,59 @@ func (v *Validator) validateConformance(
 		// For multi-phase validation, validateAll() manages RBAC lifecycle.
 		// For single-phase validation, the CLI/API should call agent.EnsureRBAC() first.
 		if len(recipeResult.Validation.Conformance.Checks) > 0 || len(recipeResult.Validation.Conformance.Constraints) > 0 {
-			clientset, _, err := k8sclient.GetKubeClient()
-			if err != nil {
-				// If Kubernetes is not available (e.g., running in test mode), skip check execution
-				slog.Warn("Kubernetes client unavailable, skipping check execution",
-					"error", err,
-					"checks", len(recipeResult.Validation.Conformance.Checks))
-				// Add skeleton check result
-				phaseResult.Checks = append(phaseResult.Checks, CheckResult{
-					Name:   "conformance",
-					Status: ValidationStatusPass,
-					Reason: "skipped - Kubernetes unavailable (test mode)",
-				})
-			} else {
-				// ConfigMap names (created once per validation run by validateAll)
-				snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-				recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
-
-				// Validate that all recipe constraints/checks are registered (logs warnings for missing)
-				v.validateRecipeRegistrations(recipeResult, "conformance")
-
-				// Deploy ONE Job for ALL conformance checks and constraints in this phase
-				jobConfig := agent.Config{
-					Namespace:          v.Namespace,
-					JobName:            fmt.Sprintf("eidos-%s-conformance", v.RunID),
-					Image:              v.Image,
-					ImagePullSecrets:   v.ImagePullSecrets,
-					ServiceAccountName: "eidos-validator",
-					SnapshotConfigMap:  snapshotCMName,
-					RecipeConfigMap:    recipeCMName,
-					TestPackage:        "./pkg/validator/checks/conformance",
-					TestPattern:        "", // Run all tests in package
-					Timeout:            15 * time.Minute,
+			if v.NoCluster {
+				slog.Info("no-cluster mode enabled, skipping cluster check execution for conformance phase")
+				// Create stub check results for each check in the recipe
+				for _, checkName := range recipeResult.Validation.Conformance.Checks {
+					phaseResult.Checks = append(phaseResult.Checks, CheckResult{
+						Name:   checkName,
+						Status: ValidationStatusPass,
+						Reason: "skipped - no-cluster mode (test mode)",
+					})
 				}
+			} else {
+				clientset, _, err := k8sclient.GetKubeClient()
+				if err != nil {
+					// If Kubernetes is not available (e.g., running in test mode), skip check execution
+					slog.Warn("Kubernetes client unavailable, skipping check execution",
+						"error", err,
+						"checks", len(recipeResult.Validation.Conformance.Checks))
+					// Add skeleton check result
+					phaseResult.Checks = append(phaseResult.Checks, CheckResult{
+						Name:   "conformance",
+						Status: ValidationStatusPass,
+						Reason: "skipped - Kubernetes unavailable (test mode)",
+					})
+				} else {
+					// ConfigMap names (created once per validation run by validateAll)
+					snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
+					recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
 
-				deployer := agent.NewDeployer(clientset, jobConfig)
+					// Validate that all recipe constraints/checks are registered (logs warnings for missing)
+					v.validateRecipeRegistrations(recipeResult, "conformance")
 
-				// Run the phase Job and aggregate results
-				phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "conformance")
+					// Deploy ONE Job for ALL conformance checks and constraints in this phase
+					jobConfig := agent.Config{
+						Namespace:          v.Namespace,
+						JobName:            fmt.Sprintf("eidos-%s-conformance", v.RunID),
+						Image:              v.Image,
+						ImagePullSecrets:   v.ImagePullSecrets,
+						ServiceAccountName: "eidos-validator",
+						SnapshotConfigMap:  snapshotCMName,
+						RecipeConfigMap:    recipeCMName,
+						TestPackage:        "./pkg/validator/checks/conformance",
+						TestPattern:        "", // Run all tests in package
+						Timeout:            15 * time.Minute,
+					}
 
-				// Merge Job results into phase result
-				phaseResult.Checks = phaseJobResult.Checks
+					deployer := agent.NewDeployer(clientset, jobConfig)
+
+					// Run the phase Job and aggregate results
+					phaseJobResult := v.runPhaseJob(ctx, deployer, jobConfig, "conformance")
+
+					// Merge Job results into phase result
+					phaseResult.Checks = phaseJobResult.Checks
+				}
 			}
 		}
 	}
@@ -1180,7 +1229,7 @@ func (v *Validator) validateAll(
 	// Create Kubernetes client for agent deployment
 	// If Kubernetes is not available (e.g., running in test mode), phases will skip Job execution
 	clientset, _, err := k8sclient.GetKubeClient()
-	rbacAvailable := err == nil
+	rbacAvailable := err == nil && !v.NoCluster
 
 	// Check if resuming from existing validation
 	var startPhase ValidationPhaseName

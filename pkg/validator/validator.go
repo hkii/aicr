@@ -111,6 +111,10 @@ type Validator struct {
 
 	// ImagePullSecrets are secret names for pulling images from private registries.
 	ImagePullSecrets []string
+
+	// NoCluster controls whether to skip actual cluster operations (dry-run mode).
+	// When true, validation runs without connecting to Kubernetes cluster.
+	NoCluster bool
 }
 
 // Option is a functional option for configuring Validator instances.
@@ -157,6 +161,14 @@ func WithCleanup(cleanup bool) Option {
 func WithImagePullSecrets(secrets []string) Option {
 	return func(v *Validator) {
 		v.ImagePullSecrets = secrets
+	}
+}
+
+// WithNoCluster returns an Option that controls cluster access.
+// When set to true, validation runs in dry-run mode without connecting to cluster.
+func WithNoCluster(noCluster bool) Option {
+	return func(v *Validator) {
+		v.NoCluster = noCluster
 	}
 }
 

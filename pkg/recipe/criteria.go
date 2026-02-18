@@ -711,6 +711,7 @@ func LoadCriteriaFromFileWithContext(ctx context.Context, path string) (*Criteri
 	}
 
 	// For local files, use the existing FromFile which doesn't need context
+	//nolint:contextcheck // Local file reads don't require context; HTTP paths use loadCriteriaFromHTTPWithContext
 	raw, err := serializer.FromFile[rawRecipeCriteria](path)
 	if err != nil {
 		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to load criteria file", err)

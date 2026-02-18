@@ -181,4 +181,3 @@ func (w *ConfigMapWriter) Serialize(ctx context.Context, snapshot any) error {
 func (w *ConfigMapWriter) Close() error {
 	return nil
 }
-

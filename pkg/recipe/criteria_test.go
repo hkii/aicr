@@ -1105,8 +1105,8 @@ spec:
 		}
 		defer os.Remove(tmpFile.Name())
 
-		if _, err := tmpFile.WriteString(content); err != nil {
-			t.Fatalf("failed to write temp file: %v", err)
+		if _, writeErr := tmpFile.WriteString(content); writeErr != nil {
+			t.Fatalf("failed to write temp file: %v", writeErr)
 		}
 		tmpFile.Close()
 

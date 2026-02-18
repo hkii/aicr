@@ -156,6 +156,7 @@ func runValidation(
 	validatorImage string,
 	cleanup bool,
 	imagePullSecrets []string,
+	noCluster bool,
 ) error {
 
 	slog.Info("running validation",
@@ -175,6 +176,7 @@ func runValidation(
 		validator.WithImage(validatorImage),
 		validator.WithCleanup(cleanup),
 		validator.WithImagePullSecrets(imagePullSecrets),
+		validator.WithNoCluster(noCluster),
 	}
 	if resumeRunID != "" {
 		opts = append(opts, validator.WithRunID(resumeRunID))
@@ -263,6 +265,10 @@ func validateCmdFlags() []cli.Flag {
 			Name:  "fail-on-error",
 			Value: true,
 			Usage: "Exit with non-zero status if any constraint fails validation",
+		},
+		&cli.BoolFlag{
+			Name:  "no-cluster",
+			Usage: "Run validation without cluster access (dry-run mode). Skips checks that require cluster operations.",
 		},
 		// Agent deployment flags (used when --snapshot is not provided)
 		&cli.StringFlag{
@@ -453,7 +459,7 @@ Resume a previous validation run from where it left off:
 				}
 			}
 
-			return runValidation(ctx, rec, snap, phases, recipeFilePath, snapshotSource, cmd.String("output"), outFormat, failOnError, validationNamespace, cmd.String("resume"), cmd.String("image"), cmd.Bool("cleanup"), cmd.StringSlice("image-pull-secret"))
+			return runValidation(ctx, rec, snap, phases, recipeFilePath, snapshotSource, cmd.String("output"), outFormat, failOnError, validationNamespace, cmd.String("resume"), cmd.String("image"), cmd.Bool("cleanup"), cmd.StringSlice("image-pull-secret"), cmd.Bool("no-cluster"))
 		},
 	}
 }
