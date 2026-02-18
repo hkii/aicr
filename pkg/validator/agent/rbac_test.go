@@ -119,40 +119,65 @@ func TestEnsureRole(t *testing.T) {
 			t.Errorf("expected namespace %q, got %q", deployer.config.Namespace, role.Namespace)
 		}
 
-		// Verify policy rules (apps rule moved to ClusterRole)
-		if len(role.Rules) != 3 {
-			t.Errorf("expected 3 rules, got %d", len(role.Rules))
+		// Verify policy rules
+		if len(role.Rules) != 5 {
+			t.Errorf("expected 5 rules, got %d", len(role.Rules))
 		}
 
-		// Check ConfigMap rule
+		// Rule 0: namespaces, events, services, endpoints, nodes (get, list)
 		rule0 := role.Rules[0]
-		if len(rule0.Resources) != 1 || rule0.Resources[0] != "configmaps" {
-			t.Errorf("expected configmaps in first rule, got %v", rule0.Resources)
+		if len(rule0.Resources) != 5 {
+			t.Errorf("expected 5 resources in first rule, got %d: %v", len(rule0.Resources), rule0.Resources)
 		}
-		if !containsVerb(rule0.Verbs, "get") || !containsVerb(rule0.Verbs, "list") ||
-			!containsVerb(rule0.Verbs, "create") || !containsVerb(rule0.Verbs, "update") {
-
-			t.Errorf("expected get/list/create/update verbs for configmaps, got %v", rule0.Verbs)
+		for _, res := range []string{"namespaces", "events", "services", "endpoints", "nodes"} {
+			if !containsResource(rule0.Resources, res) {
+				t.Errorf("expected %s in first rule, got %v", res, rule0.Resources)
+			}
+		}
+		if !containsVerb(rule0.Verbs, "get") || !containsVerb(rule0.Verbs, "list") {
+			t.Errorf("expected get/list verbs for first rule, got %v", rule0.Verbs)
 		}
 
-		// Check pods/services/endpoints rule
+		// Rule 1: configmaps (get, list, create, update, patch)
 		rule1 := role.Rules[1]
-		if len(rule1.Resources) != 3 {
-			t.Errorf("expected 3 resources in second rule, got %d", len(rule1.Resources))
+		if len(rule1.Resources) != 1 || rule1.Resources[0] != "configmaps" {
+			t.Errorf("expected configmaps in second rule, got %v", rule1.Resources)
 		}
-		if !containsResource(rule1.Resources, "pods") || !containsResource(rule1.Resources, "services") ||
-			!containsResource(rule1.Resources, "endpoints") {
+		if !containsVerb(rule1.Verbs, "get") || !containsVerb(rule1.Verbs, "list") ||
+			!containsVerb(rule1.Verbs, "create") || !containsVerb(rule1.Verbs, "update") ||
+			!containsVerb(rule1.Verbs, "patch") {
 
-			t.Errorf("expected pods/services/endpoints in second rule, got %v", rule1.Resources)
-		}
-		if !containsVerb(rule1.Verbs, "get") || !containsVerb(rule1.Verbs, "list") {
-			t.Errorf("expected get/list verbs, got %v", rule1.Verbs)
+			t.Errorf("expected get/list/create/update/patch verbs for configmaps, got %v", rule1.Verbs)
 		}
 
-		// Check batch rule (apps rule moved to ClusterRole for cluster-wide access)
+		// Rule 2: pods (get, list, create, update, patch, delete)
 		rule2 := role.Rules[2]
-		if rule2.APIGroups[0] != "batch" {
-			t.Errorf("expected batch API group, got %v", rule2.APIGroups)
+		if len(rule2.Resources) != 1 || rule2.Resources[0] != "pods" {
+			t.Errorf("expected pods in third rule, got %v", rule2.Resources)
+		}
+		if !containsVerb(rule2.Verbs, "get") || !containsVerb(rule2.Verbs, "list") ||
+			!containsVerb(rule2.Verbs, "create") || !containsVerb(rule2.Verbs, "update") ||
+			!containsVerb(rule2.Verbs, "patch") || !containsVerb(rule2.Verbs, "delete") {
+
+			t.Errorf("expected get/list/create/update/patch/delete verbs for pods, got %v", rule2.Verbs)
+		}
+
+		// Rule 3: pods/log, pods/status (get, list)
+		rule3 := role.Rules[3]
+		if !containsResource(rule3.Resources, "pods/log") || !containsResource(rule3.Resources, "pods/status") {
+			t.Errorf("expected pods/log and pods/status in fourth rule, got %v", rule3.Resources)
+		}
+		if !containsVerb(rule3.Verbs, "get") || !containsVerb(rule3.Verbs, "list") {
+			t.Errorf("expected get/list verbs for pod subresources, got %v", rule3.Verbs)
+		}
+
+		// Rule 4: batch/jobs (get, list)
+		rule4 := role.Rules[4]
+		if rule4.APIGroups[0] != "batch" {
+			t.Errorf("expected batch API group in fifth rule, got %v", rule4.APIGroups)
+		}
+		if !containsResource(rule4.Resources, "jobs") {
+			t.Errorf("expected jobs in fifth rule, got %v", rule4.Resources)
 		}
 	})
 

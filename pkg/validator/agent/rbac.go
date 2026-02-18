@@ -58,12 +58,22 @@ func (d *Deployer) ensureRole(ctx context.Context) error {
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
+				Resources: []string{"namespaces", "events", "services", "endpoints", "nodes"},
+				Verbs:     []string{"get", "list"},
+			},
+			{
+				APIGroups: []string{""},
 				Resources: []string{"configmaps"},
 				Verbs:     []string{"get", "list", "create", "update", "patch"},
 			},
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods", "services", "endpoints"},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "list", "create", "update", "patch", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods/log", "pods/status"},
 				Verbs:     []string{"get", "list"},
 			},
 			{
