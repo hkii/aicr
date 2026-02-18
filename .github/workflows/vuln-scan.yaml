@@ -29,7 +29,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: scheduled-trivy-scan
+  group: ${{ github.workflow }}-${{ github.event_name }}
   cancel-in-progress: false
 
 env:

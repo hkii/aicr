@@ -125,16 +125,16 @@ runs:
       with:
         name: coverage-comment-data
         path: coverage-comment-data/
-        retention-days: 1
+        retention-days: 7
 
-    # Upload PR coverage for delta comparison (short retention)
+    # Upload PR coverage for delta comparison
     - name: Upload PR Coverage
       if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
       with:
         name: coverage-pr
         path: ${{ inputs.coverage_file }}
-        retention-days: 1
+        retention-days: 7
 
     # Upload baseline coverage for future PR comparisons (long retention)
     - name: Upload Baseline Coverage
