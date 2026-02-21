@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.5] - 2026-02-21
+
+### Bug Fixes
+
+- *(ci)* Add packages:read permission to deploy job by [@mchmarny](https://github.com/mchmarny)
+- *(infra)* Restore eidos-tf-state GCP bucket name by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.7.4] - 2026-02-21
 
 ### Bug Fixes
