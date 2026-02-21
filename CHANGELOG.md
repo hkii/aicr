@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.6] - 2026-02-21
+
+### Refactor
+
+- Codebase consistency fixes and test coverage  by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Rename cleanup by [@mchmarny](https://github.com/mchmarny)
+- Remove redundant local e2e script by [@mchmarny](https://github.com/mchmarny)
+- Remove flox environment support by [@mchmarny](https://github.com/mchmarny)
+- Remove empty .envrc stub by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.7.5] - 2026-02-21
 
 ### Bug Fixes
