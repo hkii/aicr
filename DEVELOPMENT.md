@@ -124,19 +124,6 @@ All tool versions are centrally managed in `.settings.yaml`. This file is the si
 
 When updating tool versions, edit `.settings.yaml` and the changes propagate everywhere automatically.
 
-### Alternative: Using Flox
-
-For a fully reproducible environment without global tool installation:
-
-```bash
-# Install Flox (https://flox.dev/docs/install-flox/)
-# Then activate the development environment
-flox activate
-
-# Optional: Enable auto-activation with direnv
-direnv allow
-```
-
 ### Finalize Setup
 
 After installing tools:
@@ -591,7 +578,6 @@ See [kwok/README.md](kwok/README.md) for adding recipes, profiles, and troublesh
 |--------|-------------|
 | `make tools-check` | Check tools and compare versions |
 | `make tools-setup` | Install all development tools |
-| `make flox-manifest` | Generate Flox manifest (alternative setup) |
 
 ### Utilities
 

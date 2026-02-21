@@ -8,7 +8,7 @@ ifeq ($(IMAGE_REGISTRY),)
 IMAGE_REGISTRY     := ghcr.io/nvidia
 endif
 IMAGE_TAG          ?= latest
-YAML_FILES         := $(shell find . -type f \( -iname "*.yml" -o -iname "*.yaml" \) ! -path "./examples/*" ! -path "./bundles/*" ! -path "./.flox/*" ! -path "*/testdata/*")
+YAML_FILES         := $(shell find . -type f \( -iname "*.yml" -o -iname "*.yaml" \) ! -path "./examples/*" ! -path "./bundles/*" ! -path "*/testdata/*")
 COMMIT             := $(shell git rev-parse HEAD)
 BRANCH             := $(shell git rev-parse --abbrev-ref HEAD)
 GO_VERSION         := $(shell go env GOVERSION 2>/dev/null | sed 's/go//')
@@ -69,10 +69,6 @@ tools-update: ## Reinstall/upgrade all tools to versions in .settings.yaml (non-
 generate-validator: ## Generate scaffolding for a new check or constraint validator
 	@python3 tools/generate-validator $(ARGS)
 
-.PHONY: flox-manifest
-flox-manifest: ## Generate Flox manifest.toml from .settings.yaml (alternative to tools-setup)
-	@bash tools/generate-flox-manifest
-
 # =============================================================================
 # Code Formatting & Dependencies
 # =============================================================================
@@ -128,7 +124,6 @@ lint-yaml: ## Lints YAML files with yamllint
 
 # License ignore patterns (reused by license target)
 LICENSE_IGNORES = \
-	-ignore '.flox/**' \
 	-ignore '.git/**' \
 	-ignore '.venv/**' \
 	-ignore '**/__pycache__/**' \
@@ -565,7 +560,6 @@ help-full: ## Displays commands grouped by category
 	@echo "  make tools-check    Check tools and compare versions"
 	@echo "  make tools-setup    Install all development tools"
 	@echo "  make tools-update   Upgrade all tools to .settings.yaml"
-	@echo "  make flox-manifest  Generate Flox manifest (alternative setup)"
 	@echo ""
 	@echo "\033[1m=== Utilities ===\033[0m"
 	@echo "  make info           Print project info"

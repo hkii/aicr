@@ -453,7 +453,6 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 - Replace Codecov with GitHub-native coverage tracking by @mchmarny
-- Add Flox manifest generator from .settings.yaml by @mchmarny
 
 ### Refactor
 
