@@ -17,8 +17,8 @@ package recipe
 import (
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 // ExtractCriteriaFromSnapshot extracts criteria from a snapshot.

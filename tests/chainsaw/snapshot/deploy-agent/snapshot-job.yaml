@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Snapshot agent Job that runs eidos snapshot and writes to a ConfigMap.
+# Snapshot agent Job that runs aicr snapshot and writes to a ConfigMap.
 # Extracted from test_snapshot() in tests/e2e/run.sh lines 621-674.
 #
 # Prerequisites:
 #   - Kind cluster with fake nvidia-smi injected into worker nodes
 #   - RBAC created (rbac.yaml applied)
-#   - Eidos image pushed to local registry (localhost:5001/eidos:local)
+#   - AICR image pushed to local registry (localhost:5001/aicr:local)
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos-e2e-snapshot
+  name: aicr-e2e-snapshot
   namespace: gpu-operator
 spec:
   completions: 1
@@ -30,19 +30,19 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     spec:
-      serviceAccountName: eidos
+      serviceAccountName: aicr
       restartPolicy: Never
       nodeSelector:
         kubernetes.io/os: linux
       hostPID: true
       hostNetwork: true
       containers:
-        - name: eidos
-          image: localhost:5001/eidos:local
-          command: ["eidos"]
-          args: ["snapshot", "-o", "cm://gpu-operator/eidos-e2e-snapshot"]
+        - name: aicr
+          image: localhost:5001/aicr:local
+          command: ["aicr"]
+          args: ["snapshot", "-o", "cm://gpu-operator/aicr-e2e-snapshot"]
           env:
-            - name: EIDOS_LOG_PREFIX
+            - name: AICR_LOG_PREFIX
               value: agent
             - name: NODE_NAME
               valueFrom:

@@ -282,10 +282,10 @@ validation:
 
 ```bash
 # Validate constraints
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
 
 # Phase-specific
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml --phase deployment
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml --phase deployment
 
 # Run validation tests
 go test -v ./pkg/recipe/... -run TestConstraintPathsUseValidMeasurementTypes
@@ -301,12 +301,12 @@ go test -v ./pkg/recipe/... -run TestConstraintPathsUseValidMeasurementTypes
 1. Create overlay in `recipes/overlays/` with criteria and componentRefs
 2. Create component values files if using `valuesFile`
 3. Run tests: `make test`
-4. Test generation: `eidos recipe --service eks --accelerator gb200 --format yaml`
+4. Test generation: `aicr recipe --service eks --accelerator gb200 --format yaml`
 
 **Example:**
 ```yaml
 # recipes/overlays/gb200-eks-ubuntu-training.yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: RecipeMetadata
 metadata:
   name: gb200-eks-ubuntu-training
@@ -342,7 +342,7 @@ componentRefs:
     dependencyRefs: [existing-component]  # Optional
 ```
 
-**Test changes:** `eidos recipe --service eks --accelerator gb200 --format yaml`
+**Test changes:** `aicr recipe --service eks --accelerator gb200 --format yaml`
 
 ## Best Practices
 
@@ -386,8 +386,8 @@ go test -v ./pkg/recipe/... -run TestAllMetadataFilesConformToSchema  # Specific
 
 1. Create recipe file in `recipes/`
 2. Run `make test` to validate
-3. Test generation: `eidos recipe --service eks --accelerator gb200 --format yaml`
-4. Inspect bundle: `eidos bundle -r recipe.yaml -o ./test-bundles`
+3. Test generation: `aicr recipe --service eks --accelerator gb200 --format yaml`
+4. Inspect bundle: `aicr bundle -r recipe.yaml -o ./test-bundles`
 
 Tests run automatically on PRs, main pushes, and release builds.
 
@@ -415,13 +415,13 @@ Integrators can extend or override embedded recipe data using the `--data` flag 
 **Usage:**
 ```bash
 # Recipe generation
-eidos recipe --service eks --accelerator gb200 --data ./my-data --output recipe.yaml
+aicr recipe --service eks --accelerator gb200 --data ./my-data --output recipe.yaml
 
 # Bundle generation
-eidos bundle --recipe recipe.yaml --data ./my-data --deployer argocd --output ./bundle
+aicr bundle --recipe recipe.yaml --data ./my-data --deployer argocd --output ./bundle
 
 # Debug loading
-eidos --debug recipe --service eks --data ./my-data
+aicr --debug recipe --service eks --data ./my-data
 ```
 
 **Precedence:** Embedded data (lowest) → External data (highest)
@@ -433,16 +433,16 @@ eidos --debug recipe --service eks --data ./my-data
 
 **Validation:**
 ```bash
-eidos --debug recipe --service eks --data ./my-data --dry-run
-eidos recipe --service eks --data ./my-data --output /dev/stdout
+aicr --debug recipe --service eks --data ./my-data --dry-run
+aicr recipe --service eks --data ./my-data --output /dev/stdout
 ```
 
 ## Troubleshooting
 
 **Debug overlay matching:**
 ```bash
-eidos recipe --service eks --accelerator gb200 --format json | jq '.metadata.appliedOverlays'
-eidos recipe --service eks --accelerator gb200 --format json | jq '.componentRefs[].version'
+aicr recipe --service eks --accelerator gb200 --format json | jq '.metadata.appliedOverlays'
+aicr recipe --service eks --accelerator gb200 --format json | jq '.componentRefs[].version'
 ```
 
 **Common issues:**
@@ -458,7 +458,7 @@ eidos recipe --service eks --accelerator gb200 --format json | jq '.componentRef
 ```bash
 make qualify  # Full qualification
 make test     # All tests
-eidos recipe --service eks --accelerator gb200 --format yaml  # Test generation
+aicr recipe --service eks --accelerator gb200 --format yaml  # Test generation
 ```
 
 ---

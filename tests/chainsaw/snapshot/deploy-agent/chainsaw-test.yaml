@@ -19,10 +19,10 @@ metadata:
   name: snapshot-deploy-agent
 spec:
   description: |
-    Deploys the eidos snapshot agent as a Job, then asserts on the K8s
+    Deploys the aicr snapshot agent as a Job, then asserts on the K8s
     resources it creates (Job completion, ConfigMap metadata, snapshot content).
     Requires: Kind cluster with fake nvidia-smi, gpu-operator namespace,
-    eidos image at localhost:5001/eidos:local.
+    aicr image at localhost:5001/aicr:local.
     Run with: chainsaw test --test-dir tests/chainsaw/snapshot/deploy-agent
   timeouts:
     apply: 30s
@@ -34,8 +34,8 @@ spec:
       try:
         - script:
             content: |
-              kubectl delete job eidos-e2e-snapshot -n gpu-operator --ignore-not-found=true
-              kubectl delete cm eidos-e2e-snapshot -n gpu-operator --ignore-not-found=true
+              kubectl delete job aicr-e2e-snapshot -n gpu-operator --ignore-not-found=true
+              kubectl delete cm aicr-e2e-snapshot -n gpu-operator --ignore-not-found=true
               kubectl create namespace gpu-operator --dry-run=client -o yaml | kubectl apply -f -
 
     - name: setup-rbac
@@ -69,7 +69,7 @@ spec:
             content: |
               WORK="/tmp/chainsaw-snapshot-deploy"
               mkdir -p "${WORK}"
-              kubectl get cm eidos-e2e-snapshot -n gpu-operator \
+              kubectl get cm aicr-e2e-snapshot -n gpu-operator \
                 -o jsonpath='{.data.snapshot\.yaml}' > "${WORK}/snapshot.yaml"
               chainsaw assert --resource "${WORK}/snapshot.yaml" \
                 --file ./assert-snapshot-content.yaml \
@@ -78,8 +78,8 @@ spec:
       cleanup:
         - script:
             content: |
-              kubectl delete job eidos-e2e-snapshot -n gpu-operator --ignore-not-found=true
-              kubectl delete cm eidos-e2e-snapshot -n gpu-operator --ignore-not-found=true
+              kubectl delete job aicr-e2e-snapshot -n gpu-operator --ignore-not-found=true
+              kubectl delete cm aicr-e2e-snapshot -n gpu-operator --ignore-not-found=true
               rm -rf /tmp/chainsaw-snapshot-deploy
         - delete:
             file: rbac.yaml

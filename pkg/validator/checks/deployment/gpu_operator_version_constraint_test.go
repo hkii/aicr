@@ -17,7 +17,7 @@ package deployment
 import (
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // TestGPUOperatorVersion validates the GPU operator version constraint.

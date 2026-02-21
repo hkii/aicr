@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +29,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 )
 
-const testName = "eidos"
+const testName = "aicr"
 
 func TestDeployer_EnsureRBAC(t *testing.T) {
 	clientset := fake.NewClientset()
@@ -37,8 +37,8 @@ func TestDeployer_EnsureRBAC(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -103,12 +103,12 @@ func TestDeployer_EnsureRBAC(t *testing.T) {
 			t.Errorf("expected 1 subject, got %d", len(rb.Subjects))
 		}
 		if rb.Subjects[0].Name != testName {
-			t.Errorf("expected subject name 'eidos', got %q", rb.Subjects[0].Name)
+			t.Errorf("expected subject name 'aicr', got %q", rb.Subjects[0].Name)
 		}
 
 		// Verify roleRef
 		if rb.RoleRef.Name != testName {
-			t.Errorf("expected roleRef name 'eidos', got %q", rb.RoleRef.Name)
+			t.Errorf("expected roleRef name 'aicr', got %q", rb.RoleRef.Name)
 		}
 	})
 
@@ -119,7 +119,7 @@ func TestDeployer_EnsureRBAC(t *testing.T) {
 		}
 
 		cr, err := clientset.RbacV1().ClusterRoles().
-			Get(ctx, "eidos-node-reader", metav1.GetOptions{})
+			Get(ctx, "aicr-node-reader", metav1.GetOptions{})
 		if err != nil {
 			t.Fatalf("ClusterRole not found: %v", err)
 		}
@@ -137,7 +137,7 @@ func TestDeployer_EnsureRBAC(t *testing.T) {
 		}
 
 		crb, err := clientset.RbacV1().ClusterRoleBindings().
-			Get(ctx, "eidos-node-reader", metav1.GetOptions{})
+			Get(ctx, "aicr-node-reader", metav1.GetOptions{})
 		if err != nil {
 			t.Fatalf("ClusterRoleBinding not found: %v", err)
 		}
@@ -148,8 +148,8 @@ func TestDeployer_EnsureRBAC(t *testing.T) {
 		}
 
 		// Verify roleRef
-		if crb.RoleRef.Name != "eidos-node-reader" {
-			t.Errorf("expected roleRef name 'eidos-node-reader', got %q", crb.RoleRef.Name)
+		if crb.RoleRef.Name != "aicr-node-reader" {
+			t.Errorf("expected roleRef name 'aicr-node-reader', got %q", crb.RoleRef.Name)
 		}
 	})
 }
@@ -160,8 +160,8 @@ func TestDeployer_EnsureRBAC_Idempotent(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -192,8 +192,8 @@ func TestDeployer_EnsureJob(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 		Privileged:         true, // Test privileged mode (default for agent deployment)
 		NodeSelector: map[string]string{
 			"nodeGroup": "customer-gpu",
@@ -290,8 +290,8 @@ func TestDeployer_EnsureJob_Unprivileged(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 		Privileged:         false, // Test unprivileged mode for PSS-restricted namespaces
 	}
 	deployer := NewDeployer(clientset, config)
@@ -375,8 +375,8 @@ func TestDeployer_Deploy(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -409,14 +409,14 @@ func TestDeployer_Deploy(t *testing.T) {
 
 	// Verify ClusterRole
 	_, err = clientset.RbacV1().ClusterRoles().
-		Get(ctx, "eidos-node-reader", metav1.GetOptions{})
+		Get(ctx, "aicr-node-reader", metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("ClusterRole not created: %v", err)
 	}
 
 	// Verify ClusterRoleBinding
 	_, err = clientset.RbacV1().ClusterRoleBindings().
-		Get(ctx, "eidos-node-reader", metav1.GetOptions{})
+		Get(ctx, "aicr-node-reader", metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("ClusterRoleBinding not created: %v", err)
 	}
@@ -446,8 +446,8 @@ func TestDeployer_Cleanup(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -506,8 +506,8 @@ func TestDeployer_Cleanup_AttemptsAllDeletions(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -570,8 +570,8 @@ func TestDeployer_Cleanup_ReportsAllErrors(t *testing.T) {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
-		Output:             "cm://test-namespace/eidos-snapshot",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -592,9 +592,9 @@ func TestParseConfigMapName(t *testing.T) {
 	}{
 		{
 			name:          "valid URI",
-			uri:           "cm://gpu-operator/eidos-snapshot",
+			uri:           "cm://gpu-operator/aicr-snapshot",
 			wantNamespace: "gpu-operator",
-			wantName:      "eidos-snapshot",
+			wantName:      "aicr-snapshot",
 			wantErr:       false,
 		},
 		{
@@ -654,7 +654,7 @@ func TestParseConfigMapName(t *testing.T) {
 
 func TestDeployer_GetSnapshot(t *testing.T) {
 	// Create ConfigMap with snapshot data
-	snapshotYAML := `apiVersion: eidos.nvidia.com/v1alpha1
+	snapshotYAML := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: Snapshot
 metadata:
   created: "2025-01-15T10:30:00Z"
@@ -667,7 +667,7 @@ measurements:
 `
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eidos-snapshot",
+			Name:      "aicr-snapshot",
 			Namespace: "test-namespace",
 		},
 		Data: map[string]string{
@@ -679,7 +679,7 @@ measurements:
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -700,7 +700,7 @@ func TestDeployer_GetSnapshot_NotFound(t *testing.T) {
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -716,7 +716,7 @@ func TestDeployer_GetSnapshot_MissingKey(t *testing.T) {
 	// Create ConfigMap without snapshot.yaml key
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eidos-snapshot",
+			Name:      "aicr-snapshot",
 			Namespace: "test-namespace",
 		},
 		Data: map[string]string{
@@ -728,7 +728,7 @@ func TestDeployer_GetSnapshot_MissingKey(t *testing.T) {
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -744,10 +744,10 @@ func TestDeployer_WaitForPodReady(t *testing.T) {
 	// Create a Pod in Running state with Ready condition
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eidos-xyz",
+			Name:      "aicr-xyz",
 			Namespace: "test-namespace",
 			Labels: map[string]string{
-				"app.kubernetes.io/name": "eidos",
+				"app.kubernetes.io/name": "aicr",
 			},
 		},
 		Status: corev1.PodStatus{
@@ -765,7 +765,7 @@ func TestDeployer_WaitForPodReady(t *testing.T) {
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -782,7 +782,7 @@ func TestDeployer_WaitForPodReady_NoPod(t *testing.T) {
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -798,10 +798,10 @@ func TestDeployer_WaitForPodReady_PodFailed(t *testing.T) {
 	// Create a Pod in Failed state
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eidos-xyz",
+			Name:      "aicr-xyz",
 			Namespace: "test-namespace",
 			Labels: map[string]string{
-				"app.kubernetes.io/name": "eidos",
+				"app.kubernetes.io/name": "aicr",
 			},
 		},
 		Status: corev1.PodStatus{
@@ -814,7 +814,7 @@ func TestDeployer_WaitForPodReady_PodFailed(t *testing.T) {
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()
@@ -831,7 +831,7 @@ func TestDeployer_StreamLogs_NoPod(t *testing.T) {
 	config := Config{
 		Namespace: "test-namespace",
 		JobName:   testName,
-		Output:    "cm://test-namespace/eidos-snapshot",
+		Output:    "cm://test-namespace/aicr-snapshot",
 	}
 	deployer := NewDeployer(clientset, config)
 	ctx := context.Background()

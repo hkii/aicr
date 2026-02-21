@@ -5,7 +5,7 @@
 # These CRDs are not included in the kgateway-crds Helm chart and must
 # be installed separately. Vendored here for fully automated deployment.
 #
-# eidos/skip-hook-validation: "true"
+# aicr/skip-hook-validation: "true"
 # Copyright 2024 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

@@ -20,9 +20,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // ComponentConfig defines the configuration for a bundler component.

@@ -1,4 +1,4 @@
-# Copilot Instructions for NVIDIA Eidos
+# Copilot Instructions for NVIDIA AI Cluster Runtime (AICR)
 
 This file contains extended technical documentation for GitHub Copilot. For core rules and patterns, see `.claude/CLAUDE.md`.
 
@@ -77,7 +77,7 @@ Choose solutions based on: testability, readability, consistency, simplicity, re
 
 ## Project Context
 
-NVIDIA Eidos provides validated GPU-accelerated Kubernetes configurations through a four-stage workflow:
+NVIDIA AICR provides validated GPU-accelerated Kubernetes configurations through a four-stage workflow:
 
 1. **Snapshot** → Capture system state (OS, kernel, K8s, GPU)
 2. **Recipe** → Generate optimized config from captured data or query parameters
@@ -85,8 +85,8 @@ NVIDIA Eidos provides validated GPU-accelerated Kubernetes configurations throug
 4. **Bundle** → Create deployment artifacts (Helm values, manifests, scripts)
 
 **Core Components:**
-- **CLI (`eidos`)**: All four stages (snapshot/recipe/validate/bundle)
-- **API Server (`eidosd`)**: Recipe generation and bundle creation via REST API
+- **CLI (`aicr`)**: All four stages (snapshot/recipe/validate/bundle)
+- **API Server (`aicrd`)**: Recipe generation and bundle creation via REST API
 - **Agent**: Kubernetes Job for automated cluster snapshots → ConfigMaps
 - **Bundlers**: Plugin-based artifact generators (GPU Operator, Network Operator, Cert-Manager, NVSentinel, Skyhook, DRA Driver)
 - **Deployers**: GitOps integration providers (helm, argocd) with deployment ordering
@@ -116,8 +116,8 @@ NVIDIA Eidos provides validated GPU-accelerated Kubernetes configurations throug
 
 3. **Test workflow**:
    ```bash
-   eidos snapshot --output snapshot.yaml
-   eidos recipe --snapshot snapshot.yaml --intent training --platform kubeflow
+   aicr snapshot --output snapshot.yaml
+   aicr recipe --snapshot snapshot.yaml --intent training --platform kubeflow
    ```
 
 → See Extended Reference: Adding a New Collector for full example
@@ -185,7 +185,7 @@ NVIDIA Eidos provides validated GPU-accelerated Kubernetes configurations throug
 1. Create handler in `pkg/api/`
 2. Register route in `pkg/api/server.go`
 3. Add middleware (metrics → version → requestID → panic → rateLimit → logging)
-4. Update API spec in `api/eidos/v1/server.yaml`
+4. Update API spec in `api/aicr/v1/server.yaml`
 5. Write integration tests
 
 → See Extended Reference: Adding a New API Endpoint for detailed steps
@@ -213,7 +213,7 @@ builder := recipe.NewBuilder(
     recipe.WithVersion(version),
 )
 server := server.New(
-    server.WithName("eidosd"),
+    server.WithName("aicrd"),
     server.WithVersion(version),
 )
 ```
@@ -235,7 +235,7 @@ measurement.NewMeasurement(measurement.TypeK8s).
 
 **4. Singleton Pattern (K8s Client)**
 ```go
-import "github.com/NVIDIA/eidos/pkg/k8s/client"
+import "github.com/NVIDIA/aicr/pkg/k8s/client"
 
 clientset, config, err := client.GetKubeClient()  // Uses sync.Once
 ```
@@ -283,7 +283,7 @@ go test -race -v ./pkg/collector/...
 
 ```bash
 # Enable debug logging
-eidos --debug snapshot
+aicr --debug snapshot
 
 # Run server with debug logs
 LOG_LEVEL=debug make server
@@ -336,25 +336,25 @@ When writing documentation, act as a senior open-source documentation editor wit
 
 ```bash
 # Capture system state
-eidos snapshot --output snapshot.yaml
+aicr snapshot --output snapshot.yaml
 
 # Generate recipe from snapshot
-eidos recipe --snapshot snapshot.yaml --intent training --platform kubeflow
+aicr recipe --snapshot snapshot.yaml --intent training --platform kubeflow
 
 # Generate recipe from query parameters
-eidos recipe --service eks --accelerator h100 --intent training --os ubuntu
+aicr recipe --service eks --accelerator h100 --intent training --os ubuntu
 
 # Create deployment bundle
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 
 # Override bundle values at generation time
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:gds.enabled=true \
   --set gpuoperator:driver.version=570.86.16 \
   -o ./bundles
 
 # Node scheduling with selectors and tolerations
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --system-node-selector nodeGroup=system-pool \
   --system-node-toleration dedicated=system:NoSchedule \
   --accelerated-node-selector nvidia.com/gpu.present=true \
@@ -362,7 +362,7 @@ eidos bundle -r recipe.yaml \
   -o ./bundles
 
 # GitOps deployment with ArgoCD (sync-wave ordering)
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --deployer argocd \
   --repo https://github.com/my-org/my-gitops-repo.git \
   -o ./bundles
@@ -372,7 +372,7 @@ eidos bundle -r recipe.yaml \
 
 - **Kubernetes**: Singleton client via `pkg/k8s/client.GetKubeClient()`
 - **NVIDIA Operators**: GPU Operator, Network Operator, NIM Operator, Nsight Operator
-- **Container Images**: ghcr.io/nvidia/eidos, ghcr.io/nvidia/eidosd
+- **Container Images**: ghcr.io/nvidia/aicr, ghcr.io/nvidia/aicrd
 - **Observability**: Prometheus metrics at `/metrics`, structured JSON logs to stderr
 
 ### Key Links
@@ -385,7 +385,7 @@ eidos bundle -r recipe.yaml \
 - **[Bundler Development](../docs/contributor/component.md)** – Create new bundlers
 - **[API Reference](../docs/user/api-reference.md)** – REST API endpoints
 - **[GitHub Actions README](actions/README.md)** – CI/CD architecture
-- **[API Specification](../api/eidos/v1/server.yaml)** – OpenAPI spec
+- **[API Specification](../api/aicr/v1/server.yaml)** – OpenAPI spec
 - **[.settings.yaml](../.settings.yaml)** – Project settings: tool versions, quality thresholds, build/test config
 
 ---
@@ -407,7 +407,7 @@ import (
     "os"
     "strings"
 
-    "github.com/NVIDIA/eidos/pkg/errors"
+    "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // collectRelease reads and parses /etc/os-release
@@ -529,9 +529,9 @@ import (
     "embed"
     "path/filepath"
 
-    "github.com/NVIDIA/eidos/pkg/bundler"
-    "github.com/NVIDIA/eidos/pkg/bundler/result"
-    "github.com/NVIDIA/eidos/pkg/errors"
+    "github.com/NVIDIA/aicr/pkg/bundler"
+    "github.com/NVIDIA/aicr/pkg/bundler/result"
+    "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 //go:embed templates/*.tmpl
@@ -696,7 +696,7 @@ handler = rateLimitMiddleware(handler, limiter)
 handler = loggingMiddleware(handler)
 ```
 
-**4. Update API spec in `api/eidos/v1/server.yaml`:**
+**4. Update API spec in `api/aicr/v1/server.yaml`:**
 ```yaml
 paths:
   /v1/recipe:
@@ -733,7 +733,7 @@ func TestRecipeHandler(t *testing.T) {
 
 ## GitHub Actions & CI/CD Architecture
 
-Eidos uses a **three-layer composite actions architecture** for reusability:
+AICR uses a **three-layer composite actions architecture** for reusability:
 
 **Layer 1: Primitives** (Single-Purpose Building Blocks)
 - `ghcr-login` – GHCR authentication
@@ -787,14 +787,14 @@ jobs:
     steps:
       - uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: 'ghcr.io/nvidia/eidos'
+          image_name: 'ghcr.io/nvidia/aicr'
           tag: ${{ github.ref_name }}
   deploy:  # Demo deployment (example, not production)
     needs: [attest]
     steps:
       - uses: ./.github/actions/cloud-run-deploy
         with:
-          source_image: 'ghcr.io/nvidia/eidosd:${{ github.ref_name }}'
+          source_image: 'ghcr.io/nvidia/aicrd:${{ github.ref_name }}'
           target_registry: 'us-docker.pkg.dev/eidosx/demo'
 ```
 
@@ -802,7 +802,7 @@ jobs:
 - **SLSA Build Level 3**: GitHub OIDC attestations
 - **SBOMs**: SPDX format via Syft (containers) and GoReleaser (binaries)
 - **Signing**: Cosign keyless signing (Fulcio + Rekor)
-- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG}`
+- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/aicr:${TAG}`
 
 For detailed GitHub Actions architecture, see [actions/README.md](actions/README.md)
 
@@ -814,10 +814,10 @@ For detailed GitHub Actions architecture, see [actions/README.md](actions/README
 
 ```bash
 # 1. Capture system configuration
-eidos snapshot --output snapshot.yaml
+aicr snapshot --output snapshot.yaml
 
 # 2. Generate optimized recipe for training workloads
-eidos recipe \
+aicr recipe \
   --snapshot snapshot.yaml \
   --intent training \
   --platform kubeflow \
@@ -825,7 +825,7 @@ eidos recipe \
   --output recipe.yaml
 
 # 3. Create deployment bundle
-eidos bundle \
+aicr bundle \
   --recipe recipe.yaml \
   --output ./bundles
 
@@ -838,21 +838,21 @@ chmod +x deploy.sh && ./deploy.sh
 
 ```bash
 # 1. Capture snapshot directly to ConfigMap
-eidos snapshot -o cm://gpu-operator/eidos-snapshot
+aicr snapshot -o cm://gpu-operator/aicr-snapshot
 
 # 2. Generate recipe from ConfigMap snapshot
-eidos recipe -s cm://gpu-operator/eidos-snapshot \
+aicr recipe -s cm://gpu-operator/aicr-snapshot \
   --intent training \
   --platform kubeflow \
-  -o cm://gpu-operator/eidos-recipe
+  -o cm://gpu-operator/aicr-recipe
 
 # 3. Create bundle from ConfigMap recipe
-eidos bundle -r cm://gpu-operator/eidos-recipe \
+aicr bundle -r cm://gpu-operator/aicr-recipe \
   -o ./bundles
 
 # 4. Verify ConfigMap data
-kubectl get configmap eidos-snapshot -n gpu-operator -o yaml
-kubectl get configmap eidos-recipe -n gpu-operator -o yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o yaml
+kubectl get configmap aicr-recipe -n gpu-operator -o yaml
 ```
 
 ### E2E Testing
@@ -862,7 +862,7 @@ kubectl get configmap eidos-recipe -n gpu-operator -o yaml
 make e2e
 
 # Run a single chainsaw test
-EIDOS_BIN=$(pwd)/dist/eidos \
+AICR_BIN=$(pwd)/dist/aicr \
   chainsaw test --no-cluster --test-dir tests/chainsaw/cli/recipe-generation
 
 # Run cluster-based E2E tests (requires Kind cluster)
@@ -873,13 +873,13 @@ make e2e-tilt
 
 ```bash
 # Deploy agent for automated snapshots
-kubectl apply -f deployments/eidos-agent/1-deps.yaml
-kubectl apply -f deployments/eidos-agent/2-job.yaml
+kubectl apply -f deployments/aicr-agent/1-deps.yaml
+kubectl apply -f deployments/aicr-agent/2-job.yaml
 
 # Check logs
-kubectl logs -n gpu-operator job/eidos
+kubectl logs -n gpu-operator job/aicr
 
 # Get snapshot from ConfigMap
-kubectl get configmap eidos-snapshot -n gpu-operator \
+kubectl get configmap aicr-snapshot -n gpu-operator \
   -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
 ```

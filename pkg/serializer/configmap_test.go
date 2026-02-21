@@ -17,7 +17,7 @@ package serializer
 import (
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 )
 
 func TestParseConfigMapURI(t *testing.T) {
@@ -30,16 +30,16 @@ func TestParseConfigMapURI(t *testing.T) {
 	}{
 		{
 			name:          "valid URI",
-			uri:           "cm://gpu-operator/eidos-snapshot",
+			uri:           "cm://gpu-operator/aicr-snapshot",
 			wantNamespace: "gpu-operator",
-			wantName:      "eidos-snapshot",
+			wantName:      "aicr-snapshot",
 			wantErr:       false,
 		},
 		{
 			name:          "valid URI with spaces",
-			uri:           "cm://gpu-operator / eidos-snapshot ",
+			uri:           "cm://gpu-operator / aicr-snapshot ",
 			wantNamespace: "gpu-operator",
-			wantName:      "eidos-snapshot",
+			wantName:      "aicr-snapshot",
 			wantErr:       false,
 		},
 		{
@@ -51,12 +51,12 @@ func TestParseConfigMapURI(t *testing.T) {
 		},
 		{
 			name:    "missing scheme",
-			uri:     "gpu-operator/eidos-snapshot",
+			uri:     "gpu-operator/aicr-snapshot",
 			wantErr: true,
 		},
 		{
 			name:    "wrong scheme",
-			uri:     "http://gpu-operator/eidos-snapshot",
+			uri:     "http://gpu-operator/aicr-snapshot",
 			wantErr: true,
 		},
 		{
@@ -66,7 +66,7 @@ func TestParseConfigMapURI(t *testing.T) {
 		},
 		{
 			name:    "missing namespace",
-			uri:     "cm:///eidos-snapshot",
+			uri:     "cm:///aicr-snapshot",
 			wantErr: true,
 		},
 		{

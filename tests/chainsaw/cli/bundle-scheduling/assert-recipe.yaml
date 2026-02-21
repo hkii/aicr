@@ -14,10 +14,10 @@
 
 # Assert the generated recipe has the expected structure.
 #
-# Validates that eidos recipe --service eks --accelerator h100 produces
+# Validates that aicr recipe --service eks --accelerator h100 produces
 # a valid recipe with the correct criteria and components.
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 criteria:
   service: eks
   accelerator: h100

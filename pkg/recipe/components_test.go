@@ -746,7 +746,7 @@ func TestHelmConfig_DefaultNamespace(t *testing.T) {
 
 func TestHelmConfig_DefaultNamespaceParsing(t *testing.T) {
 	yamlData := `
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: test-component
@@ -784,7 +784,7 @@ func TestKustomizeConfig_Parsing(t *testing.T) {
 	)
 
 	yamlData := `
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: my-kustomize-app

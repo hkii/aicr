@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-Deploy the Eidos API Server in your Kubernetes cluster for self-hosted recipe generation.
+Deploy the AICR API Server in your Kubernetes cluster for self-hosted recipe generation.
 
 ## Overview
 
@@ -38,14 +38,14 @@ Deploy the Eidos API Server in your Kubernetes cluster for self-hosted recipe ge
 
 ```shell
 # Create namespace
-kubectl create namespace eidos
+kubectl create namespace aicr
 
 # Deploy API server
-kubectl apply -k https://github.com/NVIDIA/eidos/deployments/eidosd
+kubectl apply -k https://github.com/NVIDIA/aicr/deployments/aicrd
 
 # Check deployment
-kubectl get pods -n eidos
-kubectl get svc -n eidos
+kubectl get pods -n aicr
+kubectl get svc -n aicr
 ```
 
 ### Deploy with Helm
@@ -54,8 +54,8 @@ kubectl get svc -n eidos
 
 <!-- Uncomment when Helm chart is published
 ```shell
-helm repo add eidos https://nvidia.github.io/eidos
-helm install eidosd eidos/eidosd -n eidos --create-namespace
+helm repo add aicr https://nvidia.github.io/aicr
+helm install aicrd aicr/aicrd -n aicr --create-namespace
 ```
 -->
 
@@ -68,9 +68,9 @@ helm install eidosd eidos/eidosd -n eidos --create-namespace
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: eidos
+  name: aicr
   labels:
-    app: eidosd
+    app: aicrd
 ```
 
 ```shell
@@ -84,19 +84,19 @@ kubectl apply -f namespace.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   labels:
-    app: eidosd
+    app: aicrd
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   template:
     metadata:
       labels:
-        app: eidosd
+        app: aicrd
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
@@ -109,7 +109,7 @@ spec:
       
       containers:
         - name: api-server
-          image: ghcr.io/nvidia/eidosd:latest
+          image: ghcr.io/nvidia/aicrd:latest
           imagePullPolicy: IfNotPresent
           
           ports:
@@ -167,14 +167,14 @@ kubectl apply -f deployment.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   labels:
-    app: eidosd
+    app: aicrd
 spec:
   type: ClusterIP
   selector:
-    app: eidosd
+    app: aicrd
   ports:
     - name: http
       port: 80
@@ -193,8 +193,8 @@ kubectl apply -f service.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/rate-limit: "100"
@@ -202,17 +202,17 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - eidos.yourdomain.com
-      secretName: eidos-tls
+        - aicr.yourdomain.com
+      secretName: aicr-tls
   rules:
-    - host: eidos.yourdomain.com
+    - host: aicr.yourdomain.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: eidosd
+                name: aicrd
                 port:
                   number: 80
 ```
@@ -223,7 +223,7 @@ kubectl apply -f ingress.yaml
 
 ## Agent Deployment
 
-Deploy the Eidos Agent as a Kubernetes Job to automatically capture cluster configuration.
+Deploy the AICR Agent as a Kubernetes Job to automatically capture cluster configuration.
 
 ### 1. Create RBAC Resources
 
@@ -232,13 +232,13 @@ Deploy the Eidos Agent as a Kubernetes Job to automatically capture cluster conf
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 rules:
 - apiGroups: [""]
@@ -248,21 +248,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: eidos
+  name: aicr
 subjects:
 - kind: ServiceAccount
-  name: eidos
+  name: aicr
   namespace: gpu-operator  # Must match ServiceAccount namespace
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: eidos
+  name: aicr
 rules:
 - apiGroups: [""]
   resources: ["nodes", "pods"]
@@ -274,14 +274,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: eidos
+  name: aicr
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: eidos
+  name: aicr
 subjects:
 - kind: ServiceAccount
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 ```
 
@@ -296,29 +296,29 @@ kubectl apply -f agent-rbac.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
   labels:
-    app: eidos-agent
+    app: aicr-agent
 spec:
   template:
     metadata:
       labels:
-        app: eidos-agent
+        app: aicr-agent
     spec:
-      serviceAccountName: eidos
+      serviceAccountName: aicr
       restartPolicy: Never
       
       containers:
-      - name: eidos
-        image: ghcr.io/nvidia/eidos-validator:latest
+      - name: aicr
+        image: ghcr.io/nvidia/aicr-validator:latest
         imagePullPolicy: IfNotPresent
         
         command:
-        - eidos
+        - aicr
         - snapshot
         - --output
-        - cm://gpu-operator/eidos-snapshot
+        - cm://gpu-operator/aicr-snapshot
         
         securityContext:
           allowPrivilegeEscalation: false
@@ -333,39 +333,39 @@ spec:
 kubectl apply -f agent-job.yaml
 
 # Wait for completion
-kubectl wait --for=condition=complete job/eidos -n gpu-operator --timeout=5m
+kubectl wait --for=condition=complete job/aicr -n gpu-operator --timeout=5m
 
 # Verify ConfigMap was created
-kubectl get configmap eidos-snapshot -n gpu-operator
+kubectl get configmap aicr-snapshot -n gpu-operator
 
 # View snapshot data
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
 ```
 
 ### 3. Generate Recipe from ConfigMap
 
 ```bash
 # Using CLI (local or in another Job)
-eidos recipe --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe --snapshot cm://gpu-operator/aicr-snapshot \
              --intent training \
              --platform kubeflow \
              --output recipe.yaml
 
 # Or write recipe back to ConfigMap
-eidos recipe --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe --snapshot cm://gpu-operator/aicr-snapshot \
              --intent training \
              --platform kubeflow \
-             --output cm://gpu-operator/eidos-recipe
+             --output cm://gpu-operator/aicr-recipe
 ```
 
 ### 4. Generate Bundle
 
 ```bash
 # From file
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 
 # From ConfigMap
-eidos bundle --recipe cm://gpu-operator/eidos-recipe --output ./bundles
+aicr bundle --recipe cm://gpu-operator/aicr-recipe --output ./bundles
 ```
 
 ### E2E Testing
@@ -407,12 +407,12 @@ CLI tests use [Kyverno Chainsaw](https://github.com/kyverno/chainsaw) for declar
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: eidos-recipe-data
-  namespace: eidos
+  name: aicr-recipe-data
+  namespace: aicr
 data:
   overlays/base.yaml: |
     # Your custom base recipe
-    apiVersion: eidos.nvidia.com/v1alpha1
+    apiVersion: aicr.nvidia.com/v1alpha1
     kind: RecipeMetadata
     # ... (see recipes/overlays/base.yaml for schema)
 ```
@@ -425,7 +425,7 @@ spec:
       volumes:
         - name: recipe-data
           configMap:
-            name: eidos-recipe-data
+            name: aicr-recipe-data
       containers:
         - name: api-server
           volumeMounts:
@@ -445,13 +445,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: eidosd
+    name: aicrd
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -493,13 +493,13 @@ kubectl apply -f hpa.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   minAvailable: 2
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
 ```
 
 ```shell
@@ -515,14 +515,14 @@ kubectl apply -f pdb.yaml
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   labels:
-    app: eidosd
+    app: aicrd
 spec:
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   endpoints:
     - port: http
       path: /metrics
@@ -554,12 +554,12 @@ Import dashboard JSON from `docs/monitoring/grafana-dashboard.json`:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   podSelector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   policyTypes:
     - Ingress
     - Egress
@@ -591,7 +591,7 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: eidos
+  name: aicr
   labels:
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
@@ -605,15 +605,15 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 
 ---
 # role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: eidosd
+  name: aicrd
 rules:
   - apiGroups: [""]
     resources: ["nodes", "pods"]
@@ -624,15 +624,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: eidosd
+  name: aicrd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: eidosd
+  name: aicrd
 subjects:
   - kind: ServiceAccount
-    name: eidosd
-    namespace: eidos
+    name: aicrd
+    namespace: aicr
 ```
 
 ## Troubleshooting
@@ -641,71 +641,71 @@ subjects:
 
 ```shell
 # Pod status
-kubectl get pods -n eidos
+kubectl get pods -n aicr
 
 # Describe pod
-kubectl describe pod -n eidos -l app=eidosd
+kubectl describe pod -n aicr -l app=aicrd
 
 # View logs
-kubectl logs -n eidos -l app=eidosd
+kubectl logs -n aicr -l app=aicrd
 
 # Follow logs
-kubectl logs -n eidos -l app=eidosd -f
+kubectl logs -n aicr -l app=aicrd -f
 ```
 
 ### Check Service
 
 ```shell
 # Service status
-kubectl get svc -n eidos
+kubectl get svc -n aicr
 
 # Endpoints
-kubectl get endpoints -n eidos
+kubectl get endpoints -n aicr
 
 # Test from within cluster
 kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
-  curl http://eidosd.eidos.svc.cluster.local/health
+  curl http://aicrd.aicr.svc.cluster.local/health
 ```
 
 ### Check Ingress
 
 ```shell
 # Ingress status
-kubectl get ingress -n eidos
+kubectl get ingress -n aicr
 
 # Describe ingress
-kubectl describe ingress eidosd -n eidos
+kubectl describe ingress aicrd -n aicr
 
 # Check cert-manager certificate
-kubectl get certificate -n eidos
+kubectl get certificate -n aicr
 ```
 
 ### Performance Issues
 
 ```shell
 # Check resource usage
-kubectl top pods -n eidos
+kubectl top pods -n aicr
 
 # Check HPA status
-kubectl get hpa -n eidos
+kubectl get hpa -n aicr
 
 # Check metrics
-kubectl exec -n eidos -it deploy/eidosd -- \
+kubectl exec -n aicr -it deploy/aicrd -- \
   wget -qO- http://localhost:8080/metrics
 ```
 
 ### Connection Refused
 
-1. Check service exists: `kubectl get svc -n eidos`
-2. Check endpoints: `kubectl get endpoints -n eidos`
-3. Check pod is ready: `kubectl get pods -n eidos`
-4. Check readiness probe: `kubectl describe pod -n eidos <pod-name>`
+1. Check service exists: `kubectl get svc -n aicr`
+2. Check endpoints: `kubectl get endpoints -n aicr`
+3. Check pod is ready: `kubectl get pods -n aicr`
+4. Check readiness probe: `kubectl describe pod -n aicr <pod-name>`
 
 ### Rate Limiting
 
 Check rate limit settings:
 ```shell
-kubectl exec -n eidos deploy/eidosd -- env | grep RATE
+kubectl exec -n aicr deploy/aicrd -- env | grep RATE
 ```
 
 Adjust via deployment:
@@ -723,15 +723,15 @@ env:
 
 ```shell
 # Update image
-kubectl set image deployment/eidosd \
-  api-server=ghcr.io/nvidia/eidosd:v0.8.0 \
-  -n eidos
+kubectl set image deployment/aicrd \
+  api-server=ghcr.io/nvidia/aicrd:v0.8.0 \
+  -n aicr
 
 # Watch rollout
-kubectl rollout status deployment/eidosd -n eidos
+kubectl rollout status deployment/aicrd -n aicr
 
 # Rollback if needed
-kubectl rollout undo deployment/eidosd -n eidos
+kubectl rollout undo deployment/aicrd -n aicr
 ```
 
 ### Blue-Green Deployment
@@ -741,11 +741,11 @@ kubectl rollout undo deployment/eidosd -n eidos
 kubectl apply -f deployment-v2.yaml
 
 # Switch service
-kubectl patch service eidosd -n eidos \
+kubectl patch service aicrd -n aicr \
   -p '{"spec":{"selector":{"version":"v2"}}}'
 
 # Delete old deployment
-kubectl delete deployment eidosd-v1 -n eidos
+kubectl delete deployment aicrd-v1 -n aicr
 ```
 
 ## Backup and Disaster Recovery
@@ -754,17 +754,17 @@ kubectl delete deployment eidosd-v1 -n eidos
 
 ```shell
 # Export all resources
-kubectl get all -n eidos -o yaml > eidos-backup.yaml
+kubectl get all -n aicr -o yaml > aicr-backup.yaml
 
 # Export specific resources
-kubectl get deployment,service,ingress -n eidos -o yaml > eidos-config.yaml
+kubectl get deployment,service,ingress -n aicr -o yaml > aicr-config.yaml
 ```
 
 ### Restore from Backup
 
 ```shell
 # Restore namespace and resources
-kubectl apply -f eidos-backup.yaml
+kubectl apply -f aicr-backup.yaml
 ```
 
 ## Cost Optimization
@@ -791,13 +791,13 @@ Monitor and adjust based on usage.
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: eidosd
+    name: aicrd
   updatePolicy:
     updateMode: "Auto"
 ```

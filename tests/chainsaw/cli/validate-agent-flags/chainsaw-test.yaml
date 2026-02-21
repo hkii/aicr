@@ -30,8 +30,8 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
-              help_output=$(${EIDOS_BIN} validate --help 2>&1)
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
+              help_output=$(${AICR_BIN} validate --help 2>&1)
               missing=""
               for flag in namespace node-selector toleration image job-name timeout cleanup privileged; do
                 echo "$help_output" | grep -q "$flag" || missing="$missing $flag"
@@ -48,7 +48,7 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
-              ${EIDOS_BIN} validate --help 2>&1
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
+              ${AICR_BIN} validate --help 2>&1
             check:
               (contains($stdout, 'agent') || contains($stdout, 'deploy') || contains($stdout, 'Agent') || contains($stdout, 'Deploy')): true

@@ -1,10 +1,10 @@
 # CLI Reference
 
-Complete reference for the `eidos` command-line interface.
+Complete reference for the `aicr` command-line interface.
 
 ## Overview
 
-Eidos provides a four-step workflow for optimizing GPU infrastructure:
+AICR provides a four-step workflow for optimizing GPU infrastructure:
 
 ```
 ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
@@ -30,7 +30,7 @@ Available for all commands:
 
 ### Logging Modes
 
-Eidos supports three logging modes:
+AICR supports three logging modes:
 
 1. **CLI Mode (default)**: Minimal user-friendly output
    - Just message text without timestamps or metadata
@@ -39,7 +39,7 @@ Eidos supports three logging modes:
 
 2. **Text Mode (`--debug`)**: Debug output with full metadata
    - Key=value format with time, level, source location
-   - Example: `time=2025-01-06T10:30:00.123Z level=INFO module=eidos version=v1.0.0 msg="snapshot started"`
+   - Example: `time=2025-01-06T10:30:00.123Z level=INFO module=aicr version=v1.0.0 msg="snapshot started"`
 
 3. **JSON Mode (`--log-json`)**: Structured JSON for automation
    - Machine-readable format for log aggregation
@@ -48,27 +48,27 @@ Eidos supports three logging modes:
 **Examples:**
 ```shell
 # Default: Clean CLI output
-eidos snapshot
+aicr snapshot
 
 # Debug mode: Full metadata
-eidos --debug snapshot
+aicr --debug snapshot
 
 # JSON mode: Structured logs
-eidos --log-json snapshot
+aicr --log-json snapshot
 
 # Combine with other flags
-eidos --debug --output system.yaml snapshot
+aicr --debug --output system.yaml snapshot
 ```
 
 ## Commands
 
-### eidos snapshot
+### aicr snapshot
 
 Capture comprehensive system configuration including OS, GPU, Kubernetes, and SystemD settings.
 
 **Synopsis:**
 ```shell
-eidos snapshot [flags]
+aicr snapshot [flags]
 ```
 
 **Flags:**
@@ -79,9 +79,9 @@ eidos snapshot [flags]
 | `--kubeconfig` | `-k` | string | ~/.kube/config | Path to kubeconfig file (overrides KUBECONFIG env) |
 | `--deploy-agent` | | bool | false | Deploy Kubernetes Job to capture snapshot on cluster nodes |
 | `--namespace` | `-n` | string | gpu-operator | Kubernetes namespace for agent deployment |
-| `--image` | | string | ghcr.io/nvidia/eidos-validator:latest | Container image for agent Job |
-| `--job-name` | | string | eidos | Name for the agent Job |
-| `--service-account-name` | | string | eidos | ServiceAccount name for agent Job |
+| `--image` | | string | ghcr.io/nvidia/aicr-validator:latest | Container image for agent Job |
+| `--job-name` | | string | aicr | Name for the agent Job |
+| `--service-account-name` | | string | aicr | ServiceAccount name for agent Job |
 | `--node-selector` | | string[] | | Node selector for agent scheduling (key=value, repeatable) |
 | `--toleration` | | string[] | all taints | Tolerations for agent scheduling (key=value:effect, repeatable). **Default: all taints tolerated** (uses `operator: Exists`). Only specify to restrict which taints are tolerated. |
 | `--timeout` | | duration | 5m | Timeout for agent Job completion |
@@ -104,58 +104,58 @@ eidos snapshot [flags]
 
 ```shell
 # Output to stdout (YAML)
-eidos snapshot
+aicr snapshot
 
 # Save to file (JSON)
-eidos snapshot --output system.json --format json
+aicr snapshot --output system.json --format json
 
 # Save to Kubernetes ConfigMap (requires cluster access)
-eidos snapshot --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --output cm://gpu-operator/aicr-snapshot
 
 # Debug mode
-eidos --debug snapshot
+aicr --debug snapshot
 
 # Table format (human-readable)
-eidos snapshot --format table
+aicr snapshot --format table
 
 # Agent deployment mode: Deploy Job to capture snapshot on cluster node
-eidos snapshot --deploy-agent
+aicr snapshot --deploy-agent
 
 # Agent deployment with custom kubeconfig
-eidos snapshot --deploy-agent --kubeconfig ~/.kube/prod-cluster
+aicr snapshot --deploy-agent --kubeconfig ~/.kube/prod-cluster
 
 # Agent deployment targeting specific nodes
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --namespace gpu-operator \
   --node-selector accelerator=nvidia-h100 \
   --node-selector zone=us-west1-a
 
 # Agent deployment with tolerations for tainted nodes
 # (By default all taints are tolerated - only needed to restrict tolerations)
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --toleration nvidia.com/gpu=present:NoSchedule
 
 # Agent deployment: Full example with all options
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --kubeconfig ~/.kube/config \
   --namespace gpu-operator \
-  --image ghcr.io/nvidia/eidos:v0.8.0 \
+  --image ghcr.io/nvidia/aicr:v0.8.0 \
   --job-name snapshot-gpu-nodes \
-  --service-account-name eidos \
+  --service-account-name aicr \
   --node-selector accelerator=nvidia-h100 \
   --toleration nvidia.com/gpu:NoSchedule \
   --timeout 10m \
-  --output cm://gpu-operator/eidos-snapshot \
+  --output cm://gpu-operator/aicr-snapshot \
   --cleanup
 
 # Custom template formatting
-eidos snapshot --template examples/templates/snapshot-template.md.tmpl
+aicr snapshot --template examples/templates/snapshot-template.md.tmpl
 
 # Template with file output
-eidos snapshot --template examples/templates/snapshot-template.md.tmpl --output report.md
+aicr snapshot --template examples/templates/snapshot-template.md.tmpl --output report.md
 
 # Agent deployment with custom template
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --namespace gpu-operator \
   --template examples/templates/snapshot-template.md.tmpl \
   --output cluster-report.yaml
@@ -191,10 +191,10 @@ See `examples/templates/snapshot-template.md.tmpl` for a complete example templa
 
 **Agent Deployment Mode:**
 
-When `--deploy-agent` is specified, Eidos deploys a Kubernetes Job to capture the snapshot instead of running locally:
+When `--deploy-agent` is specified, AICR deploys a Kubernetes Job to capture the snapshot instead of running locally:
 
 1. **Deploys RBAC**: ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding
-2. **Creates Job**: Runs `eidos snapshot` as a container on the target node
+2. **Creates Job**: Runs `aicr snapshot` as a container on the target node
 3. **Waits for completion**: Monitors Job status with configurable timeout
 4. **Retrieves snapshot**: Reads snapshot from ConfigMap after Job completes
 5. **Writes output**: Saves snapshot to specified output destination
@@ -221,10 +221,10 @@ When using ConfigMap URIs (`cm://namespace/name`), the snapshot is stored direct
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: eidos-snapshot
+  name: aicr-snapshot
   namespace: gpu-operator
   labels:
-    app.kubernetes.io/name: eidos
+    app.kubernetes.io/name: aicr
     app.kubernetes.io/component: snapshot
     app.kubernetes.io/version: v0.17.0
 data:
@@ -236,7 +236,7 @@ data:
 
 **Snapshot Structure:**
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: Snapshot
 metadata:
   created: "2025-12-31T10:30:00Z"
@@ -254,13 +254,13 @@ measurements:
 
 ---
 
-### eidos recipe
+### aicr recipe
 
 Generate optimized configuration recipes from query parameters or captured snapshots.
 
 **Synopsis:**
 ```shell
-eidos recipe [flags]
+aicr recipe [flags]
 ```
 
 **Modes:**
@@ -279,7 +279,7 @@ Generate recipes using a Kubernetes-style criteria file:
 The criteria file uses a Kubernetes-style format:
 ```yaml
 kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: gb200-eks-ubuntu-training
 spec:
@@ -293,13 +293,13 @@ spec:
 Individual CLI flags can override criteria file values:
 ```shell
 # Load criteria from file
-eidos recipe --criteria criteria.yaml
+aicr recipe --criteria criteria.yaml
 
 # Override service from file
-eidos recipe --criteria criteria.yaml --service gke
+aicr recipe --criteria criteria.yaml --service gke
 
 # Save output to file
-eidos recipe -c criteria.yaml -o recipe.yaml
+aicr recipe -c criteria.yaml -o recipe.yaml
 ```
 
 #### Query Mode
@@ -321,10 +321,10 @@ Generate recipes using direct system parameters:
 **Examples:**
 ```shell
 # Basic recipe for Ubuntu on EKS with H100
-eidos recipe --os ubuntu --service eks --accelerator h100
+aicr recipe --os ubuntu --service eks --accelerator h100
 
 # Training workload with multiple GPU nodes
-eidos recipe \
+aicr recipe \
   --service eks \
   --accelerator gb200 \
   --intent training \
@@ -333,7 +333,7 @@ eidos recipe \
   --format yaml
 
 # Kubeflow training workload
-eidos recipe \
+aicr recipe \
   --service eks \
   --accelerator h100 \
   --intent training \
@@ -341,7 +341,7 @@ eidos recipe \
   --platform kubeflow
 
 # Save to file (--gpu is an alias for --accelerator)
-eidos recipe --os ubuntu --gpu h100 --output recipe.yaml
+aicr recipe --os ubuntu --gpu h100 --output recipe.yaml
 ```
 
 #### Snapshot Mode
@@ -364,31 +364,31 @@ Generate recipes from captured snapshots:
 **Examples:**
 ```shell
 # Generate recipe from local snapshot file
-eidos recipe --snapshot system.yaml --intent training
+aicr recipe --snapshot system.yaml --intent training
 
 # From ConfigMap (requires cluster access)
-eidos recipe --snapshot cm://gpu-operator/eidos-snapshot --intent training
+aicr recipe --snapshot cm://gpu-operator/aicr-snapshot --intent training
 
 # From ConfigMap with custom kubeconfig
-eidos recipe \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --kubeconfig ~/.kube/prod-cluster \
   --intent training
 
 # Output to ConfigMap
-eidos recipe -s system.yaml -o cm://gpu-operator/eidos-recipe
+aicr recipe -s system.yaml -o cm://gpu-operator/aicr-recipe
 
 # Chain snapshot → recipe with ConfigMaps
-eidos snapshot -o cm://default/snapshot
-eidos recipe -s cm://default/snapshot -o cm://default/recipe
+aicr snapshot -o cm://default/snapshot
+aicr recipe -s cm://default/snapshot -o cm://default/recipe
 
 # With custom output
-eidos recipe -s system.yaml -i inference -o recipe.yaml --format yaml
+aicr recipe -s system.yaml -i inference -o recipe.yaml --format yaml
 ```
 
 **Output structure:**
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: Recipe
 metadata:
   version: v1.0.0
@@ -416,13 +416,13 @@ constraints:
 
 ---
 
-### eidos validate
+### aicr validate
 
 Validate a system snapshot against the constraints defined in a recipe to verify cluster compatibility. Supports multi-phase validation with different validation stages.
 
 **Synopsis:**
 ```shell
-eidos validate [flags]
+aicr validate [flags]
 ```
 
 **Flags:**
@@ -485,72 +485,72 @@ Constraints use fully qualified measurement paths: `{Type}.{Subtype}.{Key}`
 
 ```shell
 # Validate snapshot against recipe (default: readiness phase)
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
 
 # Validate specific phase
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml \
   --phase deployment
 
 # Run all validation phases
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml \
   --phase all
 
 # Load snapshot from ConfigMap
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
-  --snapshot cm://gpu-operator/eidos-snapshot
+  --snapshot cm://gpu-operator/aicr-snapshot
 
 # Save results to file
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --output validation-results.yaml
 
 # Validate readiness phase before installing components
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml \
   --phase readiness \
   --fail-on-error
 
 # Validate deployment phase after components are installed
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml \
   --phase deployment
 
 # Run performance validation
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml \
   --phase performance
 
 # JSON output format
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml \
   --format json
 
 # With custom kubeconfig
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --kubeconfig ~/.kube/prod-cluster
 ```
 
 **Output Structure (Readiness Phase):**
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ValidationResult
 metadata:
   timestamp: "2025-12-31T10:30:00Z"
   version: v0.14.0
 recipeSource: recipe.yaml
-snapshotSource: cm://gpu-operator/eidos-snapshot
+snapshotSource: cm://gpu-operator/aicr-snapshot
 summary:
   passed: 5
   failed: 0
@@ -582,7 +582,7 @@ phases:
 
 **Output Structure (All Phases):**
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ValidationResult
 metadata:
   timestamp: "2025-12-31T10:30:00Z"
@@ -656,13 +656,13 @@ phases:
 
 ---
 
-### eidos bundle
+### aicr bundle
 
 Generate deployment-ready bundles from recipes containing Helm values, manifests, scripts, and documentation.
 
 **Synopsis:**
 ```shell
-eidos bundle [flags]
+aicr bundle [flags]
 ```
 
 **Flags:**
@@ -723,47 +723,47 @@ Override any value in the generated bundle files using dot notation:
 **Examples:**
 ```shell
 # Generate all bundles
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 
 # Override values in GPU Operator bundle
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:gds.enabled=true \
   --set gpuoperator:driver.version=570.86.16 \
   -o ./bundles
 
 # Override multiple components
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:mig.strategy=mixed \
   --set networkoperator:rdma.enabled=true \
   --set networkoperator:sriov.enabled=true \
   -o ./bundles
 
 # Override cert-manager resources
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set certmanager:controller.resources.memory.limit=512Mi \
   --set certmanager:webhook.resources.cpu.limit=200m \
   -o ./bundles
 
 # Override Skyhook manager resources
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set skyhook-operator:manager.resources.cpu.limit=500m \
   --set skyhook-operator:manager.resources.memory.limit=256Mi \
   -o ./bundles
 
 # Schedule system components on specific node pool
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --system-node-selector nodeGroup=system-pool \
   --system-node-toleration dedicated=system:NoSchedule \
   -o ./bundles
 
 # Schedule GPU workloads on labeled GPU nodes
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --accelerated-node-selector nvidia.com/gpu.present=true \
   --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule \
   -o ./bundles
 
 # Combined: separate system and GPU scheduling
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --system-node-selector nodeGroup=system-pool \
   --system-node-toleration dedicated=system:NoSchedule \
   --accelerated-node-selector accelerator=nvidia-h100 \
@@ -771,21 +771,21 @@ eidos bundle -r recipe.yaml \
   -o ./bundles
 
 # Day 2 options: workload-gate and workload-selector for skyhook
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --workload-gate skyhook.io/runtime-required=true:NoSchedule \
   --workload-selector workload-type=training \
   -o ./bundles
 
 # Generate ArgoCD Application manifests for GitOps
-eidos bundle -r recipe.yaml --deployer argocd -o ./bundles
+aicr bundle -r recipe.yaml --deployer argocd -o ./bundles
 
 # ArgoCD with Git repository URL (avoids placeholder in app-of-apps.yaml)
-eidos bundle -r recipe.yaml --deployer argocd \
+aicr bundle -r recipe.yaml --deployer argocd \
   --repo https://github.com/my-org/my-gitops-repo.git \
   -o ./bundles
 
 # Combine deployer with value overrides
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --deployer argocd \
   -o ./bundles
 ```
@@ -834,7 +834,7 @@ The `--workload-gate` and `--workload-selector` flags are day 2 operational opti
 
 **Component Validation System:**
 
-Eidos includes a component-driven validation system that automatically checks bundle configuration and displays warnings or errors during bundle generation. Validations are defined in the component registry and run automatically when components are included in a recipe.
+AICR includes a component-driven validation system that automatically checks bundle configuration and displays warnings or errors during bundle generation. Validations are defined in the component registry and run automatically when components are included in a recipe.
 
 **How Validations Work:**
 
@@ -877,17 +877,17 @@ To resolve the warnings, include the appropriate flags when generating the bundl
 
 ```shell
 # Resolve workload selector warning
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --workload-selector workload-type=training \
   -o ./bundle
 
 # Resolve accelerated selector warning
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --accelerated-node-selector nodeGroup=gpu-worker \
   -o ./bundle
 
 # Resolve both warnings
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --workload-selector workload-type=training \
   --accelerated-node-selector nodeGroup=gpu-worker \
   -o ./bundle
@@ -896,7 +896,7 @@ eidos bundle -r recipe.yaml \
 **Examples:**
 ```shell
 # Generate bundle with day 2 options for training workloads
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --workload-gate skyhook.io/runtime-required=true:NoSchedule \
   --workload-selector workload-type=training \
   --workload-selector intent=training \
@@ -904,7 +904,7 @@ eidos bundle -r recipe.yaml \
   -o ./bundles
 
 # Generate bundle for inference workloads with accelerated selector
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --accelerated-node-selector accelerator=nvidia-h100 \
   -o ./bundles
 ```
@@ -938,21 +938,21 @@ chmod +x deploy.sh && ./deploy.sh
 
 ```shell
 # Step 1: Capture system configuration
-eidos snapshot --output snapshot.yaml
+aicr snapshot --output snapshot.yaml
 
 # Step 2: Generate optimized recipe for training workloads
-eidos recipe \
+aicr recipe \
   --snapshot snapshot.yaml \
   --intent training \
   --output recipe.yaml
 
 # Step 3: Validate recipe constraints against snapshot
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml
 
 # Step 4: Create deployment bundle
-eidos bundle \
+aicr bundle \
   --recipe recipe.yaml \
   --output ./deployment
 
@@ -968,45 +968,45 @@ kubectl logs -n gpu-operator -l app=nvidia-operator-validator
 
 ```shell
 # Step 1: Agent captures snapshot to ConfigMap (using CLI deployment)
-eidos snapshot --deploy-agent --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --deploy-agent --output cm://gpu-operator/aicr-snapshot
 
 # Alternative: Manual kubectl deployment
-kubectl apply -f deployments/eidos-agent/1-deps.yaml
-kubectl apply -f deployments/eidos-agent/2-job.yaml
-kubectl wait --for=condition=complete job/eidos -n gpu-operator --timeout=5m
+kubectl apply -f deployments/aicr-agent/1-deps.yaml
+kubectl apply -f deployments/aicr-agent/2-job.yaml
+kubectl wait --for=condition=complete job/aicr -n gpu-operator --timeout=5m
 
 # Step 2: Generate recipe from ConfigMap
-eidos recipe \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --intent training \
   --output recipe.yaml
 
 # Alternative: Write recipe to ConfigMap as well
-eidos recipe \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --intent training \
-  --output cm://gpu-operator/eidos-recipe
+  --output cm://gpu-operator/aicr-recipe
 
 # With custom kubeconfig (if not using default)
-eidos recipe \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --kubeconfig ~/.kube/prod-cluster \
   --intent training \
   --output recipe.yaml
 
 # Step 3: Validate recipe constraints against cluster snapshot
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
-  --snapshot cm://gpu-operator/eidos-snapshot
+  --snapshot cm://gpu-operator/aicr-snapshot
 
 # For CI/CD pipelines: exit non-zero on validation failure
-eidos validate \
+aicr validate \
   --recipe recipe.yaml \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --fail-on-error
 
 # Step 4: Create bundle from recipe
-eidos bundle \
+aicr bundle \
   --recipe recipe.yaml \
   --output ./deployment
 
@@ -1027,7 +1027,7 @@ Validate the complete workflow:
 make e2e
 
 # Run a single chainsaw test
-EIDOS_BIN=$(find dist -maxdepth 2 -type f -name eidos | head -n 1)
+AICR_BIN=$(find dist -maxdepth 2 -type f -name aicr | head -n 1)
 chainsaw test --no-cluster --test-dir tests/chainsaw/cli/recipe-generation
 ```
 
@@ -1037,37 +1037,37 @@ Generate shell completion scripts:
 
 ```shell
 # Bash
-eidos completion bash
+aicr completion bash
 
 # Zsh
-eidos completion zsh
+aicr completion zsh
 
 # Fish
-eidos completion fish
+aicr completion fish
 
 # PowerShell
-eidos completion pwsh
+aicr completion pwsh
 ```
 
 **Installation:**
 
 **Bash:**
 ```shell
-source <(eidos completion bash)
+source <(aicr completion bash)
 # Or add to ~/.bashrc for persistence
-echo 'source <(eidos completion bash)' >> ~/.bashrc
+echo 'source <(aicr completion bash)' >> ~/.bashrc
 ```
 
 **Zsh:**
 ```shell
-source <(eidos completion zsh)
+source <(aicr completion zsh)
 # Or add to ~/.zshrc
-echo 'source <(eidos completion zsh)' >> ~/.zshrc
+echo 'source <(aicr completion zsh)' >> ~/.zshrc
 ```
 
 ## Environment Variables
 
-Eidos respects standard environment variables:
+AICR respects standard environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -1090,24 +1090,24 @@ Eidos respects standard environment variables:
 
 ### Quick Recipe Generation
 ```shell
-eidos recipe --os ubuntu --accelerator h100 | jq '.componentRefs[]'
+aicr recipe --os ubuntu --accelerator h100 | jq '.componentRefs[]'
 ```
 
 ### Save All Steps
 ```shell
-eidos snapshot -o snapshot.yaml
-eidos recipe -s snapshot.yaml -i training -o recipe.yaml
-eidos bundle -r recipe.yaml -o ./bundles
+aicr snapshot -o snapshot.yaml
+aicr recipe -s snapshot.yaml -i training -o recipe.yaml
+aicr bundle -r recipe.yaml -o ./bundles
 ```
 
 ### JSON Processing
 ```shell
 # Extract GPU Operator version from recipe
-eidos recipe --os ubuntu --accelerator h100 --format json | \
+aicr recipe --os ubuntu --accelerator h100 --format json | \
   jq -r '.componentRefs[] | select(.name=="gpu-operator") | .version'
 
 # Get all component versions
-eidos recipe --os ubuntu --accelerator h100 --format json | \
+aicr recipe --os ubuntu --accelerator h100 --format json | \
   jq -r '.componentRefs[] | "\(.name): \(.version)"'
 ```
 
@@ -1115,7 +1115,7 @@ eidos recipe --os ubuntu --accelerator h100 --format json | \
 ```shell
 # Generate recipes for different cloud providers
 for service in eks gke aks; do
-  eidos recipe --os ubuntu --service $service --gpu h100 \
+  aicr recipe --os ubuntu --service $service --gpu h100 \
     --output recipe-${service}.yaml
 done
 ```
@@ -1131,14 +1131,14 @@ nvidia-smi
 kubectl cluster-info
 
 # Run with debug
-eidos --debug snapshot
+aicr --debug snapshot
 ```
 
 ### Recipe Not Found
 ```shell
 # Query parameters may not match any overlay
 # Try broader query:
-eidos recipe --os ubuntu --gpu h100
+aicr recipe --os ubuntu --gpu h100
 ```
 
 ### Bundle Generation Fails
@@ -1147,10 +1147,10 @@ eidos recipe --os ubuntu --gpu h100
 cat recipe.yaml
 
 # Check bundler is valid
-eidos bundle --help  # Shows available bundlers
+aicr bundle --help  # Shows available bundlers
 
 # Run with debug
-eidos --debug bundle -r recipe.yaml
+aicr --debug bundle -r recipe.yaml
 ```
 
 ## External Data Directory
@@ -1159,7 +1159,7 @@ The `--data` flag enables extending or overriding the embedded recipe data with 
 
 ### Overview
 
-Eidos embeds recipe data (overlays, component values, registry) at compile time. The `--data` flag layers an external directory on top, enabling:
+AICR embeds recipe data (overlays, component values, registry) at compile time. The `--data` flag layers an external directory on top, enabling:
 
 - **Custom components**: Add new components to the registry
 - **Override values**: Replace default component values files
@@ -1198,13 +1198,13 @@ my-data/
 
 ```shell
 # Use external data directory for recipe generation
-eidos recipe --service eks --accelerator h100 --data ./my-data
+aicr recipe --service eks --accelerator h100 --data ./my-data
 
 # Use external data directory for bundle generation
-eidos bundle --recipe recipe.yaml --data ./my-data --output ./bundles
+aicr bundle --recipe recipe.yaml --data ./my-data --output ./bundles
 
 # Combine with other flags
-eidos recipe --service eks --gpu gb200 --intent training \
+aicr recipe --service eks --gpu gb200 --intent training \
   --data ./custom-recipes \
   --output recipe.yaml
 ```
@@ -1219,7 +1219,7 @@ mkdir -p my-data/components/my-operator
 2. **Create registry.yaml with custom component:**
 ```yaml
 # my-data/registry.yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: my-operator
@@ -1243,7 +1243,7 @@ image:
 ```yaml
 # my-data/overlays/my-custom-overlay.yaml
 kind: RecipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: my-custom-overlay
 spec:
@@ -1258,7 +1258,7 @@ spec:
 
 5. **Generate recipe with external data:**
 ```shell
-eidos recipe --service eks --intent training --data ./my-data
+aicr recipe --service eks --intent training --data ./my-data
 ```
 
 ### Debugging External Data
@@ -1266,7 +1266,7 @@ eidos recipe --service eks --intent training --data ./my-data
 Use `--debug` flag to see detailed logging about external data loading:
 
 ```shell
-eidos --debug recipe --service eks --data ./my-data
+aicr --debug recipe --service eks --data ./my-data
 ```
 
 Debug logs include:
@@ -1289,7 +1289,7 @@ The `examples/` directory contains reference files for testing and learning:
 **Usage:**
 ```shell
 # Generate recipe from example snapshot
-eidos recipe --snapshot examples/snapshots/gb200.yaml --intent training --platform kubeflow
+aicr recipe --snapshot examples/snapshots/gb200.yaml --intent training --platform kubeflow
 ```
 
 ### Recipes (`examples/recipes/`)
@@ -1302,7 +1302,7 @@ eidos recipe --snapshot examples/snapshots/gb200.yaml --intent training --platfo
 **Usage:**
 ```shell
 # Generate bundle from example recipe
-eidos bundle --recipe examples/recipes/eks-gb200-training.yaml --output ./bundles
+aicr bundle --recipe examples/recipes/eks-gb200-training.yaml --output ./bundles
 ```
 
 ### Templates (`examples/templates/`)
@@ -1314,12 +1314,12 @@ eidos bundle --recipe examples/recipes/eks-gb200-training.yaml --output ./bundle
 **Usage:**
 ```shell
 # Generate custom cluster report
-eidos snapshot --template examples/templates/snapshot-template.md.tmpl --output report.md
+aicr snapshot --template examples/templates/snapshot-template.md.tmpl --output report.md
 ```
 
 ## See Also
 
-- [Installation Guide](installation.md) - Install eidos
+- [Installation Guide](installation.md) - Install aicr
 - [Agent Deployment](agent-deployment.md) - Kubernetes agent setup
 - [API Reference](api-reference.md) - Programmatic access
 - [Architecture Docs](../contributor/README.md) - Internal architecture

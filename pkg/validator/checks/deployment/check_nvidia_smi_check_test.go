@@ -17,7 +17,7 @@ package deployment
 import (
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // TestCheckCheckNvidiaSmi is the integration test for check-nvidia-smi.

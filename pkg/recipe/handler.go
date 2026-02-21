@@ -20,10 +20,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/server"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/server"
 )
 
 // DefaultRecipeCacheTTL is the default cache duration for recipe responses.
@@ -60,7 +60,7 @@ func (b *Builder) HandleRecipes(w http.ResponseWriter, r *http.Request) {
 		}()
 	default:
 		w.Header().Set("Allow", "GET, POST")
-		server.WriteError(w, r, http.StatusMethodNotAllowed, eidoserrors.ErrCodeMethodNotAllowed,
+		server.WriteError(w, r, http.StatusMethodNotAllowed, aicrerrors.ErrCodeMethodNotAllowed,
 			"Method not allowed", false, map[string]any{
 				"method":  r.Method,
 				"allowed": []string{"GET", "POST"},
@@ -69,7 +69,7 @@ func (b *Builder) HandleRecipes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		server.WriteError(w, r, http.StatusBadRequest, eidoserrors.ErrCodeInvalidRequest,
+		server.WriteError(w, r, http.StatusBadRequest, aicrerrors.ErrCodeInvalidRequest,
 			"Invalid recipe criteria", false, map[string]any{
 				"error": err.Error(),
 			})
@@ -77,7 +77,7 @@ func (b *Builder) HandleRecipes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if criteria == nil {
-		server.WriteError(w, r, http.StatusBadRequest, eidoserrors.ErrCodeInvalidRequest,
+		server.WriteError(w, r, http.StatusBadRequest, aicrerrors.ErrCodeInvalidRequest,
 			"Recipe criteria cannot be empty", false, nil)
 		return
 	}

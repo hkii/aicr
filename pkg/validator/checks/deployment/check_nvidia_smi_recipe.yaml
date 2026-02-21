@@ -14,7 +14,7 @@
 
 # Sample recipe for testing check-nvidia-smi check
 kind: recipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 validation:

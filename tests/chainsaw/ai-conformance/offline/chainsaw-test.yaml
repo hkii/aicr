@@ -24,7 +24,7 @@ spec:
     then asserts the recipe has correct criteria, constraints, all 16
     components, and expected deployment order.
     No cluster needed. Run with:
-      EIDOS_BIN=$(pwd)/dist/e2e/eidos chainsaw test --no-cluster --test-dir tests/chainsaw/ai-conformance/offline
+      AICR_BIN=$(pwd)/dist/e2e/aicr chainsaw test --no-cluster --test-dir tests/chainsaw/ai-conformance/offline
   timeouts:
     exec: 30s
   steps:
@@ -35,10 +35,10 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-ai-conformance"
               rm -rf "${WORK}" && mkdir -p "${WORK}"
-              ${EIDOS_BIN} recipe \
+              ${AICR_BIN} recipe \
                 --service eks \
                 --accelerator h100 \
                 --intent inference \
@@ -62,9 +62,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-ai-conformance"
-              ${EIDOS_BIN} bundle \
+              ${AICR_BIN} bundle \
                 --recipe "${WORK}/recipe.yaml" \
                 --output "${WORK}/bundle" \
                 --system-node-selector nodeGroup=system-pool \

@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/types"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/types"
 )
 
 func TestNewBaseBundler(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/NVIDIA/eidos
+module github.com/NVIDIA/aicr
 
 go 1.25.7
 

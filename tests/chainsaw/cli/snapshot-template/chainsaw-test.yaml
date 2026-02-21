@@ -44,8 +44,8 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
-              ${EIDOS_BIN} snapshot --help 2>&1
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
+              ${AICR_BIN} snapshot --help 2>&1
             check:
               (contains($stdout, 'template')): true
 
@@ -54,9 +54,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-snapshot-template"
-              ${EIDOS_BIN} snapshot --template "${WORK}/test.tmpl" --format json 2>&1 || true
+              ${AICR_BIN} snapshot --template "${WORK}/test.tmpl" --format json 2>&1 || true
             check:
               (contains($stderr, 'YAML format') || contains($stderr, 'requires YAML') || contains($stdout, 'YAML format') || contains($stdout, 'requires YAML')): true
 
@@ -65,8 +65,8 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
-              ${EIDOS_BIN} snapshot --template "/non/existent.tmpl" 2>&1 || true
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
+              ${AICR_BIN} snapshot --template "/non/existent.tmpl" 2>&1 || true
             check:
               (contains($stderr, 'not found') || contains($stderr, 'no such file') || contains($stderr, 'does not exist') || contains($stdout, 'not found') || contains($stdout, 'no such file') || contains($stdout, 'does not exist')): true
 
@@ -75,9 +75,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-snapshot-template"
-              ${EIDOS_BIN} snapshot --template "${WORK}" 2>&1 || true
+              ${AICR_BIN} snapshot --template "${WORK}" 2>&1 || true
             check:
               (contains($stderr, 'directory') || contains($stderr, 'not a file') || contains($stdout, 'directory') || contains($stdout, 'not a file')): true
 
@@ -96,9 +96,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               for fmt in yaml json; do
-                output=$(${EIDOS_BIN} snapshot --format "$fmt" 2>&1) || true
+                output=$(${AICR_BIN} snapshot --format "$fmt" 2>&1) || true
                 if echo "$output" | grep -qi "invalid format\|unknown format"; then
                   echo "Format '$fmt' should be valid" >&2
                   exit 1

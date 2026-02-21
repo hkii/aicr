@@ -76,8 +76,8 @@ body:
     attributes:
       label: Component
       options:
-        - CLI (eidos)
-        - API server (eidosd)
+        - CLI (aicr)
+        - API server (aicrd)
         - Recipe engine / data
         - Bundlers (gpu-operator, network-operator, etc.)
         - Collectors / snapshotter

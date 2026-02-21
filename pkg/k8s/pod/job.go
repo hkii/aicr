@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -20,8 +20,8 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,15 +73,15 @@ func (d *Deployer) buildJobSpec() *batchv1.Job {
 		Args:            []string{testCommand},
 		Env: []corev1.EnvVar{
 			{
-				Name:  "EIDOS_SNAPSHOT_PATH",
+				Name:  "AICR_SNAPSHOT_PATH",
 				Value: "/data/snapshot/snapshot.yaml",
 			},
 			{
-				Name:  "EIDOS_RECIPE_PATH",
+				Name:  "AICR_RECIPE_PATH",
 				Value: "/data/recipe/recipe.yaml",
 			},
 			{
-				Name: "EIDOS_NAMESPACE",
+				Name: "AICR_NAMESPACE",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
 						FieldPath: "metadata.namespace",
@@ -106,7 +106,7 @@ func (d *Deployer) buildJobSpec() *batchv1.Job {
 	// Add debug flag if enabled
 	if d.config.Debug {
 		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EIDOS_DEBUG",
+			Name:  "AICR_DEBUG",
 			Value: "true",
 		})
 	}
@@ -172,9 +172,9 @@ func (d *Deployer) buildJobSpec() *batchv1.Job {
 			Name:      d.config.JobName,
 			Namespace: d.config.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":      "eidos",
+				"app.kubernetes.io/name":      "aicr",
 				"app.kubernetes.io/component": "validation",
-				"eidos.nvidia.com/job-type":   "validation",
+				"aicr.nvidia.com/job-type":    "validation",
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -183,9 +183,9 @@ func (d *Deployer) buildJobSpec() *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app.kubernetes.io/name":      "eidos",
+						"app.kubernetes.io/name":      "aicr",
 						"app.kubernetes.io/component": "validation",
-						"eidos.nvidia.com/job":        d.config.JobName,
+						"aicr.nvidia.com/job":         d.config.JobName,
 					},
 				},
 				Spec: podSpec,

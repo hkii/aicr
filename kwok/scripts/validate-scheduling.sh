@@ -45,10 +45,10 @@ log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 log_debug() { echo -e "${BLUE}[DEBUG]${NC} $*"; }
 
 # Use consistent namespace/release names so Helm can upgrade existing resources
-NAMESPACE="${KWOK_NAMESPACE:-eidos-kwok-test}"
-RELEASE_NAME="${KWOK_RELEASE:-eidos-test}"
+NAMESPACE="${KWOK_NAMESPACE:-aicr-kwok-test}"
+RELEASE_NAME="${KWOK_RELEASE:-aicr-test}"
 WORK_DIR=""
-EIDOS_BIN=""
+AICR_BIN=""
 KEEP_NAMESPACE=false
 
 # Cleanup function
@@ -90,14 +90,14 @@ cleanup() {
     exit $exit_code
 }
 
-# Find eidos binary (goreleaser puts it in platform-specific dirs)
-find_eidos_binary() {
+# Find aicr binary (goreleaser puts it in platform-specific dirs)
+find_aicr_binary() {
     # Check common locations in order of preference
     local candidates=(
-        "${REPO_ROOT}/dist/eidos"
-        "${REPO_ROOT}/dist/eidos_darwin_arm64_v8.0/eidos"
-        "${REPO_ROOT}/dist/eidos_darwin_all/eidos"
-        "${REPO_ROOT}/dist/eidos_linux_amd64_v1/eidos"
+        "${REPO_ROOT}/dist/aicr"
+        "${REPO_ROOT}/dist/aicr_darwin_arm64_v8.0/aicr"
+        "${REPO_ROOT}/dist/aicr_darwin_all/aicr"
+        "${REPO_ROOT}/dist/aicr_linux_amd64_v1/aicr"
     )
 
     for candidate in "${candidates[@]}"; do
@@ -109,7 +109,7 @@ find_eidos_binary() {
 
     # Try glob pattern as fallback
     local found
-    found=$(find "${REPO_ROOT}/dist" -name "eidos" -type f -perm /111 2>/dev/null | head -1)
+    found=$(find "${REPO_ROOT}/dist" -name "aicr" -type f -perm /111 2>/dev/null | head -1)
     if [[ -n "$found" ]]; then
         echo "$found"
         return 0
@@ -127,13 +127,13 @@ check_deps() {
         fi
     done
 
-    # Check for eidos binary
-    EIDOS_BIN=$(find_eidos_binary) || {
-        log_error "eidos binary not found in dist/"
+    # Check for aicr binary
+    AICR_BIN=$(find_aicr_binary) || {
+        log_error "aicr binary not found in dist/"
         log_error "Run 'make build' first"
         exit 1
     }
-    log_info "Using eidos binary: $EIDOS_BIN"
+    log_info "Using aicr binary: $AICR_BIN"
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing required tools: ${missing[*]}"
@@ -249,9 +249,9 @@ cleanup_old_tests() {
         kubectl delete ns "$ns" --ignore-not-found --wait=true --timeout=120s 2>/dev/null || true
     done
 
-    # Also clean up legacy eidos-kwok-test namespaces
+    # Also clean up legacy aicr-kwok-test namespaces
     local old_namespaces
-    old_namespaces=$(kubectl get ns -o name 2>/dev/null | grep "namespace/eidos-kwok-test" || true)
+    old_namespaces=$(kubectl get ns -o name 2>/dev/null | grep "namespace/aicr-kwok-test" || true)
     if [[ -n "$old_namespaces" ]]; then
         log_info "Removing old test namespaces..."
         echo "$old_namespaces" | xargs kubectl delete --wait=true --timeout=120s 2>/dev/null || true
@@ -329,9 +329,9 @@ generate_bundle() {
 
     # Generate resolved recipe from criteria
     log_info "Generating resolved recipe..."
-    log_debug "Running: $EIDOS_BIN recipe ${recipe_args[*]} --output ${WORK_DIR}/recipe.yaml"
+    log_debug "Running: $AICR_BIN recipe ${recipe_args[*]} --output ${WORK_DIR}/recipe.yaml"
 
-    if ! "$EIDOS_BIN" recipe "${recipe_args[@]}" --output "${WORK_DIR}/recipe.yaml" 2>&1; then
+    if ! "$AICR_BIN" recipe "${recipe_args[@]}" --output "${WORK_DIR}/recipe.yaml" 2>&1; then
         log_error "Recipe generation failed"
         return 1
     fi
@@ -351,18 +351,18 @@ generate_bundle() {
     log_info "Generating bundle..."
 
     local bundle_output
-    if ! bundle_output=$("$EIDOS_BIN" bundle \
+    if ! bundle_output=$("$AICR_BIN" bundle \
         --recipe "${WORK_DIR}/recipe.yaml" \
         --output "${WORK_DIR}/bundle" \
-        --system-node-selector "eidos.nvidia.com/node-type=system" \
-        --accelerated-node-selector "eidos.nvidia.com/node-type=accelerated" \
+        --system-node-selector "aicr.nvidia.com/node-type=system" \
+        --accelerated-node-selector "aicr.nvidia.com/node-type=accelerated" \
         --system-node-toleration "kwok.x-k8s.io/node=fake:NoSchedule" \
         --accelerated-node-toleration "nvidia.com/gpu=present:NoSchedule" \
         --accelerated-node-toleration "kwok.x-k8s.io/node=fake:NoSchedule" \
         --set "kubeprometheusstack:defaultRules.create=false" \
         --set "kubeprometheusstack:alertmanager.enabled=false" \
         --set "skyhook-customizations:enabled=false" \
-        --set "networkoperator:operator.tolerations[2].key=eidos.nvidia.com/kwok-test" \
+        --set "networkoperator:operator.tolerations[2].key=aicr.nvidia.com/kwok-test" \
         --set "networkoperator:operator.tolerations[2].operator=Equal" \
         --set "networkoperator:operator.tolerations[2].value=true" \
         --set "networkoperator:operator.tolerations[2].effect=NoSchedule" \

@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 // ConstraintPath represents a parsed fully qualified constraint path.

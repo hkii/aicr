@@ -17,7 +17,7 @@ package pod_test
 import (
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	"github.com/stretchr/testify/assert"
 )
 

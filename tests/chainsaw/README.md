@@ -22,7 +22,7 @@ Or manually:
 
 ```bash
 make build
-EIDOS_BIN=$(pwd)/dist/eidos_darwin_arm64_v8.0/eidos \
+AICR_BIN=$(pwd)/dist/aicr_darwin_arm64_v8.0/aicr \
   chainsaw test --no-cluster \
     --config tests/chainsaw/chainsaw-config.yaml \
     --test-dir tests/chainsaw/cli/
@@ -31,7 +31,7 @@ EIDOS_BIN=$(pwd)/dist/eidos_darwin_arm64_v8.0/eidos \
 Single test:
 
 ```bash
-EIDOS_BIN=$(pwd)/dist/eidos_darwin_arm64_v8.0/eidos \
+AICR_BIN=$(pwd)/dist/aicr_darwin_arm64_v8.0/aicr \
   chainsaw test --no-cluster --test-dir tests/chainsaw/cli/recipe-generation
 ```
 
@@ -40,8 +40,8 @@ Snapshot tests (cluster required):
 ```bash
 # Setup (one-time)
 make cluster-create
-make image IMAGE_REGISTRY=localhost:5001/eidos IMAGE_TAG=local
-for node in $(docker ps --filter "name=eidos-worker" --format "{{.Names}}"); do
+make image IMAGE_REGISTRY=localhost:5001/aicr IMAGE_TAG=local
+for node in $(docker ps --filter "name=aicr-worker" --format "{{.Names}}"); do
   docker cp tools/fake-nvidia-smi "${node}:/usr/local/bin/nvidia-smi"
   docker exec "$node" chmod +x /usr/local/bin/nvidia-smi
 done
@@ -52,7 +52,7 @@ chainsaw test --test-dir tests/chainsaw/snapshot/deploy-agent
 
 ## CLI Tests
 
-No cluster needed. All tests receive `EIDOS_BIN` and `REPO_ROOT` from the environment.
+No cluster needed. All tests receive `AICR_BIN` and `REPO_ROOT` from the environment.
 
 | Test | Replaces | What it tests |
 |------|----------|---------------|

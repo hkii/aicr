@@ -25,10 +25,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/agent"
-	k8sclient "github.com/NVIDIA/eidos/pkg/k8s/client"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/agent"
+	k8sclient "github.com/NVIDIA/aicr/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -117,7 +117,7 @@ func DeployAndGetSnapshot(ctx context.Context, config *AgentConfig) (*Snapshot, 
 	}
 
 	// Agent Job always writes to a ConfigMap internally.
-	agentOutput := fmt.Sprintf("%s%s/eidos-snapshot", serializer.ConfigMapURIScheme, config.Namespace)
+	agentOutput := fmt.Sprintf("%s%s/aicr-snapshot", serializer.ConfigMapURIScheme, config.Namespace)
 
 	// Build agent configuration
 	agentConfig := agent.Config{
@@ -375,7 +375,7 @@ func (n *NodeSnapshotter) measureWithAgent(ctx context.Context) error {
 
 	// Agent Job always writes to a ConfigMap internally.
 	// If user specified a ConfigMap URI, use that; otherwise use a default ConfigMap.
-	agentOutput := fmt.Sprintf("%s%s/eidos-snapshot", serializer.ConfigMapURIScheme, n.AgentConfig.Namespace)
+	agentOutput := fmt.Sprintf("%s%s/aicr-snapshot", serializer.ConfigMapURIScheme, n.AgentConfig.Namespace)
 	if strings.HasPrefix(finalOutput, serializer.ConfigMapURIScheme) {
 		// User explicitly wants ConfigMap output, use their URI
 		agentOutput = finalOutput
@@ -414,7 +414,7 @@ func (n *NodeSnapshotter) measureWithAgent(ctx context.Context) error {
 			slog.Warn("to manually clean up, run:",
 				slog.String("command", fmt.Sprintf(
 					"kubectl delete job/%s sa/%s role/%s rolebinding/%s -n %s && "+
-						"kubectl delete clusterrole/eidos-node-reader clusterrolebinding/eidos-node-reader",
+						"kubectl delete clusterrole/aicr-node-reader clusterrolebinding/aicr-node-reader",
 					n.AgentConfig.JobName,
 					n.AgentConfig.ServiceAccountName,
 					n.AgentConfig.ServiceAccountName,

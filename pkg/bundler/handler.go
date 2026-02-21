@@ -27,13 +27,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/server"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/server"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 // DefaultBundleTimeout is the timeout for bundle generation.
@@ -63,11 +63,11 @@ const DefaultBundleTimeout = defaults.BundleHandlerTimeout
 //
 //	POST /v1/bundle?set=gpuoperator:gds.enabled=true
 //	Content-Type: application/json
-//	Body: { "apiVersion": "eidos.nvidia.com/v1alpha1", "kind": "Recipe", ... }
+//	Body: { "apiVersion": "aicr.nvidia.com/v1alpha1", "kind": "Recipe", ... }
 func (b *DefaultBundler) HandleBundles(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		server.WriteError(w, r, http.StatusMethodNotAllowed, eidoserrors.ErrCodeMethodNotAllowed,
+		server.WriteError(w, r, http.StatusMethodNotAllowed, aicrerrors.ErrCodeMethodNotAllowed,
 			"Method not allowed", false, map[string]any{
 				"method": r.Method,
 			})
@@ -89,7 +89,7 @@ func (b *DefaultBundler) HandleBundles(w http.ResponseWriter, r *http.Request) {
 	var recipeResult recipe.RecipeResult
 	err = json.NewDecoder(r.Body).Decode(&recipeResult)
 	if err != nil {
-		server.WriteError(w, r, http.StatusBadRequest, eidoserrors.ErrCodeInvalidRequest,
+		server.WriteError(w, r, http.StatusBadRequest, aicrerrors.ErrCodeInvalidRequest,
 			"Invalid request body", false, map[string]any{
 				"error": err.Error(),
 			})
@@ -98,7 +98,7 @@ func (b *DefaultBundler) HandleBundles(w http.ResponseWriter, r *http.Request) {
 
 	// Validate recipe has component references
 	if len(recipeResult.ComponentRefs) == 0 {
-		server.WriteError(w, r, http.StatusBadRequest, eidoserrors.ErrCodeInvalidRequest,
+		server.WriteError(w, r, http.StatusBadRequest, aicrerrors.ErrCodeInvalidRequest,
 			"Recipe must contain at least one component reference", false, nil)
 		return
 	}
@@ -119,9 +119,9 @@ func (b *DefaultBundler) HandleBundles(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// Create temporary directory for bundle output
-	tempDir, err := os.MkdirTemp("", "eidos-bundle-*")
+	tempDir, err := os.MkdirTemp("", "aicr-bundle-*")
 	if err != nil {
-		server.WriteError(w, r, http.StatusInternalServerError, eidoserrors.ErrCodeInternal,
+		server.WriteError(w, r, http.StatusInternalServerError, aicrerrors.ErrCodeInternal,
 			"Failed to create temporary directory", true, nil)
 		return
 	}
@@ -142,7 +142,7 @@ func (b *DefaultBundler) HandleBundles(w http.ResponseWriter, r *http.Request) {
 		)),
 	)
 	if err != nil {
-		server.WriteError(w, r, http.StatusInternalServerError, eidoserrors.ErrCodeInternal,
+		server.WriteError(w, r, http.StatusInternalServerError, aicrerrors.ErrCodeInternal,
 			"Failed to create bundler", true, map[string]any{
 				"error": err.Error(),
 			})
@@ -165,7 +165,7 @@ func (b *DefaultBundler) HandleBundles(w http.ResponseWriter, r *http.Request) {
 				"error":   be.Error,
 			})
 		}
-		server.WriteError(w, r, http.StatusInternalServerError, eidoserrors.ErrCodeInternal,
+		server.WriteError(w, r, http.StatusInternalServerError, aicrerrors.ErrCodeInternal,
 			"Bundle generation failed", true, map[string]any{
 				"errors": errorDetails,
 			})
@@ -196,7 +196,7 @@ func streamZipResponse(w http.ResponseWriter, dir string, output *result.Output)
 	// Walk the directory and add all files to zip
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "walk error", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "walk error", err)
 		}
 
 		// Skip the root directory itself
@@ -207,13 +207,13 @@ func streamZipResponse(w http.ResponseWriter, dir string, output *result.Output)
 		// Get relative path for zip entry
 		relPath, err := filepath.Rel(dir, path)
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to get relative path", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to get relative path", err)
 		}
 
 		// Create zip file header
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create file header", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create file header", err)
 		}
 		header.Name = relPath
 
@@ -229,19 +229,19 @@ func streamZipResponse(w http.ResponseWriter, dir string, output *result.Output)
 
 		writer, err := zw.CreateHeader(header)
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create zip entry", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create zip entry", err)
 		}
 
 		// Open and copy file content
 		file, err := os.Open(path)
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to open file", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to open file", err)
 		}
 		defer file.Close()
 
 		_, err = io.Copy(writer, file)
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to copy file content", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to copy file content", err)
 		}
 
 		return nil
@@ -271,31 +271,31 @@ func parseQueryParams(r *http.Request) (*bundleParams, error) {
 	// Parse value overrides
 	params.valueOverrides, err = config.ParseValueOverrides(query["set"])
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid set parameter", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid set parameter", err)
 	}
 
 	// Parse system node selectors
 	params.systemNodeSelector, err = snapshotter.ParseNodeSelectors(query["system-node-selector"])
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid system-node-selector", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid system-node-selector", err)
 	}
 
 	// Parse accelerated node selectors
 	params.acceleratedNodeSelector, err = snapshotter.ParseNodeSelectors(query["accelerated-node-selector"])
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid accelerated-node-selector", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid accelerated-node-selector", err)
 	}
 
 	// Parse system node tolerations
 	params.systemNodeTolerations, err = snapshotter.ParseTolerations(query["system-node-toleration"])
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid system-node-toleration", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid system-node-toleration", err)
 	}
 
 	// Parse accelerated node tolerations
 	params.acceleratedNodeTolerations, err = snapshotter.ParseTolerations(query["accelerated-node-toleration"])
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid accelerated-node-toleration", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid accelerated-node-toleration", err)
 	}
 
 	// Parse deployer type (helm, argocd)
@@ -305,7 +305,7 @@ func parseQueryParams(r *http.Request) (*bundleParams, error) {
 	} else {
 		params.deployer, err = config.ParseDeployerType(deployerStr)
 		if err != nil {
-			return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid deployer parameter", err)
+			return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid deployer parameter", err)
 		}
 	}
 
@@ -317,14 +317,14 @@ func parseQueryParams(r *http.Request) (*bundleParams, error) {
 	if workloadGateStr != "" {
 		params.workloadGateTaint, err = snapshotter.ParseTaint(workloadGateStr)
 		if err != nil {
-			return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid workload-gate parameter", err)
+			return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid workload-gate parameter", err)
 		}
 	}
 
 	// Parse workload-selector
 	params.workloadSelector, err = snapshotter.ParseNodeSelectors(query["workload-selector"])
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "Invalid workload-selector parameter", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "Invalid workload-selector parameter", err)
 	}
 
 	return params, nil

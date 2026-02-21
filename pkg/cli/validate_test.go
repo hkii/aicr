@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/validator"
+	"github.com/NVIDIA/aicr/pkg/validator"
 )
 
 func TestParseValidationPhases(t *testing.T) {

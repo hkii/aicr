@@ -22,8 +22,8 @@ Related: <!-- #123 or N/A -->
 
 ## Component(s) Affected
 
-- [ ] CLI (`cmd/eidos`, `pkg/cli`)
-- [ ] API server (`cmd/eidosd`, `pkg/api`, `pkg/server`)
+- [ ] CLI (`cmd/aicr`, `pkg/cli`)
+- [ ] API server (`cmd/aicrd`, `pkg/api`, `pkg/server`)
 - [ ] Recipe engine / data (`pkg/recipe`)
 - [ ] Bundlers (`pkg/bundler`, `pkg/component/*`)
 - [ ] Collectors / snapshotter (`pkg/collector`, `pkg/snapshotter`)

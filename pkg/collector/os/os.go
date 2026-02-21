@@ -18,7 +18,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 // Collector collects operating system configuration including:

@@ -1,7 +1,7 @@
-# Makefile for the eidos project
-# Purpose: Build, lint, test, and manage releases for the eidos project.
+# Makefile for the aicr project
+# Purpose: Build, lint, test, and manage releases for the aicr project.
 
-REPO_NAME          := eidos
+REPO_NAME          := aicr
 VERSION            ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 IMAGE_REGISTRY     ?= $(shell yq -r '.build.image_registry' .settings.yaml 2>/dev/null)
 ifeq ($(IMAGE_REGISTRY),)
@@ -200,7 +200,7 @@ qualify: test-coverage lint e2e scan ## Qualifies the codebase (test-coverage, l
 server: ## Starts a local development server with debug logging
 	@set -e; \
 	echo "Starting local development server..."; \
-	GOFLAGS="-mod=vendor" LOG_LEVEL=debug go run cmd/eidosd/main.go
+	GOFLAGS="-mod=vendor" LOG_LEVEL=debug go run cmd/aicrd/main.go
 
 .PHONY: docs
 docs: ## Serves Go documentation on http://localhost:6060
@@ -219,17 +219,17 @@ build: tidy ## Builds binaries for the current OS and architecture
 .PHONY: image
 image: ## Builds and pushes container image (IMAGE_REGISTRY, IMAGE_TAG)
 	@set -e; \
-	echo "Building and pushing image to $(IMAGE_REGISTRY)/eidos:$(IMAGE_TAG)"; \
-	KO_DOCKER_REPO=$(IMAGE_REGISTRY) ko build --bare --sbom=none --tags=$(IMAGE_TAG) ./cmd/eidos
+	echo "Building and pushing image to $(IMAGE_REGISTRY)/aicr:$(IMAGE_TAG)"; \
+	KO_DOCKER_REPO=$(IMAGE_REGISTRY) ko build --bare --sbom=none --tags=$(IMAGE_TAG) ./cmd/aicr
 
 .PHONY: image-validator
 image-validator: build ## Builds validator image with Go toolchain (IMAGE_REGISTRY, IMAGE_TAG)
 	@set -e; \
-	echo "Building validator image to $(IMAGE_REGISTRY)/eidos-validator:$(IMAGE_TAG)"; \
-	docker build -f Dockerfile.validator -t $(IMAGE_REGISTRY)/eidos-validator:$(IMAGE_TAG) .; \
+	echo "Building validator image to $(IMAGE_REGISTRY)/aicr-validator:$(IMAGE_TAG)"; \
+	docker build -f Dockerfile.validator -t $(IMAGE_REGISTRY)/aicr-validator:$(IMAGE_TAG) .; \
 	if [ -n "$(IMAGE_REGISTRY)" ] && [ "$(IMAGE_REGISTRY)" != "localhost:5005" ]; then \
-		echo "Pushing validator image to $(IMAGE_REGISTRY)/eidos-validator:$(IMAGE_TAG)"; \
-		docker push $(IMAGE_REGISTRY)/eidos-validator:$(IMAGE_TAG); \
+		echo "Pushing validator image to $(IMAGE_REGISTRY)/aicr-validator:$(IMAGE_TAG)"; \
+		docker push $(IMAGE_REGISTRY)/aicr-validator:$(IMAGE_TAG); \
 	fi
 
 .PHONY: release
@@ -266,7 +266,7 @@ clean-all: clean ## Deep cleans including Go module cache
 	@echo "Deep clean completed"
 
 .PHONY: cleanup
-cleanup: ## Cleans up Eidos Kubernetes resources (requires kubectl)
+cleanup: ## Cleans up AICR Kubernetes resources (requires kubectl)
 	tools/cleanup
 
 .PHONY: demos
@@ -573,5 +573,5 @@ help-full: ## Displays commands grouped by category
 	@echo "  make demos          Create demo GIFs (requires vhs)"
 	@echo "  make clean          Clean build artifacts"
 	@echo "  make clean-all      Deep clean including module cache"
-	@echo "  make cleanup        Clean up Eidos Kubernetes resources"
+	@echo "  make cleanup        Clean up AICR Kubernetes resources"
 	@echo ""

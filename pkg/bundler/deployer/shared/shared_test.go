@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 func TestIsSafePathComponent(t *testing.T) {

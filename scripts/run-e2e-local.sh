@@ -144,15 +144,15 @@ collect_artifacts() {
   msg "Collecting events..."
   kubectl get events --all-namespaces --sort-by='.lastTimestamp' > "$ARTIFACTS_DIR/events.txt" 2>&1 || true
 
-  msg "Collecting eidosd logs..."
-  kubectl logs -n eidos -l app.kubernetes.io/name=eidosd --tail=500 > "$ARTIFACTS_DIR/eidosd-logs.txt" 2>&1 || true
+  msg "Collecting aicrd logs..."
+  kubectl logs -n aicr -l app.kubernetes.io/name=aicrd --tail=500 > "$ARTIFACTS_DIR/aicrd-logs.txt" 2>&1 || true
 
   msg "Collecting docker images..."
   docker images > "$ARTIFACTS_DIR/docker-images.txt" 2>&1 || true
 
   msg "Exporting Kind logs..."
   mkdir -p "$ARTIFACTS_DIR/kind-logs"
-  kind export logs "$ARTIFACTS_DIR/kind-logs" --name eidos 2>&1 || true
+  kind export logs "$ARTIFACTS_DIR/kind-logs" --name aicr 2>&1 || true
 
   success "Artifacts collected in: $ARTIFACTS_DIR"
 }
@@ -226,17 +226,17 @@ sleep 10
 success "Tilt started (PID: $TILT_PID)"
 
 # =============================================================================
-# CI Step 5: Build and Push Eidos Image
+# CI Step 5: Build and Push AICR Image
 # =============================================================================
 
 step "Building and pushing snapshot agent image"
 
-msg "Building eidos image for snapshot agent (Ko-built)..."
-KO_DOCKER_REPO=localhost:5001/eidos ko build --bare --tags=local ./cmd/eidos
+msg "Building aicr image for snapshot agent (Ko-built)..."
+KO_DOCKER_REPO=localhost:5001/aicr ko build --bare --tags=local ./cmd/aicr
 
 msg "Verifying image is available..."
-if curl -sf http://localhost:5001/v2/eidos/tags/list | grep -q "local"; then
-  success "Snapshot agent image available: localhost:5001/eidos:local"
+if curl -sf http://localhost:5001/v2/aicr/tags/list | grep -q "local"; then
+  success "Snapshot agent image available: localhost:5001/aicr:local"
 else
   err "Failed to verify snapshot agent image"
   exit 1
@@ -249,12 +249,12 @@ fi
 step "Building and pushing validator image"
 
 msg "Building validator image with Go toolchain..."
-docker build -f Dockerfile.validator -t localhost:5001/eidos-validator:local .
-docker push localhost:5001/eidos-validator:local
+docker build -f Dockerfile.validator -t localhost:5001/aicr-validator:local .
+docker push localhost:5001/aicr-validator:local
 
 msg "Verifying image is available..."
-if curl -sf http://localhost:5001/v2/eidos-validator/tags/list | grep -q "local"; then
-  success "Validator image available: localhost:5001/eidos-validator:local"
+if curl -sf http://localhost:5001/v2/aicr-validator/tags/list | grep -q "local"; then
+  success "Validator image available: localhost:5001/aicr-validator:local"
 else
   err "Failed to verify validator image"
   exit 1
@@ -286,23 +286,23 @@ success "Fake GPU environment configured"
 # CI Step 8: Set Up Port Forwarding
 # =============================================================================
 
-step "Setting up port forwarding to eidosd"
+step "Setting up port forwarding to aicrd"
 
-msg "Waiting for eidosd service to be ready..."
-kubectl wait --for=condition=available --timeout=120s deployment/eidosd -n eidos || true
+msg "Waiting for aicrd service to be ready..."
+kubectl wait --for=condition=available --timeout=120s deployment/aicrd -n aicr || true
 
-msg "Starting port forward to eidosd..."
-kubectl port-forward -n eidos svc/eidosd 8080:8080 &
+msg "Starting port forward to aicrd..."
+kubectl port-forward -n aicr svc/aicrd 8080:8080 &
 PORT_FORWARD_PID=$!
 
 sleep 5
 
-msg "Checking eidosd health endpoint..."
+msg "Checking aicrd health endpoint..."
 if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-  success "eidosd is healthy (PID: $PORT_FORWARD_PID)"
+  success "aicrd is healthy (PID: $PORT_FORWARD_PID)"
 else
-  err "eidosd health check failed"
-  kubectl logs -n eidos -l app.kubernetes.io/name=eidosd --tail=50
+  err "aicrd health check failed"
+  kubectl logs -n aicr -l app.kubernetes.io/name=aicrd --tail=50
   exit 1
 fi
 
@@ -312,13 +312,13 @@ fi
 
 step "Running E2E tests"
 
-export EIDOS_IMAGE=localhost:5001/eidos:local
-export EIDOS_VALIDATOR_IMAGE=localhost:5001/eidos-validator:local
+export AICR_IMAGE=localhost:5001/aicr:local
+export AICR_VALIDATOR_IMAGE=localhost:5001/aicr-validator:local
 export FAKE_GPU_ENABLED=true
 
 msg "Environment:"
-msg "  EIDOS_IMAGE=$EIDOS_IMAGE"
-msg "  EIDOS_VALIDATOR_IMAGE=$EIDOS_VALIDATOR_IMAGE"
+msg "  AICR_IMAGE=$AICR_IMAGE"
+msg "  AICR_VALIDATOR_IMAGE=$AICR_VALIDATOR_IMAGE"
 msg "  FAKE_GPU_ENABLED=$FAKE_GPU_ENABLED"
 echo ""
 

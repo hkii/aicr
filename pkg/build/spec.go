@@ -21,14 +21,14 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 const (
 	// ExpectedAPIVersion is the required apiVersion for build spec files.
-	ExpectedAPIVersion = "eidos.nvidia.com/v1beta1"
+	ExpectedAPIVersion = "aicr.nvidia.com/v1beta1"
 	// ExpectedKind is the required kind for build spec files.
-	ExpectedKind = "EidosRuntime"
+	ExpectedKind = "AICRRuntime"
 )
 
 // BuildSpec represents the top-level build specification file used by the

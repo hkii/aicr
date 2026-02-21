@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // BundlerInterface defines the interface that bundlers must implement for testing.

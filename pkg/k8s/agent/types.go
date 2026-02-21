@@ -20,7 +20,7 @@ import (
 )
 
 // clusterRoleName is the name used for the ClusterRole and ClusterRoleBinding.
-const clusterRoleName = "eidos-node-reader"
+const clusterRoleName = "aicr-node-reader"
 
 // Config holds the configuration for deploying the agent.
 type Config struct {

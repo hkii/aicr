@@ -19,7 +19,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 

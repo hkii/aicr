@@ -15,8 +15,8 @@
 package deployment
 
 import (
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

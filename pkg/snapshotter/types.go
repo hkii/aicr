@@ -17,8 +17,8 @@ package snapshotter
 import (
 	"context"
 
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 // Snapshotter defines the interface for collecting system configuration snapshots.

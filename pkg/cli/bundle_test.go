@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
 )
 
 func TestParseSetFlags(t *testing.T) {

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package header provides common header types for Eidos data structures.
+// Package header provides common header types for AICR data structures.
 //
 // This package defines the Header type used across recipes, snapshots, and other
-// Eidos data structures to provide consistent metadata and versioning information.
+// AICR data structures to provide consistent metadata and versioning information.
 //
 // # Header Structure
 //

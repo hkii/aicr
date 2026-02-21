@@ -24,8 +24,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 	"gopkg.in/yaml.v3"
 )
 
@@ -548,7 +548,7 @@ func ParseCriteriaFromValues(values url.Values) (*Criteria, error) {
 const RecipeCriteriaKind = "RecipeCriteria"
 
 // RecipeCriteriaAPIVersion is the API version for RecipeCriteria resources.
-const RecipeCriteriaAPIVersion = "eidos.nvidia.com/v1alpha1"
+const RecipeCriteriaAPIVersion = "aicr.nvidia.com/v1alpha1"
 
 // RecipeCriteria represents a Kubernetes-style criteria resource.
 // This is the format used in criteria files and API requests.
@@ -556,7 +556,7 @@ const RecipeCriteriaAPIVersion = "eidos.nvidia.com/v1alpha1"
 // Example:
 //
 //	kind: RecipeCriteria
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	metadata:
 //	  name: gb200-eks-ubuntu-training
 //	spec:
@@ -568,7 +568,7 @@ type RecipeCriteria struct {
 	// Kind is always "RecipeCriteria".
 	Kind string `json:"kind" yaml:"kind"`
 
-	// APIVersion is the API version (e.g., "eidos.nvidia.com/v1alpha1").
+	// APIVersion is the API version (e.g., "aicr.nvidia.com/v1alpha1").
 	APIVersion string `json:"apiVersion" yaml:"apiVersion"`
 
 	// Metadata contains the name and other metadata.
@@ -661,7 +661,7 @@ func validateAndConvertRawSpec(raw *rawCriteriaSpec) (*Criteria, error) {
 // Example file (YAML):
 //
 //	kind: RecipeCriteria
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	metadata:
 //	  name: gb200-eks-ubuntu-training
 //	spec:
@@ -696,7 +696,7 @@ func LoadCriteriaFromFile(path string) (*Criteria, error) {
 // Example file (YAML):
 //
 //	kind: RecipeCriteria
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	metadata:
 //	  name: gb200-eks-ubuntu-training
 //	spec:
@@ -774,7 +774,7 @@ func loadCriteriaFromHTTPWithContext(ctx context.Context, url string) (*Criteria
 //
 //	{
 //	  "kind": "RecipeCriteria",
-//	  "apiVersion": "eidos.nvidia.com/v1alpha1",
+//	  "apiVersion": "aicr.nvidia.com/v1alpha1",
 //	  "metadata": {"name": "my-criteria"},
 //	  "spec": {"service": "eks", "accelerator": "h100"}
 //	}

@@ -14,13 +14,13 @@
 
 version: 2
 
-project_name: eidos
+project_name: aicr
 
 builds:
-  - id: eidos
-    binary: eidos
+  - id: aicr
+    binary: aicr
     mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
-    dir: cmd/eidos
+    dir: cmd/aicr
     env:
       - CGO_ENABLED=0
       - GOFLAGS=-mod=vendor
@@ -30,9 +30,9 @@ builds:
       -w
       -s
       -extldflags "-static"
-      -X github.com/NVIDIA/eidos/pkg/cli.version={{.Version}}
-      -X github.com/NVIDIA/eidos/pkg/cli.commit={{.ShortCommit}}
-      -X github.com/NVIDIA/eidos/pkg/cli.date={{.Date}}
+      -X github.com/NVIDIA/aicr/pkg/cli.version={{.Version}}
+      -X github.com/NVIDIA/aicr/pkg/cli.commit={{.ShortCommit}}
+      -X github.com/NVIDIA/aicr/pkg/cli.date={{.Date}}
     goos:
       - darwin
       - linux
@@ -40,10 +40,10 @@ builds:
       - amd64
       - arm64
 
-  - id: eidosd
-    binary: eidosd
+  - id: aicrd
+    binary: aicrd
     mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
-    dir: cmd/eidosd
+    dir: cmd/aicrd
     env:
       - CGO_ENABLED=0
       - GOFLAGS=-mod=vendor
@@ -53,9 +53,9 @@ builds:
       -w
       -s
       -extldflags "-static"
-      -X github.com/NVIDIA/eidos/pkg/api.version={{.Version}}
-      -X github.com/NVIDIA/eidos/pkg/api.commit={{.ShortCommit}}
-      -X github.com/NVIDIA/eidos/pkg/api.date={{.Date}}
+      -X github.com/NVIDIA/aicr/pkg/api.version={{.Version}}
+      -X github.com/NVIDIA/aicr/pkg/api.commit={{.ShortCommit}}
+      -X github.com/NVIDIA/aicr/pkg/api.date={{.Date}}
     goos:
       - linux
     goarch:
@@ -84,15 +84,15 @@ metadata:
 release:
   github:
     owner: NVIDIA
-    name: eidos
+    name: aicr
   prerelease: auto
   draft: true
 
 kos:
-  - id: eidos
-    build: eidos
+  - id: aicr
+    build: aicr
     repositories:
-      - ghcr.io/nvidia/eidos
+      - ghcr.io/nvidia/aicr
     base_image: nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04
     platforms:
       - linux/amd64
@@ -103,10 +103,10 @@ kos:
     preserve_import_paths: false
     bare: true
 
-  - id: eidosd
-    build: eidosd
+  - id: aicrd
+    build: aicrd
     repositories:
-      - ghcr.io/nvidia/eidosd
+      - ghcr.io/nvidia/aicrd
     base_image: gcr.io/distroless/static:nonroot
     platforms:
       - linux/amd64
@@ -118,9 +118,9 @@ kos:
     bare: true
 
 archives:
-  - id: eidos
+  - id: aicr
     ids:
-      - eidos
+      - aicr
     formats:
       - binary
     name_template: "{{ .Binary }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"

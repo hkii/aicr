@@ -1,6 +1,6 @@
 # Component Validation System
 
-Learn how to define and use component validations in Eidos.
+Learn how to define and use component validations in AICR.
 
 ## Overview
 
@@ -426,4 +426,4 @@ validations:
 
 - [Component Development Guide](component.md) - How to add new components
 - [CLI Reference](../user/cli-reference.md) - User-facing validation documentation
-- [Recipe Criteria](../user/cli-reference.md#eidos-recipe) - Understanding recipe criteria
+- [Recipe Criteria](../user/cli-reference.md#aicr-recipe) - Understanding recipe criteria

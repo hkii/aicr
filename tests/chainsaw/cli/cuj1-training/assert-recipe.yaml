@@ -14,11 +14,11 @@
 
 # Assert the CUJ1 recipe has the expected structure.
 #
-# Validates that `eidos recipe --service eks --accelerator h100 --intent training
+# Validates that `aicr recipe --service eks --accelerator h100 --intent training
 # --os ubuntu --platform kubeflow` produces a valid recipe with correct criteria,
 # kubeflow-specific components, and standard GPU stack components.
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 criteria:
   service: eks
   accelerator: h100

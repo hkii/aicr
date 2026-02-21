@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-# Check if XML output is requested (Eidos collector uses -q -x)
+# Check if XML output is requested (AICR collector uses -q -x)
 if [[ "$*" == *"-x"* ]] || [[ "$*" == *"--xml"* ]]; then
   cat << 'XML'
 <?xml version="1.0" ?>

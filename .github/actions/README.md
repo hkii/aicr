@@ -205,9 +205,9 @@ This action runs `tools/setup-tools --skip-go --skip-docker` in auto mode, which
 - `service_account` (required): Service account email
 - `region` (required): Cloud Run region
 - `service` (required): Cloud Run service name
-- `source_image` (required): Source image to copy (e.g., "ghcr.io/nvidia/eidosd:v1.0.0")
+- `source_image` (required): Source image to copy (e.g., "ghcr.io/nvidia/aicrd:v1.0.0")
 - `target_registry` (required): Target Artifact Registry path (e.g., "us-docker.pkg.dev/project/repo")
-- `image_name` (optional): Image name in target registry (default: "eidosd")
+- `image_name` (optional): Image name in target registry (default: "aicrd")
 - `ghcr_token` (required): GitHub token for GHCR authentication (use `github.token`)
 
 **Flow**: GHCR → Artifact Registry → Cloud Run
@@ -221,9 +221,9 @@ This action runs `tools/setup-tools --skip-go --skip-docker` in auto mode, which
     service_account: 'github-actions@eidosx.iam.gserviceaccount.com'
     region: 'us-west1'
     service: 'api'
-    source_image: 'ghcr.io/nvidia/eidosd:v1.0.0'
+    source_image: 'ghcr.io/nvidia/aicrd:v1.0.0'
     target_registry: 'us-docker.pkg.dev/eidosx/demo'
-    image_name: 'eidosd'
+    image_name: 'aicrd'
     ghcr_token: ${{ github.token }}
 ```
 
@@ -245,7 +245,7 @@ This action runs `tools/setup-tools --skip-go --skip-docker` in auto mode, which
 2. **Integration Tests** (parallel): CLI integration tests
 3. **E2E Tests** (parallel): Full end-to-end tests
 4. **Build and Release** (after tests): GoReleaser builds binaries and images to GHCR
-5. **Attest Images** (after build): SBOM and provenance for eidos and eidosd images
+5. **Attest Images** (after build): SBOM and provenance for aicr and aicrd images
 6. **Deploy Demo API Server** (after attest): Copy image to Artifact Registry and deploy demo to Cloud Run (example deployment)
 
 ### `test-deploy.yaml`
@@ -341,7 +341,7 @@ jobs:
         id: release
       - uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/nvidia/eidosd
+          image_name: ghcr.io/nvidia/aicrd
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 ```
@@ -396,7 +396,7 @@ This eliminates "works on my machine" issues by ensuring:
 ### Cross-Repo Reusability
 To use these actions in other repositories:
 ```yaml
-- uses: NVIDIA/eidos/.github/actions/go-ci@main
+- uses: NVIDIA/aicr/.github/actions/go-ci@main
   with:
     go_version: '1.25'
     golangci_lint_version: 'v2.6.2'

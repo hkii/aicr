@@ -17,7 +17,7 @@ package agent
 import (
 	"context"
 
-	"github.com/NVIDIA/eidos/pkg/k8s"
+	"github.com/NVIDIA/aicr/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -141,7 +141,7 @@ func (d *Deployer) ensureClusterRoleBinding(ctx context.Context) error {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "eidos-node-reader",
+			Name:     "aicr-node-reader",
 		},
 	}
 
@@ -177,7 +177,7 @@ func (d *Deployer) deleteRoleBinding(ctx context.Context) error {
 // If the ClusterRole doesn't exist, this is a no-op (idempotent).
 func (d *Deployer) deleteClusterRole(ctx context.Context) error {
 	err := d.clientset.RbacV1().ClusterRoles().
-		Delete(ctx, "eidos-node-reader", metav1.DeleteOptions{})
+		Delete(ctx, "aicr-node-reader", metav1.DeleteOptions{})
 	return k8s.IgnoreNotFound(err)
 }
 
@@ -185,6 +185,6 @@ func (d *Deployer) deleteClusterRole(ctx context.Context) error {
 // If the ClusterRoleBinding doesn't exist, this is a no-op (idempotent).
 func (d *Deployer) deleteClusterRoleBinding(ctx context.Context) error {
 	err := d.clientset.RbacV1().ClusterRoleBindings().
-		Delete(ctx, "eidos-node-reader", metav1.DeleteOptions{})
+		Delete(ctx, "aicr-node-reader", metav1.DeleteOptions{})
 	return k8s.IgnoreNotFound(err)
 }

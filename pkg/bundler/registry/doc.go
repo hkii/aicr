@@ -45,8 +45,8 @@
 //	package gpuoperator
 //
 //	import (
-//	    "github.com/NVIDIA/eidos/pkg/bundler/registry"
-//	    "github.com/NVIDIA/eidos/pkg/bundler/types"
+//	    "github.com/NVIDIA/aicr/pkg/bundler/registry"
+//	    "github.com/NVIDIA/aicr/pkg/bundler/types"
 //	)
 //
 //	func init() {

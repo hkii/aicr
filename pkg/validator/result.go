@@ -17,7 +17,7 @@ package validator
 import (
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/header"
 )
 
 // ValidationStatus represents the overall validation outcome.

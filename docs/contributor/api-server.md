@@ -1,10 +1,10 @@
 # API Server Architecture
 
-The `eidosd` provides HTTP REST API access to Eidos configuration recipe generation and bundle creation capabilities.
+The `aicrd` provides HTTP REST API access to AICR configuration recipe generation and bundle creation capabilities.
 
 ## Overview
 
-The API server provides HTTP REST access to **Steps 2 and 4 of the Eidos workflow** – recipe generation and bundle creation. It is a production-ready HTTP service built on Go's `net/http` with middleware for rate limiting, metrics, request tracking, and graceful shutdown.
+The API server provides HTTP REST access to **Steps 2 and 4 of the AICR workflow** – recipe generation and bundle creation. It is a production-ready HTTP service built on Go's `net/http` with middleware for rate limiting, metrics, request tracking, and graceful shutdown.
 
 ### Four-Step Workflow Context
 
@@ -24,9 +24,9 @@ The API server provides HTTP REST access to **Steps 2 and 4 of the Eidos workflo
 - Supply chain security with SLSA Build Level 3 attestations
 
 **API Server Limitations:**
-- **No snapshot capture** – Use CLI `eidos snapshot` or Kubernetes Agent
+- **No snapshot capture** – Use CLI `aicr snapshot` or Kubernetes Agent
 - **No snapshot mode** – Cannot analyze captured snapshots (query mode only)
-- **No validation** – Use CLI `eidos validate` to check constraints against snapshots
+- **No validation** – Use CLI `aicr validate` to check constraints against snapshots
 - **No ConfigMap integration** – API server doesn't read/write ConfigMaps
 
 **API Server Configuration:**
@@ -44,7 +44,7 @@ The API server provides HTTP REST access to **Steps 2 and 4 of the Eidos workflo
 
 ```mermaid
 flowchart TD
-    A["eidosd<br/>cmd/eidosd/main.go"] --> B["pkg/api/server.go<br/>Serve()"]
+    A["aicrd<br/>cmd/aicrd/main.go"] --> B["pkg/api/server.go<br/>Serve()"]
     
     B --> B1["• Initialize logging<br/>• Create recipe.Builder<br/>• Create bundler.DefaultBundler<br/>• Setup routes: /v1/recipe, /v1/bundle<br/>• Create server with middleware<br/>• Graceful shutdown"]
     
@@ -96,7 +96,7 @@ flowchart TD
 
 ## Component Details
 
-### Entry Point: `cmd/eidosd/main.go`
+### Entry Point: `cmd/aicrd/main.go`
 
 Minimal entry point:
 
@@ -105,7 +105,7 @@ package main
 
 import (
     "log"
-    "github.com/NVIDIA/eidos/pkg/api"
+    "github.com/NVIDIA/aicr/pkg/api"
 )
 
 func main() {
@@ -129,7 +129,7 @@ func main() {
 **Key Features:**
 - Version info injection via ldflags: `version`, `commit`, `date`
 - Routes: `/v1/recipe` → recipe handler, `/v1/bundle` → bundle handler
-- Criteria allowlists parsed from `Eidos_ALLOWED_*` environment variables
+- Criteria allowlists parsed from `AICR_ALLOWED_*` environment variables
 - Server configured with production defaults
 - Graceful shutdown on SIGINT/SIGTERM
 
@@ -198,11 +198,11 @@ Production-ready HTTP server implementation with 10 files:
 
 **metrics.go** (90 lines)
 - Prometheus metrics:
-  - `eidos_http_requests_total` - Counter by method, path, status
-  - `eidos_http_request_duration_seconds` - Histogram by method, path
-  - `eidos_http_requests_in_flight` - Gauge
-  - `eidos_rate_limit_rejects_total` - Counter
-  - `eidos_panic_recoveries_total` - Counter
+  - `aicr_http_requests_total` - Counter by method, path, status
+  - `aicr_http_request_duration_seconds` - Histogram by method, path
+  - `aicr_http_requests_in_flight` - Gauge
+  - `aicr_rate_limit_rejects_total` - Counter
+  - `aicr_panic_recoveries_total` - Counter
 
 **context.go** (8 lines)
 - Context key type for request ID storage
@@ -289,7 +289,7 @@ POST requests accept a `RecipeCriteria` resource (Kubernetes-style):
 
 ```yaml
 kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: my-criteria
 spec:
@@ -345,7 +345,7 @@ Shared with CLI - same logic as described in CLI architecture.
 
 ```yaml
 kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: my-criteria
 spec:
@@ -358,7 +358,7 @@ spec:
 
 ```json
 {
-  "apiVersion": "eidos.nvidia.com/v1alpha1",
+  "apiVersion": "aicr.nvidia.com/v1alpha1",
   "kind": "Recipe",
   "metadata": {
     "version": "v1.0.0",
@@ -459,27 +459,27 @@ spec:
 **Response**: Prometheus text format
 
 ```
-# HELP eidos_http_requests_total Total number of HTTP requests
-# TYPE eidos_http_requests_total counter
-eidos_http_requests_total{method="GET",path="/v1/recipe",status="200"} 1234
+# HELP aicr_http_requests_total Total number of HTTP requests
+# TYPE aicr_http_requests_total counter
+aicr_http_requests_total{method="GET",path="/v1/recipe",status="200"} 1234
 
-# HELP eidos_http_request_duration_seconds HTTP request latency in seconds
-# TYPE eidos_http_request_duration_seconds histogram
-eidos_http_request_duration_seconds_bucket{method="GET",path="/v1/recipe",le="0.005"} 1000
-eidos_http_request_duration_seconds_sum{method="GET",path="/v1/recipe"} 12.34
-eidos_http_request_duration_seconds_count{method="GET",path="/v1/recipe"} 1234
+# HELP aicr_http_request_duration_seconds HTTP request latency in seconds
+# TYPE aicr_http_request_duration_seconds histogram
+aicr_http_request_duration_seconds_bucket{method="GET",path="/v1/recipe",le="0.005"} 1000
+aicr_http_request_duration_seconds_sum{method="GET",path="/v1/recipe"} 12.34
+aicr_http_request_duration_seconds_count{method="GET",path="/v1/recipe"} 1234
 
-# HELP eidos_http_requests_in_flight Current number of HTTP requests being processed
-# TYPE eidos_http_requests_in_flight gauge
-eidos_http_requests_in_flight 5
+# HELP aicr_http_requests_in_flight Current number of HTTP requests being processed
+# TYPE aicr_http_requests_in_flight gauge
+aicr_http_requests_in_flight 5
 
-# HELP eidos_rate_limit_rejects_total Total number of requests rejected due to rate limiting
-# TYPE eidos_rate_limit_rejects_total counter
-eidos_rate_limit_rejects_total 42
+# HELP aicr_rate_limit_rejects_total Total number of requests rejected due to rate limiting
+# TYPE aicr_rate_limit_rejects_total counter
+aicr_rate_limit_rejects_total 42
 
-# HELP eidos_panic_recoveries_total Total number of panics recovered in HTTP handlers
-# TYPE eidos_panic_recoveries_total counter
-eidos_panic_recoveries_total 0
+# HELP aicr_panic_recoveries_total Total number of panics recovered in HTTP handlers
+# TYPE aicr_panic_recoveries_total counter
+aicr_panic_recoveries_total 0
 ```
 
 ### Root
@@ -490,7 +490,7 @@ eidos_panic_recoveries_total 0
 
 ```json
 {
-  "service": "eidosd",
+  "service": "aicrd",
   "version": "v1.0.0",
   "routes": [
     "/v1/recipe"
@@ -525,11 +525,11 @@ curl http://localhost:8080/metrics
 
 ## Demo API Server Deployment
 
-> **Note**: This section describes the **demonstration deployment** of the `eidosd` API server for testing and development purposes only. It is not a production service. Users should self-host the `eidosd` API server in their own infrastructure for production use. See the [Kubernetes Deployment](#kubernetes-deployment) section below for deployment guidance.
+> **Note**: This section describes the **demonstration deployment** of the `aicrd` API server for testing and development purposes only. It is not a production service. Users should self-host the `aicrd` API server in their own infrastructure for production use. See the [Kubernetes Deployment](#kubernetes-deployment) section below for deployment guidance.
 
 ### Example: Google Cloud Run
 
-The demo API server is deployed to Google Cloud Run as an example of how to deploy `eidosd`:
+The demo API server is deployed to Google Cloud Run as an example of how to deploy `aicrd`:
 
 **Demo Configuration:**
 - **Platform**: Google Cloud Run (fully managed serverless)
@@ -545,7 +545,7 @@ flowchart LR
     C --> D["Build Image<br/>(ko + goreleaser)"]
     D --> E["Generate SBOM<br/>(Syft)"]
     E --> F["Sign Attestations<br/>(Cosign keyless)"]
-    F --> G["Push to GHCR<br/>ghcr.io/nvidia/eidosd"]
+    F --> G["Push to GHCR<br/>ghcr.io/nvidia/aicrd"]
     G --> H["Demo Deploy<br/>(example)"]
     H --> I["Health Check<br/>Verification"]
 ```
@@ -554,7 +554,7 @@ flowchart LR
 - **SLSA Build Level 3** compliance
 - **Signed SBOMs** in SPDX format
 - **Attestations** logged in Rekor transparency log
-- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/eidosd:TAG --owner nvidia`
+- **Verification**: `gh attestation verify oci://ghcr.io/nvidia/aicrd:TAG --owner nvidia`
 
 **Demo Monitoring:**
 - Health endpoint: `/health`
@@ -640,21 +640,21 @@ print(f"Matched {len(recipe['matchedRuleId'])} rules")
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: eidosd
-  namespace: eidos-system
+  name: aicrd
+  namespace: aicr-system
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   template:
     metadata:
       labels:
-        app: eidosd
+        app: aicrd
     spec:
       containers:
       - name: server
-        image: ghcr.io/nvidia/eidosd:v1.0.0
+        image: ghcr.io/nvidia/aicrd:v1.0.0
         ports:
         - containerPort: 8080
           name: http
@@ -684,11 +684,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: eidosd
-  namespace: eidos-system
+  name: aicrd
+  namespace: aicr-system
 spec:
   selector:
-    app: eidosd
+    app: aicrd
   ports:
   - port: 80
     targetPort: http
@@ -697,12 +697,12 @@ spec:
 apiVersion: v1
 kind: ServiceMonitor
 metadata:
-  name: eidosd
-  namespace: eidos-system
+  name: aicrd
+  namespace: aicr-system
 spec:
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   endpoints:
   - port: http
     path: /metrics
@@ -715,24 +715,24 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: eidosd
-  namespace: eidos-system
+  name: aicrd
+  namespace: aicr-system
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
   - hosts:
-    - api.eidos.nvidia.com
-    secretName: eidos-api-tls
+    - api.aicr.nvidia.com
+    secretName: aicr-api-tls
   rules:
-  - host: api.eidos.nvidia.com
+  - host: api.aicr.nvidia.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: eidosd
+            name: aicrd
             port:
               number: 80
 ```
@@ -743,13 +743,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: eidosd
-  namespace: eidos-system
+  name: aicrd
+  namespace: aicr-system
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: eidosd
+    name: aicrd
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -762,7 +762,7 @@ spec:
   - type: Pods
     pods:
       metric:
-        name: eidos_http_requests_in_flight
+        name: aicr_http_requests_in_flight
       target:
         type: AverageValue
         averageValue: "50"
@@ -892,13 +892,13 @@ When a request uses a criteria value not in the configured allowlist:
 ### Prometheus Metrics
 
 **Request Metrics**:
-- `eidos_http_requests_total` - Total requests by method, path, status
-- `eidos_http_request_duration_seconds` - Request latency histogram
-- `eidos_http_requests_in_flight` - Current active requests
+- `aicr_http_requests_total` - Total requests by method, path, status
+- `aicr_http_request_duration_seconds` - Request latency histogram
+- `aicr_http_requests_in_flight` - Current active requests
 
 **Error Metrics**:
-- `eidos_rate_limit_rejects_total` - Rate limit rejections
-- `eidos_panic_recoveries_total` - Panic recoveries
+- `aicr_rate_limit_rejects_total` - Rate limit rejections
+- `aicr_panic_recoveries_total` - Panic recoveries
 
 ### Grafana Dashboard
 
@@ -906,38 +906,38 @@ Example queries:
 
 ```promql
 # Request rate
-rate(eidos_http_requests_total[5m])
+rate(aicr_http_requests_total[5m])
 
 # Error rate
-rate(eidos_http_requests_total{status=~"5.."}[5m])
+rate(aicr_http_requests_total{status=~"5.."}[5m])
 
 # Latency percentiles
-histogram_quantile(0.99, rate(eidos_http_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.99, rate(aicr_http_request_duration_seconds_bucket[5m]))
 
 # Rate limit rejections
-rate(eidos_rate_limit_rejects_total[5m])
+rate(aicr_rate_limit_rejects_total[5m])
 ```
 
 ### Alerting Rules
 
 ```yaml
 groups:
-- name: eidosd
+- name: aicrd
   rules:
   - alert: HighErrorRate
-    expr: rate(eidos_http_requests_total{status=~"5.."}[5m]) > 0.05
+    expr: rate(aicr_http_requests_total{status=~"5.."}[5m]) > 0.05
     for: 5m
     annotations:
-      summary: High error rate on eidosd
+      summary: High error rate on aicrd
   
   - alert: HighLatency
-    expr: histogram_quantile(0.99, rate(eidos_http_request_duration_seconds_bucket[5m])) > 0.1
+    expr: histogram_quantile(0.99, rate(aicr_http_request_duration_seconds_bucket[5m])) > 0.1
     for: 5m
     annotations:
-      summary: High latency on eidosd
+      summary: High latency on aicrd
   
   - alert: HighRateLimitRejects
-    expr: rate(eidos_rate_limit_rejects_total[5m]) > 10
+    expr: rate(aicr_rate_limit_rejects_total[5m]) > 10
     for: 5m
     annotations:
       summary: High rate limit rejections
@@ -1042,10 +1042,10 @@ func TestRecipeHandler(t *testing.T) {
 **Verify Release Artifacts**:
 ```bash
 # Get latest release tag
-export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
+export TAG=$(curl -s https://api.github.com/repos/NVIDIA/aicr/releases/latest | jq -r '.tag_name')
 
 # Verify attestations
-gh attestation verify oci://ghcr.io/nvidia/eidosd:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/aicrd:${TAG} --owner nvidia
 ```
 
 For detailed CI/CD architecture, see [../CONTRIBUTING.md#github-actions--cicd](../../CONTRIBUTING.md#github-actions--cicd) and [README.md](README.md#cicd-architecture).
@@ -1059,11 +1059,11 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse --short HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
-LDFLAGS := -X github.com/NVIDIA/eidos/pkg/api.version=$(VERSION)
-LDFLAGS += -X github.com/NVIDIA/eidos/pkg/api.commit=$(COMMIT)
-LDFLAGS += -X github.com/NVIDIA/eidos/pkg/api.date=$(DATE)
+LDFLAGS := -X github.com/NVIDIA/aicr/pkg/api.version=$(VERSION)
+LDFLAGS += -X github.com/NVIDIA/aicr/pkg/api.commit=$(COMMIT)
+LDFLAGS += -X github.com/NVIDIA/aicr/pkg/api.date=$(DATE)
 
-go build -ldflags="$(LDFLAGS)" -o bin/eidosd ./cmd/eidosd
+go build -ldflags="$(LDFLAGS)" -o bin/aicrd ./cmd/aicrd
 ```
 
 ### Container Image
@@ -1074,14 +1074,14 @@ Production images are built with ko (automated in CI/CD). For local development:
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
 COPY . .
-RUN go build -ldflags="-X github.com/NVIDIA/eidos/pkg/api.version=v1.0.0" \
-    -o /bin/eidosd ./cmd/eidosd
+RUN go build -ldflags="-X github.com/NVIDIA/aicr/pkg/api.version=v1.0.0" \
+    -o /bin/aicrd ./cmd/aicrd
 
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates
-COPY --from=builder /bin/eidosd /usr/local/bin/
+COPY --from=builder /bin/aicrd /usr/local/bin/
 EXPOSE 8080
-ENTRYPOINT ["eidosd"]
+ENTRYPOINT ["aicrd"]
 ```
 
 **Note**: Production images use distroless base (gcr.io/distroless/static) for minimal attack surface.
@@ -1091,10 +1091,10 @@ ENTRYPOINT ["eidosd"]
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | Server port |
-| `Eidos_ALLOWED_ACCELERATORS` | (none) | Comma-separated list of allowed GPU types (e.g., `h100,l40`). If not set, all types allowed. |
-| `Eidos_ALLOWED_SERVICES` | (none) | Comma-separated list of allowed K8s services (e.g., `eks,gke`). If not set, all services allowed. |
-| `Eidos_ALLOWED_INTENTS` | (none) | Comma-separated list of allowed intents (e.g., `training`). If not set, all intents allowed. |
-| `Eidos_ALLOWED_OS` | (none) | Comma-separated list of allowed OS types (e.g., `ubuntu,rhel`). If not set, all OS types allowed. |
+| `AICR_ALLOWED_ACCELERATORS` | (none) | Comma-separated list of allowed GPU types (e.g., `h100,l40`). If not set, all types allowed. |
+| `AICR_ALLOWED_SERVICES` | (none) | Comma-separated list of allowed K8s services (e.g., `eks,gke`). If not set, all services allowed. |
+| `AICR_ALLOWED_INTENTS` | (none) | Comma-separated list of allowed intents (e.g., `training`). If not set, all intents allowed. |
+| `AICR_ALLOWED_OS` | (none) | Comma-separated list of allowed OS types (e.g., `ubuntu,rhel`). If not set, all OS types allowed. |
 
 **Criteria Allowlists:**
 
@@ -1102,9 +1102,9 @@ When allowlist environment variables are configured, the API server validates in
 
 ```bash
 # Start server with restricted accelerators
-export Eidos_ALLOWED_ACCELERATORS=h100,l40
-export Eidos_ALLOWED_SERVICES=eks,gke
-./eidosd
+export AICR_ALLOWED_ACCELERATORS=h100,l40
+export AICR_ALLOWED_SERVICES=eks,gke
+./aicrd
 
 # Server logs on startup:
 # INFO criteria allowlists configured accelerators=2 services=2 intents=0 os_types=0
@@ -1115,7 +1115,7 @@ export Eidos_ALLOWED_SERVICES=eks,gke
 - Requests with disallowed values return HTTP 400 with error details
 - The `any` value is always allowed regardless of allowlist
 - Both `/v1/recipe` and `/v1/bundle` endpoints enforce allowlists
-- CLI (`eidos`) is not affected by allowlists
+- CLI (`aicr`) is not affected by allowlists
 
 ## Future Enhancements
 
@@ -1177,7 +1177,7 @@ export Eidos_ALLOWED_SERVICES=eks,gke
    
    m := &autocert.Manager{
        Prompt:      autocert.AcceptTOS,
-       Cache:       autocert.DirCache("/var/cache/eidos"),
+       Cache:       autocert.DirCache("/var/cache/aicr"),
        HostPolicy:  autocert.HostWhitelist("api.example.com"),
    }
    
@@ -1378,30 +1378,30 @@ export Eidos_ALLOWED_SERVICES=eks,gke
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   replicas: 3  # Initial replicas
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   template:
     metadata:
       labels:
-        app: eidosd
+        app: aicrd
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: eidosd
+      serviceAccountName: aicrd
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
       containers:
       - name: api-server
-        image: ghcr.io/nvidia/eidosd:latest  # Or use specific tag like v0.8.12
+        image: ghcr.io/nvidia/aicrd:latest  # Or use specific tag like v0.8.12
         ports:
         - name: http
           containerPort: 8080
@@ -1415,9 +1415,9 @@ spec:
         - name: LOG_LEVEL
           value: "info"
         # Criteria allowlists (optional - omit to allow all values)
-        - name: Eidos_ALLOWED_ACCELERATORS
+        - name: AICR_ALLOWED_ACCELERATORS
           value: "h100,l40,a100"
-        - name: Eidos_ALLOWED_SERVICES
+        - name: AICR_ALLOWED_SERVICES
           value: "eks,gke,aks"
         resources:
           requests:
@@ -1450,22 +1450,22 @@ spec:
             - ALL
         volumeMounts:
         - name: recipes
-          mountPath: /etc/eidos/recipes
+          mountPath: /etc/aicr/recipes
           readOnly: true
         - name: tmp
           mountPath: /tmp
       volumes:
       - name: recipes
         configMap:
-          name: eidos-recipes
+          name: aicr-recipes
       - name: tmp
         emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   type: ClusterIP
   ports:
@@ -1474,18 +1474,18 @@ spec:
     targetPort: http
     protocol: TCP
   selector:
-    app: eidosd
+    app: aicrd
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: eidosd-hpa
-  namespace: eidos
+  name: aicrd-hpa
+  namespace: aicr
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: eidosd
+    name: aicrd
   minReplicas: 3
   maxReplicas: 20
   metrics:
@@ -1526,8 +1526,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/rate-limit: "100"
@@ -1537,17 +1537,17 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.eidos.example.com
-    secretName: eidos-api-tls
+    - api.aicr.example.com
+    secretName: aicr-api-tls
   rules:
-  - host: api.eidos.example.com
+  - host: api.aicr.example.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: eidosd
+            name: aicrd
             port:
               name: http
 ```
@@ -1561,21 +1561,21 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   hosts:
-  - eidosd.eidos.svc.cluster.local
-  - api.eidos.example.com
+  - aicrd.aicr.svc.cluster.local
+  - api.aicr.example.com
   gateways:
-  - eidos-gateway
+  - aicr-gateway
   http:
   - match:
     - uri:
         prefix: /v1/recipe
     route:
     - destination:
-        host: eidosd
+        host: aicrd
         port:
           number: 80
     timeout: 10s
@@ -1593,10 +1593,10 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
-  host: eidosd
+  host: aicrd
   trafficPolicy:
     tls:
       mode: ISTIO_MUTUAL  # mTLS between services
@@ -1616,29 +1616,29 @@ spec:
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   mtls:
     mode: STRICT  # Require mTLS
 ---
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
 spec:
   selector:
     matchLabels:
-      app: eidosd
+      app: aicrd
   action: ALLOW
   rules:
   - from:
     - source:
-        namespaces: ["eidos", "monitoring"]
+        namespaces: ["aicr", "monitoring"]
     to:
     - operation:
         methods: ["GET", "POST"]
@@ -1669,8 +1669,8 @@ defaults
     retries 3
     option  redispatch
 
-frontend eidos_api_frontend
-    bind *:443 ssl crt /etc/ssl/certs/eidos-api.pem
+frontend aicr_api_frontend
+    bind *:443 ssl crt /etc/ssl/certs/aicr-api.pem
     bind *:80
     redirect scheme https if !{ ssl_fc }
     
@@ -1683,9 +1683,9 @@ frontend eidos_api_frontend
     http-response set-header Strict-Transport-Security "max-age=31536000"
     http-response set-header X-Content-Type-Options "nosniff"
     
-    default_backend eidos_api_backend
+    default_backend aicr_api_backend
 
-backend eidos_api_backend
+backend aicr_api_backend
     balance roundrobin
     option httpchk GET /health
     http-check expect status 200
@@ -1706,8 +1706,8 @@ backend eidos_api_backend
 
 set -euo pipefail
 
-NAMESPACE=eidos
-APP=eidosd
+NAMESPACE=aicr
+APP=aicrd
 NEW_VERSION=$1
 
 # Deploy green version
@@ -2198,7 +2198,7 @@ import "github.com/prometheus/client_golang/prometheus"
 var (
     recipeBuildDuration = prometheus.NewHistogramVec(
         prometheus.HistogramOpts{
-            Name:    "eidos_recipe_build_duration_seconds",
+            Name:    "aicr_recipe_build_duration_seconds",
             Help:    "Time to build recipe",
             Buckets: prometheus.ExponentialBuckets(0.001, 2, 12), // 1ms to 4s
         },
@@ -2207,7 +2207,7 @@ var (
     
     recipeCacheHits = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "eidos_recipe_cache_hits_total",
+            Name: "aicr_recipe_cache_hits_total",
             Help: "Number of recipe cache hits",
         },
         []string{"cache_type"},
@@ -2215,7 +2215,7 @@ var (
     
     activeConnections = prometheus.NewGauge(
         prometheus.GaugeOpts{
-            Name: "eidos_active_connections",
+            Name: "aicr_active_connections",
             Help: "Number of active HTTP connections",
         },
     )
@@ -2299,7 +2299,7 @@ import (
 
 func handleRecipe(w http.ResponseWriter, r *http.Request) {
     ctx := r.Context()
-    tracer := otel.Tracer("eidosd")
+    tracer := otel.Tracer("aicrd")
     
     ctx, span := tracer.Start(ctx, "handleRecipe",
         trace.WithAttributes(
@@ -2326,7 +2326,7 @@ func handleRecipe(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildRecipeWithTrace(ctx context.Context, params Params) (*recipe.Recipe, error) {
-    tracer := otel.Tracer("eidosd")
+    tracer := otel.Tracer("aicrd")
     ctx, span := tracer.Start(ctx, "buildRecipe")
     defer span.End()
     

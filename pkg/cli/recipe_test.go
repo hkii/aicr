@@ -22,9 +22,9 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 func TestBuildCriteriaFromCmd(t *testing.T) {

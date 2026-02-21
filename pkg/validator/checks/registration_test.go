@@ -23,9 +23,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
-	_ "github.com/NVIDIA/eidos/pkg/validator/checks/deployment" // Import for init() registration
-	_ "github.com/NVIDIA/eidos/pkg/validator/checks/readiness"  // Import for init() registration
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
+	_ "github.com/NVIDIA/aicr/pkg/validator/checks/deployment" // Import for init() registration
+	_ "github.com/NVIDIA/aicr/pkg/validator/checks/readiness"  // Import for init() registration
 )
 
 // TestConstraintRegistrationCompleteness ensures that every registered constraint

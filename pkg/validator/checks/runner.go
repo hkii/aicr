@@ -23,10 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -41,7 +41,7 @@ type testingT interface {
 
 // TestRunner provides infrastructure for running validation checks as Go tests inside Kubernetes Jobs.
 //
-// The test runner bridges the gap between Go's test framework and the Eidos validation system:
+// The test runner bridges the gap between Go's test framework and the AICR validation system:
 //   - Loads ValidationContext from Job environment (snapshot, K8s client, recipe)
 //   - Looks up registered checks by name
 //   - Executes checks and reports results via testing.T
@@ -65,8 +65,8 @@ type TestRunner struct {
 
 // NewTestRunner creates a test runner by loading ValidationContext from the Job environment.
 // Expected environment variables:
-//   - EIDOS_SNAPSHOT_PATH: Path to mounted snapshot file (default: /data/snapshot/snapshot.yaml)
-//   - EIDOS_RECIPE_DATA: Optional JSON-encoded recipe metadata
+//   - AICR_SNAPSHOT_PATH: Path to mounted snapshot file (default: /data/snapshot/snapshot.yaml)
+//   - AICR_RECIPE_DATA: Optional JSON-encoded recipe metadata
 //
 // IMPORTANT: Callers should call Cancel() when done to release resources.
 func NewTestRunner(t *testing.T) (*TestRunner, error) {
@@ -193,8 +193,8 @@ func (r *TestRunner) HasCheck(phase, checkName string) bool {
 //  4. Returns fully initialized ValidationContext
 //
 // Environment variables used:
-//   - EIDOS_SNAPSHOT_PATH: Path to snapshot file (default: /data/snapshot/snapshot.yaml)
-//   - EIDOS_RECIPE_DATA: Optional JSON-encoded recipe metadata
+//   - AICR_SNAPSHOT_PATH: Path to snapshot file (default: /data/snapshot/snapshot.yaml)
+//   - AICR_RECIPE_DATA: Optional JSON-encoded recipe metadata
 //
 // Mounted volumes expected:
 //   - /data/snapshot/snapshot.yaml: Snapshot ConfigMap
@@ -231,7 +231,7 @@ func LoadValidationContext() (*ValidationContext, context.CancelFunc, error) {
 	}
 
 	// Load snapshot from mounted file using serializer (auto-detects YAML/JSON format)
-	snapshotPath := os.Getenv("EIDOS_SNAPSHOT_PATH")
+	snapshotPath := os.Getenv("AICR_SNAPSHOT_PATH")
 	if snapshotPath == "" {
 		snapshotPath = "/data/snapshot/snapshot.yaml"
 	}
@@ -244,7 +244,7 @@ func LoadValidationContext() (*ValidationContext, context.CancelFunc, error) {
 
 	// Load optional recipe data
 	var recipeData map[string]interface{}
-	if recipeJSON := os.Getenv("EIDOS_RECIPE_DATA"); recipeJSON != "" {
+	if recipeJSON := os.Getenv("AICR_RECIPE_DATA"); recipeJSON != "" {
 		if err := json.Unmarshal([]byte(recipeJSON), &recipeData); err != nil {
 			cancel()
 			return nil, nil, errors.Wrap(errors.ErrCodeInvalidRequest, "failed to unmarshal recipe data JSON", err)
@@ -252,7 +252,7 @@ func LoadValidationContext() (*ValidationContext, context.CancelFunc, error) {
 	}
 
 	// Load recipe from mounted file (contains validation constraints)
-	recipePath := os.Getenv("EIDOS_RECIPE_PATH")
+	recipePath := os.Getenv("AICR_RECIPE_PATH")
 	if recipePath == "" {
 		recipePath = "/data/recipe/recipe.yaml"
 	}

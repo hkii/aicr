@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package defaults provides centralized configuration constants for the Eidos system.
+// Package defaults provides centralized configuration constants for the AICR system.
 //
 // This package defines timeout values, retry parameters, and other configuration
 // defaults used across the codebase. Centralizing these values ensures consistency
@@ -32,7 +32,7 @@
 //
 // Import and use constants directly:
 //
-//	import "github.com/NVIDIA/eidos/pkg/defaults"
+//	import "github.com/NVIDIA/aicr/pkg/defaults"
 //
 //	ctx, cancel := context.WithTimeout(ctx, defaults.CollectorTimeout)
 //	defer cancel()

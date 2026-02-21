@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

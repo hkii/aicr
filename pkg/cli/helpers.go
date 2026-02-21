@@ -19,8 +19,8 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 )
 
 // parseOutputFormat extracts and validates the output format from CLI flags.

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logging provides structured logging utilities for Eidos components.
+// Package logging provides structured logging utilities for AICR components.
 //
 // # Overview
 //
-// This package wraps the standard library slog package with Eidos-specific defaults
+// This package wraps the standard library slog package with AICR-specific defaults
 // and conventions for consistent logging across all components. It supports three
 // logging modes: structured JSON (machine-readable), text with metadata (debugging),
 // and CLI (user-friendly minimal output).
@@ -55,13 +55,13 @@
 //
 // 2. **Text Mode (--debug flag)**: Human-readable with metadata
 //
-//	logging.SetDefaultLoggerWithLevel("eidos", "v1.0.0", "debug")
-//	// Output: time=2025-01-06T10:30:00.123Z level=INFO module=eidos version=v1.0.0 msg="server started"
+//	logging.SetDefaultLoggerWithLevel("aicr", "v1.0.0", "debug")
+//	// Output: time=2025-01-06T10:30:00.123Z level=INFO module=aicr version=v1.0.0 msg="server started"
 //
 // 3. **JSON Mode (--log-json flag)**: Machine-readable structured logs
 //
-//	logging.SetDefaultStructuredLogger("eidos", "v1.0.0")
-//	// Output: {"time":"2025-01-06T10:30:00.123Z","level":"INFO","module":"eidos","version":"v1.0.0","msg":"server started"}
+//	logging.SetDefaultStructuredLogger("aicr", "v1.0.0")
+//	// Output: {"time":"2025-01-06T10:30:00.123Z","level":"INFO","module":"aicr","version":"v1.0.0","msg":"server started"}
 //
 // Setting the default logger (CLI mode for user-facing tools):
 //
@@ -93,8 +93,8 @@
 //
 // The LOG_LEVEL environment variable controls logging verbosity:
 //
-//	LOG_LEVEL=debug eidos snapshot
-//	LOG_LEVEL=error eidosd
+//	LOG_LEVEL=debug aicr snapshot
+//	LOG_LEVEL=error aicrd
 //
 // If LOG_LEVEL is not set, defaults to INFO level.
 //
@@ -109,7 +109,7 @@
 //
 // **Text Mode (--debug)**: Key=value format with metadata
 //
-//	time=2025-01-06T10:30:00.123Z level=INFO module=eidos version=v1.0.0 msg="server started" port=8080
+//	time=2025-01-06T10:30:00.123Z level=INFO module=aicr version=v1.0.0 msg="server started" port=8080
 //
 // **JSON Mode (--log-json)**: Structured JSON to stderr
 //

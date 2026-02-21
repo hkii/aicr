@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 	"sigs.k8s.io/yaml"
 )
 

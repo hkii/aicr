@@ -120,7 +120,7 @@ CHECK_SOURCE_TEMPLATE = (
 package {{.Package}}
 
 import (
-\t"github.com/NVIDIA/eidos/pkg/validator/checks"
+\t"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func init() {
@@ -151,7 +151,7 @@ package {{.Package}}
 import (
 \t"testing"
 
-\t"github.com/NVIDIA/eidos/pkg/validator/checks"
+\t"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // {{.TestName}} is the integration test for {{.CheckName}}.
@@ -197,7 +197,7 @@ import (
 \t"context"
 \t"testing"
 
-\t"github.com/NVIDIA/eidos/pkg/validator/checks"
+\t"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func TestValidate{{.FuncName}}(t *testing.T) {
@@ -267,7 +267,7 @@ func TestValidate{{.FuncName}}Registration(t *testing.T) {
 CHECK_RECIPE_TEMPLATE = """\
 # Sample recipe for testing {{.CheckName}} check
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 validation:
@@ -308,7 +308,7 @@ go test -v -short -run {{.TestName}} ./pkg/validator/checks/{{.Phase}}/...
 
 ## Build
 
-Build the eidos CLI binary:
+Build the aicr CLI binary:
 
 ```bash
 make build
@@ -321,16 +321,16 @@ The binary is output to `./dist/`. Use it directly or add it to your PATH.
 Deploy an agent Job on a GPU node to capture the cluster state:
 
 ```bash
-eidos snapshot --deploy-agent --namespace gpu-operator --output snapshot.yaml
+aicr snapshot --deploy-agent --namespace gpu-operator --output snapshot.yaml
 ```
 
 The snapshot is also saved as a ConfigMap for reuse. To store it directly:
 
 ```bash
-eidos snapshot --deploy-agent --namespace gpu-operator --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --deploy-agent --namespace gpu-operator --output cm://gpu-operator/aicr-snapshot
 ```
 
-Then reference it in validate with `--snapshot cm://gpu-operator/eidos-snapshot`.
+Then reference it in validate with `--snapshot cm://gpu-operator/aicr-snapshot`.
 
 ## Build and Run
 
@@ -339,14 +339,14 @@ Use a unique image tag (timestamp) to avoid caching issues:
 ```bash
 # Generate unique tag
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 
 # Build and push
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 
 # Run validation
-eidos validate \\
+aicr validate \\
   --recipe pkg/validator/checks/{{.Phase}}/{{.RecipeFile}} \\
   --snapshot snapshot.yaml \\
   --phase {{.Phase}} \\
@@ -367,7 +367,7 @@ If the validator image is in a private registry, pass `--image-pull-secret`
 (the secret must already exist in the validation namespace):
 
 ```bash
-eidos validate \\
+aicr validate \\
   --recipe pkg/validator/checks/{{.Phase}}/{{.RecipeFile}} \\
   --snapshot snapshot.yaml \\
   --phase {{.Phase}} \\
@@ -387,7 +387,7 @@ docker run --rm ${IMAGE} \\
 Keep resources for debugging:
 
 ```bash
-eidos validate \\
+aicr validate \\
   --recipe pkg/validator/checks/{{.Phase}}/{{.RecipeFile}} \\
   --snapshot snapshot.yaml \\
   --phase {{.Phase}} \\
@@ -395,10 +395,10 @@ eidos validate \\
   --cleanup=false --debug
 
 # Inspect Job logs
-kubectl logs -l eidos.nvidia.com/job -n eidos-validation
+kubectl logs -l aicr.nvidia.com/job -n aicr-validation
 
 # List Jobs
-kubectl get jobs -n eidos-validation
+kubectl get jobs -n aicr-validation
 ```
 
 ## Troubleshooting
@@ -409,7 +409,7 @@ This means the check is not found in the validator image. Use a new tag:
 
 ```bash
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 ```
@@ -425,7 +425,7 @@ docker run --rm ${IMAGE} \\
 
 # If not found, rebuild with new tag
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 ```
@@ -441,8 +441,8 @@ CONSTRAINT_SOURCE_TEMPLATE = (
 package {{.Package}}
 
 import (
-\t"github.com/NVIDIA/eidos/pkg/recipe"
-\t"github.com/NVIDIA/eidos/pkg/validator/checks"
+\t"github.com/NVIDIA/aicr/pkg/recipe"
+\t"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func init() {
@@ -474,7 +474,7 @@ package {{.Package}}
 import (
 \t"testing"
 
-\t"github.com/NVIDIA/eidos/pkg/validator/checks"
+\t"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // {{.TestName}} validates the {{.ConstraintName}} constraint.
@@ -527,8 +527,8 @@ import (
 \t"context"
 \t"testing"
 
-\t"github.com/NVIDIA/eidos/pkg/recipe"
-\t"github.com/NVIDIA/eidos/pkg/validator/checks"
+\t"github.com/NVIDIA/aicr/pkg/recipe"
+\t"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func TestValidate{{.FuncName}}(t *testing.T) {
@@ -626,7 +626,7 @@ func TestValidate{{.FuncName}}Registration(t *testing.T) {
 CONSTRAINT_RECIPE_TEMPLATE = """\
 # Sample recipe for testing {{.ConstraintName}} constraint
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 validation:
@@ -674,7 +674,7 @@ go test -v -short -run {{.TestName}} ./pkg/validator/checks/{{.Phase}}/...
 
 ## Build
 
-Build the eidos CLI binary:
+Build the aicr CLI binary:
 
 ```bash
 make build
@@ -687,16 +687,16 @@ The binary is output to `./dist/`. Use it directly or add it to your PATH.
 Deploy an agent Job on a GPU node to capture the cluster state:
 
 ```bash
-eidos snapshot --deploy-agent --namespace gpu-operator --output snapshot.yaml
+aicr snapshot --deploy-agent --namespace gpu-operator --output snapshot.yaml
 ```
 
 The snapshot is also saved as a ConfigMap for reuse. To store it directly:
 
 ```bash
-eidos snapshot --deploy-agent --namespace gpu-operator --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --deploy-agent --namespace gpu-operator --output cm://gpu-operator/aicr-snapshot
 ```
 
-Then reference it in validate with `--snapshot cm://gpu-operator/eidos-snapshot`.
+Then reference it in validate with `--snapshot cm://gpu-operator/aicr-snapshot`.
 
 ## Build and Run
 
@@ -705,14 +705,14 @@ Use a unique image tag (timestamp) to avoid caching issues:
 ```bash
 # Generate unique tag
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 
 # Build and push
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 
 # Run validation
-eidos validate \\
+aicr validate \\
   --recipe pkg/validator/checks/{{.Phase}}/{{.RecipeFile}} \\
   --snapshot snapshot.yaml \\
   --phase {{.Phase}} \\
@@ -733,7 +733,7 @@ If the validator image is in a private registry, pass `--image-pull-secret`
 (the secret must already exist in the validation namespace):
 
 ```bash
-eidos validate \\
+aicr validate \\
   --recipe pkg/validator/checks/{{.Phase}}/{{.RecipeFile}} \\
   --snapshot snapshot.yaml \\
   --phase {{.Phase}} \\
@@ -753,7 +753,7 @@ docker run --rm ${IMAGE} \\
 Keep resources for debugging:
 
 ```bash
-eidos validate \\
+aicr validate \\
   --recipe pkg/validator/checks/{{.Phase}}/{{.RecipeFile}} \\
   --snapshot snapshot.yaml \\
   --phase {{.Phase}} \\
@@ -761,10 +761,10 @@ eidos validate \\
   --cleanup=false --debug
 
 # Inspect Job logs
-kubectl logs -l eidos.nvidia.com/job -n eidos-validation
+kubectl logs -l aicr.nvidia.com/job -n aicr-validation
 
 # List Jobs
-kubectl get jobs -n eidos-validation
+kubectl get jobs -n aicr-validation
 ```
 
 ## Troubleshooting
@@ -775,7 +775,7 @@ This means the constraint is not found in the validator image. Use a new tag:
 
 ```bash
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 ```
@@ -791,7 +791,7 @@ docker run --rm ${IMAGE} \\
 
 # If not found, rebuild with new tag
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 ```

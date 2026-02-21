@@ -20,7 +20,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 func TestKModCollector_Collect(t *testing.T) {

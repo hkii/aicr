@@ -1,11 +1,11 @@
 # KWOK-Based Cluster Simulation
 
-KWOK (Kubernetes WithOut Kubelet) tests Eidos bundles against simulated GPU clusters without real hardware.
+KWOK (Kubernetes WithOut Kubelet) tests AICR bundles against simulated GPU clusters without real hardware.
 
 ## Quick Start
 
 ```bash
-make build                              # Build eidos binary
+make build                              # Build aicr binary
 make kwok-test-all                      # Test all recipes (serial)
 make kwok-test-all-parallel             # Test all recipes (parallel, faster)
 make kwok-e2e RECIPE=h100-eks-ubuntu-training-kubeflow # Test single recipe
@@ -114,7 +114,7 @@ Create `recipes/overlays/your-recipe.yaml`:
 
 ```yaml
 kind: recipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: your-recipe-name
 
@@ -169,7 +169,7 @@ gh workflow run kwok-recipes.yaml -f recipe=your-recipe-name
 
 Check tolerations match KWOK nodes:
 ```bash
-kubectl describe pod <pod-name> -n eidos-kwok-test
+kubectl describe pod <pod-name> -n aicr-kwok-test
 ```
 
 GPU pods need tolerations for `kwok.x-k8s.io/node=fake:NoSchedule` and node selector `nvidia.com/gpu.present: "true"`.

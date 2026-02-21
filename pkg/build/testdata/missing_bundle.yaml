@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: eidos.nvidia.com/v1beta1
-kind: EidosRuntime
+apiVersion: aicr.nvidia.com/v1beta1
+kind: AICRRuntime
 spec:
   version: "1.0.0"
   registry:
     host: "https://registry.example.com"
-    repository: "eidos-runtime"
+    repository: "aicr-runtime"

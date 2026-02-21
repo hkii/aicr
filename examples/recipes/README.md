@@ -24,10 +24,10 @@ This directory contains example recipe files demonstrating various configuration
 
 ```shell
 # Generate deployment bundle
-eidos bundle --recipe eks-gb200-ubuntu-training.yaml --output ./bundles
+aicr bundle --recipe eks-gb200-ubuntu-training.yaml --output ./bundles
 
 # Generate bundle with value overrides
-eidos bundle \
+aicr bundle \
   --recipe eks-gb200-ubuntu-training.yaml \
   --set gpuoperator:driver.version=580.82.07 \
   --output ./bundles
@@ -37,21 +37,21 @@ eidos bundle \
 
 ```shell
 # Capture cluster snapshot
-eidos snapshot --output snapshot.yaml
+aicr snapshot --output snapshot.yaml
 
 # Validate readiness phase (default)
-eidos validate \
+aicr validate \
   --recipe eks-gb200-ubuntu-training-with-validation.yaml \
   --snapshot snapshot.yaml
 
 # Validate all phases
-eidos validate \
+aicr validate \
   --recipe eks-gb200-ubuntu-training-with-validation.yaml \
   --snapshot snapshot.yaml \
   --phase all
 
 # Validate specific phase
-eidos validate \
+aicr validate \
   --recipe eks-gb200-ubuntu-training-with-validation.yaml \
   --snapshot snapshot.yaml \
   --phase deployment
@@ -91,4 +91,4 @@ Constraints in the validation example demonstrate:
 
 - [CLI Reference](../../docs/user/cli-reference.md) - Complete CLI command documentation
 - [Recipe Development Guide](../../docs/integrator/recipe-development.md) - Creating and modifying recipes
-- [Validation Documentation](../../docs/user/cli-reference.md#eidos-validate) - Multi-phase validation details
+- [Validation Documentation](../../docs/user/cli-reference.md#aicr-validate) - Multi-phase validation details

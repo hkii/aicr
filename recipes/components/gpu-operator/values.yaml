@@ -15,7 +15,7 @@
 # GPU Operator Helm values
 # Base configuration for all deployments
 
-# Override release name prefix to avoid eidos-stack- prefix in resource names
+# Override release name prefix to avoid aicr-stack- prefix in resource names
 fullnameOverride: gpu-operator
 
 operator:

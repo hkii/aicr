@@ -15,9 +15,9 @@
 package readiness
 
 import (
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func init() {

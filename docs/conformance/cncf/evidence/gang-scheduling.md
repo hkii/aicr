@@ -55,7 +55,7 @@ pods are scheduled atomically.
 
 **Apply test manifest**
 ```
-$ kubectl apply -f /Users/yuanc/projects/eidos/tests/ai-conformance/manifests/gang-scheduling-test.yaml
+$ kubectl apply -f /Users/yuanc/projects/aicr/tests/ai-conformance/manifests/gang-scheduling-test.yaml
 namespace/gang-scheduling-test created
 podgroup.scheduling.run.ai/gang-test-group created
 pod/gang-worker-0 created

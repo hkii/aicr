@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/client"
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -152,7 +152,7 @@ func NewFileReader(format Format, filePath string) (*Reader, error) {
 	var err error
 
 	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
-		name := fmt.Sprintf("eidos-%d.tmp", time.Now().UnixNano())
+		name := fmt.Sprintf("aicr-%d.tmp", time.Now().UnixNano())
 		tempFilePath := filepath.Join(os.TempDir(), name)
 		httpReader := NewHTTPReader()
 		if err = httpReader.Download(filePath, tempFilePath); err != nil {
@@ -322,7 +322,7 @@ func (r *Reader) Close() error {
 //
 // Example:
 //
-//	snap, err := FromFile[Snapshot]("cm://gpu-operator/eidos-snapshot")
+//	snap, err := FromFile[Snapshot]("cm://gpu-operator/aicr-snapshot")
 func FromFile[T any](path string) (*T, error) {
 	return FromFileWithKubeconfig[T](path, "")
 }
@@ -338,7 +338,7 @@ func FromFile[T any](path string) (*T, error) {
 //
 // Example:
 //
-//	snap, err := FromFileWithKubeconfig[Snapshot]("cm://gpu-operator/eidos-snapshot", "/custom/kubeconfig")
+//	snap, err := FromFileWithKubeconfig[Snapshot]("cm://gpu-operator/aicr-snapshot", "/custom/kubeconfig")
 func FromFileWithKubeconfig[T any](path, kubeconfig string) (*T, error) {
 	// Check for ConfigMap URI
 	if strings.HasPrefix(path, ConfigMapURIScheme) {

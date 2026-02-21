@@ -17,7 +17,7 @@ package pod
 import (
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // ParseConfigMapURI parses a ConfigMap URI in the format "cm://namespace/name"

@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: eidos.nvidia.com/v1beta1
-kind: EidosRuntime
+apiVersion: aicr.nvidia.com/v1beta1
+kind: AICRRuntime
 spec:
   recipe: "/data/recipes/eks-training.yaml"
   version: "1.0.0"

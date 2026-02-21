@@ -26,8 +26,8 @@ import (
 	"syscall"
 	"time"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"golang.org/x/sync/errgroup"
@@ -194,7 +194,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	// Wait for completion or error
 	if err := g.Wait(); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "server error", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "server error", err)
 	}
 
 	slog.Debug("server stopped gracefully")
@@ -212,7 +212,7 @@ func (s *Server) configureRootHandler() {
 		s.config.Handlers["/"] = func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
 				w.Header().Set("Allow", http.MethodGet)
-				WriteError(w, r, http.StatusMethodNotAllowed, eidoserrors.ErrCodeMethodNotAllowed,
+				WriteError(w, r, http.StatusMethodNotAllowed, aicrerrors.ErrCodeMethodNotAllowed,
 					"Method not allowed", false, map[string]any{
 						"method": r.Method,
 					})

@@ -26,8 +26,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	"gopkg.in/yaml.v3"
 )
 

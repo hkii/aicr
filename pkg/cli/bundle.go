@@ -24,14 +24,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/NVIDIA/eidos/pkg/bundler"
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/oci"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/bundler"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/oci"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 	"github.com/urfave/cli/v3"
 )
 
@@ -198,24 +198,24 @@ ArgoCD:
 Examples:
 
 Generate Helm per-component bundle (default):
-  eidos bundle --recipe recipe.yaml --output ./my-bundle
+  aicr bundle --recipe recipe.yaml --output ./my-bundle
 
 Generate ArgoCD App of Apps:
-  eidos bundle --recipe recipe.yaml --output ./my-bundle --deployer argocd
+  aicr bundle --recipe recipe.yaml --output ./my-bundle --deployer argocd
 
 Override values in generated bundle:
-  eidos bundle --recipe recipe.yaml --set gpuoperator:driver.version=570.133.20
+  aicr bundle --recipe recipe.yaml --set gpuoperator:driver.version=570.133.20
 
 Set node selectors for GPU workloads:
-  eidos bundle --recipe recipe.yaml \
+  aicr bundle --recipe recipe.yaml \
     --accelerated-node-selector nodeGroup=gpu-nodes \
     --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule
 
 Package and push bundle to OCI registry (uses CLI version as tag):
-  eidos bundle --recipe recipe.yaml --output oci://ghcr.io/nvidia/eidos-bundle
+  aicr bundle --recipe recipe.yaml --output oci://ghcr.io/nvidia/aicr-bundle
 
 Package with explicit tag (overrides CLI version):
-  eidos bundle --recipe recipe.yaml --output oci://ghcr.io/nvidia/eidos-bundle:v1.0.0
+  aicr bundle --recipe recipe.yaml --output oci://ghcr.io/nvidia/aicr-bundle:v1.0.0
 `,
 		Flags: []cli.Flag{
 			&cli.StringFlag{

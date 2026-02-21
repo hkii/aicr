@@ -19,8 +19,8 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/recipes"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/recipes"
 	"gopkg.in/yaml.v3"
 )
 

@@ -15,7 +15,7 @@
 /*
 Package agent provides Kubernetes Job deployment for automated snapshot capture.
 
-The agent package deploys a Kubernetes Job that runs eidos snapshot on GPU nodes
+The agent package deploys a Kubernetes Job that runs aicr snapshot on GPU nodes
 and writes output to ConfigMap storage. It handles RBAC setup, Job lifecycle
 management, and snapshot retrieval.
 
@@ -33,8 +33,8 @@ recreated for each snapshot to ensure clean state.
 		"context"
 		"time"
 
-		"github.com/NVIDIA/eidos/pkg/k8s/agent"
-		"github.com/NVIDIA/eidos/pkg/k8s/client"
+		"github.com/NVIDIA/aicr/pkg/k8s/agent"
+		"github.com/NVIDIA/aicr/pkg/k8s/client"
 	)
 
 	func main() {
@@ -49,8 +49,8 @@ recreated for each snapshot to ensure clean state.
 		// Configure deployer
 		config := agent.Config{
 			Namespace: "gpu-operator",
-			Image:     "ghcr.io/nvidia/eidos-validator:latest",
-			Output:    "cm://gpu-operator/eidos-snapshot",
+			Image:     "ghcr.io/nvidia/aicr-validator:latest",
+			Output:    "cm://gpu-operator/aicr-snapshot",
 			NodeSelector: map[string]string{
 				"nodeGroup": "customer-gpu",
 			},

@@ -76,7 +76,7 @@ All recipe metadata and component values are automatically validated. Tests run 
 
 ```bash
 # Generate bundle from recipe with overrides
-eidos bundle -r recipes/overlays/your-recipe.yaml -o ./test-bundles
+aicr bundle -r recipes/overlays/your-recipe.yaml -o ./test-bundles
 
 # Verify merged values
 cat test-bundles/gpu-operator/values.yaml | grep -A5 "driver:"

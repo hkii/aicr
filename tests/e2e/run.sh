@@ -16,15 +16,15 @@
 set -euo pipefail
 
 # =============================================================================
-# E2E Tests for eidos with Tilt Cluster
+# E2E Tests for aicr with Tilt Cluster
 # =============================================================================
 #
-# This script tests the full eidos workflow with a running Kubernetes cluster
-# and the eidosd API server (via Tilt).
+# This script tests the full aicr workflow with a running Kubernetes cluster
+# and the aicrd API server (via Tilt).
 #
 # Prerequisites:
 #   - Tilt cluster running: make dev-env
-#   - eidosd accessible at localhost:8080
+#   - aicrd accessible at localhost:8080
 #
 # Usage:
 #   ./tests/e2e/run.sh
@@ -44,13 +44,13 @@ DIM='\033[2m'
 NC='\033[0m' # No Color
 
 # Configuration
-eidosd_URL="${eidosd_URL:-http://localhost:8080}"
+aicrd_URL="${aicrd_URL:-http://localhost:8080}"
 OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d)}"
-EIDOS_BIN=""
-EIDOS_IMAGE="${EIDOS_IMAGE:-localhost:5001/eidos:local}"
-EIDOS_VALIDATOR_IMAGE="${EIDOS_VALIDATOR_IMAGE:-localhost:5001/eidos-validator:local}"
+AICR_BIN=""
+AICR_IMAGE="${AICR_IMAGE:-localhost:5001/aicr:local}"
+AICR_VALIDATOR_IMAGE="${AICR_VALIDATOR_IMAGE:-localhost:5001/aicr-validator:local}"
 SNAPSHOT_NAMESPACE="${SNAPSHOT_NAMESPACE:-gpu-operator}"
-SNAPSHOT_CM="${SNAPSHOT_CM:-eidos-e2e-snapshot}"
+SNAPSHOT_CM="${SNAPSHOT_CM:-aicr-e2e-snapshot}"
 FAKE_GPU_ENABLED="${FAKE_GPU_ENABLED:-false}"
 
 # Test counters
@@ -128,22 +128,22 @@ build_binaries() {
 
   cd "${ROOT_DIR}"
 
-  # Build eidos directly with go build (simpler than goreleaser for e2e tests)
+  # Build aicr directly with go build (simpler than goreleaser for e2e tests)
   local bin_dir="${ROOT_DIR}/dist/e2e"
   mkdir -p "${bin_dir}"
 
-  if ! go build -o "${bin_dir}/eidos" ./cmd/eidos 2>&1; then
-    err "Failed to build eidos"
+  if ! go build -o "${bin_dir}/aicr" ./cmd/aicr 2>&1; then
+    err "Failed to build aicr"
   fi
 
-  EIDOS_BIN="${bin_dir}/eidos"
+  AICR_BIN="${bin_dir}/aicr"
 
-  if [ ! -x "$EIDOS_BIN" ]; then
-    err "eidos binary not found at ${EIDOS_BIN}"
+  if [ ! -x "$AICR_BIN" ]; then
+    err "aicr binary not found at ${AICR_BIN}"
   fi
 
-  pass "build/eidos"
-  msg "Using: ${EIDOS_BIN}"
+  pass "build/aicr"
+  msg "Using: ${AICR_BIN}"
 }
 
 # =============================================================================
@@ -156,19 +156,19 @@ check_api_health() {
   msg "=========================================="
 
   # Health endpoint
-  if curl -sf "${eidosd_URL}/health" > /dev/null 2>&1; then
+  if curl -sf "${aicrd_URL}/health" > /dev/null 2>&1; then
     pass "api/health"
   else
-    fail "api/health" "eidosd not responding at ${eidosd_URL}/health"
+    fail "api/health" "aicrd not responding at ${aicrd_URL}/health"
     warn "Is Tilt running? Try: make dev-env"
     return 1
   fi
 
   # Ready endpoint
-  if curl -sf "${eidosd_URL}/ready" > /dev/null 2>&1; then
+  if curl -sf "${aicrd_URL}/ready" > /dev/null 2>&1; then
     pass "api/ready"
   else
-    fail "api/ready" "eidosd not ready"
+    fail "api/ready" "aicrd not ready"
     return 1
   fi
 
@@ -190,8 +190,8 @@ test_cli_recipe() {
   # Test 1: Basic recipe with query parameters
   msg "--- Test: Recipe with query parameters ---"
   local basic_recipe="${recipe_dir}/basic.yaml"
-  echo -e "${DIM}  \$ eidos recipe --service eks --accelerator h100 --os ubuntu --intent training -o basic.yaml${NC}"
-  if "${EIDOS_BIN}" recipe \
+  echo -e "${DIM}  \$ aicr recipe --service eks --accelerator h100 --os ubuntu --intent training -o basic.yaml${NC}"
+  if "${AICR_BIN}" recipe \
     --service eks \
     --accelerator h100 \
     --os ubuntu \
@@ -215,7 +215,7 @@ test_cli_recipe() {
   local criteria_file="${recipe_dir}/criteria.yaml"
   cat > "$criteria_file" << 'EOF'
 kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: h100-eks-ubuntu-training
 spec:
@@ -226,7 +226,7 @@ spec:
 EOF
 
   local criteria_recipe="${recipe_dir}/from-criteria.yaml"
-  if "${EIDOS_BIN}" recipe --criteria "$criteria_file" --output "$criteria_recipe" 2>&1; then
+  if "${AICR_BIN}" recipe --criteria "$criteria_file" --output "$criteria_recipe" 2>&1; then
     if [ -f "$criteria_recipe" ]; then
       pass "cli/recipe/criteria-file"
     else
@@ -239,7 +239,7 @@ EOF
   # Test 3: CLI flags override criteria file
   msg "--- Test: CLI flags override criteria file ---"
   local override_recipe="${recipe_dir}/override.yaml"
-  if "${EIDOS_BIN}" recipe --criteria "$criteria_file" --service gke --output "$override_recipe" 2>&1; then
+  if "${AICR_BIN}" recipe --criteria "$criteria_file" --service gke --output "$override_recipe" 2>&1; then
     if grep -q "service: gke" "$override_recipe" 2>/dev/null; then
       pass "cli/recipe/override"
     else
@@ -264,11 +264,11 @@ test_api_recipe() {
 
   # Test 1: GET /v1/recipe with query params
   msg "--- Test: GET /v1/recipe ---"
-  echo -e "${DIM}  \$ curl ${eidosd_URL}/v1/recipe?service=eks&accelerator=h100&intent=training${NC}"
+  echo -e "${DIM}  \$ curl ${aicrd_URL}/v1/recipe?service=eks&accelerator=h100&intent=training${NC}"
   local get_recipe="${recipe_dir}/get.json"
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$get_recipe" \
-    "${eidosd_URL}/v1/recipe?service=eks&accelerator=h100&intent=training")
+    "${aicrd_URL}/v1/recipe?service=eks&accelerator=h100&intent=training")
 
   if [ "$http_code" = "200" ] && [ -s "$get_recipe" ]; then
     detail "HTTP ${http_code} OK"
@@ -281,10 +281,10 @@ test_api_recipe() {
   msg "--- Test: POST /v1/recipe ---"
   local post_recipe="${recipe_dir}/post.json"
   http_code=$(curl -s -w "%{http_code}" -o "$post_recipe" \
-    -X POST "${eidosd_URL}/v1/recipe" \
+    -X POST "${aicrd_URL}/v1/recipe" \
     -H "Content-Type: application/x-yaml" \
     -d 'kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: h100-training
 spec:
@@ -310,7 +310,7 @@ test_cli_bundle() {
 
   # First generate a recipe to use
   local recipe_file="${OUTPUT_DIR}/bundle-test-recipe.yaml"
-  "${EIDOS_BIN}" recipe \
+  "${AICR_BIN}" recipe \
     --service eks \
     --accelerator h100 \
     --os ubuntu \
@@ -326,8 +326,8 @@ test_cli_bundle() {
   msg "--- Test: Basic bundle ---"
   local basic_bundle="${OUTPUT_DIR}/bundles/basic"
   mkdir -p "$basic_bundle"
-  echo -e "${DIM}  \$ eidos bundle --recipe recipe.yaml --output bundles/basic${NC}"
-  if "${EIDOS_BIN}" bundle \
+  echo -e "${DIM}  \$ aicr bundle --recipe recipe.yaml --output bundles/basic${NC}"
+  if "${AICR_BIN}" bundle \
     --recipe "$recipe_file" \
     --output "$basic_bundle" 2>&1; then
     if [ -f "${basic_bundle}/deploy.sh" ] && [ -f "${basic_bundle}/README.md" ]; then
@@ -354,7 +354,7 @@ test_cli_bundle() {
   msg "--- Test: Bundle with scheduling options ---"
   local sched_bundle="${OUTPUT_DIR}/bundles/scheduling"
   mkdir -p "$sched_bundle"
-  if "${EIDOS_BIN}" bundle \
+  if "${AICR_BIN}" bundle \
     --recipe "$recipe_file" \
     --output "$sched_bundle" \
     --system-node-selector nodeGroup=system-pool \
@@ -381,7 +381,7 @@ test_cli_bundle() {
   msg "--- Test: Bundle with ArgoCD deployer ---"
   local argocd_bundle="${OUTPUT_DIR}/bundles/argocd"
   mkdir -p "$argocd_bundle"
-  if "${EIDOS_BIN}" bundle \
+  if "${AICR_BIN}" bundle \
     --recipe "$recipe_file" \
     --output "$argocd_bundle" \
     --deployer argocd 2>&1; then
@@ -433,11 +433,11 @@ test_api_bundle() {
 
   # Test: POST /v1/bundle (recipe -> bundle pipeline)
   msg "--- Test: POST /v1/bundle ---"
-  echo -e "${DIM}  \$ curl -X POST ${eidosd_URL}/v1/bundle?deployer=helm -d <recipe>${NC}"
+  echo -e "${DIM}  \$ curl -X POST ${aicrd_URL}/v1/bundle?deployer=helm -d <recipe>${NC}"
 
   # First get a recipe from API
   local recipe_json
-  recipe_json=$(curl -s "${eidosd_URL}/v1/recipe?service=eks&accelerator=h100&intent=training")
+  recipe_json=$(curl -s "${aicrd_URL}/v1/recipe?service=eks&accelerator=h100&intent=training")
 
   if [ -z "$recipe_json" ]; then
     fail "api/bundle/POST" "Could not get recipe from API"
@@ -448,7 +448,7 @@ test_api_bundle() {
   local bundle_zip="${bundle_dir}/bundle.zip"
   local http_code
   http_code=$(curl -s -w "%{http_code}" -o "$bundle_zip" \
-    -X POST "${eidosd_URL}/v1/bundle?deployer=helm" \
+    -X POST "${aicrd_URL}/v1/bundle?deployer=helm" \
     -H "Content-Type: application/json" \
     -d "$recipe_json")
 
@@ -483,20 +483,20 @@ test_cli_help() {
   msg "Testing CLI help"
   msg "=========================================="
 
-  # Test: eidos -h
-  msg "--- Test: eidos -h ---"
-  if "${EIDOS_BIN}" -h > /dev/null 2>&1; then
+  # Test: aicr -h
+  msg "--- Test: aicr -h ---"
+  if "${AICR_BIN}" -h > /dev/null 2>&1; then
     pass "cli/help"
   else
-    fail "cli/help" "eidos -h failed"
+    fail "cli/help" "aicr -h failed"
   fi
 
-  # Test: eidos --version
-  msg "--- Test: eidos --version ---"
-  if "${EIDOS_BIN}" --version > /dev/null 2>&1; then
+  # Test: aicr --version
+  msg "--- Test: aicr --version ---"
+  if "${AICR_BIN}" --version > /dev/null 2>&1; then
     pass "cli/version"
   else
-    fail "cli/version" "eidos --version failed"
+    fail "cli/version" "aicr --version failed"
   fi
 }
 
@@ -525,7 +525,7 @@ setup_fake_gpu() {
   if [ -f "$fake_smi" ]; then
     # Find Kind worker nodes
     local workers
-    workers=$(docker ps --filter "name=eidos-worker" --format "{{.Names}}" 2>/dev/null || true)
+    workers=$(docker ps --filter "name=aicr-worker" --format "{{.Names}}" 2>/dev/null || true)
     if [ -n "$workers" ]; then
       for worker in $workers; do
         msg "Injecting fake nvidia-smi into $worker"
@@ -561,13 +561,13 @@ setup_fake_gpu() {
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: eidos
+  name: aicr
   namespace: ${SNAPSHOT_NAMESPACE}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: eidos-e2e-reader
+  name: aicr-e2e-reader
 rules:
 - apiGroups: [""]
   resources: ["nodes", "pods", "configmaps"]
@@ -576,14 +576,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: eidos-e2e-reader
+  name: aicr-e2e-reader
 subjects:
 - kind: ServiceAccount
-  name: eidos
+  name: aicr
   namespace: ${SNAPSHOT_NAMESPACE}
 roleRef:
   kind: ClusterRole
-  name: eidos-e2e-reader
+  name: aicr-e2e-reader
   apiGroup: rbac.authorization.k8s.io
 EOF
   pass "setup/rbac"
@@ -610,19 +610,19 @@ test_snapshot() {
 
   # Test: Snapshot with deploy-agent using custom Job (with nvidia-smi hostPath)
   msg "--- Test: Snapshot with deploy-agent ---"
-  detail "Image: ${EIDOS_IMAGE}"
+  detail "Image: ${AICR_IMAGE}"
   detail "Output: cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}"
 
   # Create a custom Job that mounts nvidia-smi from host
   echo -e "${DIM}  \$ kubectl apply -f snapshot-job.yaml${NC}"
-  kubectl delete job eidos-e2e-snapshot -n "$SNAPSHOT_NAMESPACE" --ignore-not-found=true > /dev/null 2>&1
+  kubectl delete job aicr-e2e-snapshot -n "$SNAPSHOT_NAMESPACE" --ignore-not-found=true > /dev/null 2>&1
   sleep 2
 
   kubectl apply -f - << EOF
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos-e2e-snapshot
+  name: aicr-e2e-snapshot
   namespace: ${SNAPSHOT_NAMESPACE}
 spec:
   completions: 1
@@ -630,19 +630,19 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     spec:
-      serviceAccountName: eidos
+      serviceAccountName: aicr
       restartPolicy: Never
       nodeSelector:
         kubernetes.io/os: linux
       hostPID: true
       hostNetwork: true
       containers:
-      - name: eidos
-        image: ${EIDOS_IMAGE}
-        command: ["eidos"]
+      - name: aicr
+        image: ${AICR_IMAGE}
+        command: ["aicr"]
         args: ["snapshot", "-o", "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}"]
         env:
-        - name: EIDOS_LOG_PREFIX
+        - name: AICR_LOG_PREFIX
           value: agent
         - name: NODE_NAME
           valueFrom:
@@ -674,10 +674,10 @@ spec:
 EOF
 
   # Wait for job to complete
-  if kubectl wait --for=condition=complete job/eidos-e2e-snapshot -n "$SNAPSHOT_NAMESPACE" --timeout=120s > /dev/null 2>&1; then
+  if kubectl wait --for=condition=complete job/aicr-e2e-snapshot -n "$SNAPSHOT_NAMESPACE" --timeout=120s > /dev/null 2>&1; then
     pass "snapshot/deploy-agent"
   else
-    kubectl logs -n "$SNAPSHOT_NAMESPACE" -l job-name=eidos-e2e-snapshot 2>/dev/null || true
+    kubectl logs -n "$SNAPSHOT_NAMESPACE" -l job-name=aicr-e2e-snapshot 2>/dev/null || true
     fail "snapshot/deploy-agent" "Job did not complete"
     return 1
   fi
@@ -736,8 +736,8 @@ test_recipe_from_snapshot() {
   # Test: Recipe from ConfigMap snapshot
   msg "--- Test: Recipe from snapshot (cm://...) ---"
   local snapshot_recipe="${recipe_dir}/from-snapshot.yaml"
-  echo -e "${DIM}  \$ eidos recipe --snapshot cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM} --intent training -o from-snapshot.yaml${NC}"
-  if "${EIDOS_BIN}" recipe \
+  echo -e "${DIM}  \$ aicr recipe --snapshot cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM} --intent training -o from-snapshot.yaml${NC}"
+  if "${AICR_BIN}" recipe \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --intent training \
     --output "$snapshot_recipe" 2>&1; then
@@ -788,7 +788,7 @@ test_validate() {
 
   # First generate a recipe
   local recipe_file="${validate_dir}/recipe.yaml"
-  "${EIDOS_BIN}" recipe \
+  "${AICR_BIN}" recipe \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --intent training \
     --output "$recipe_file" 2>&1 || true
@@ -800,10 +800,10 @@ test_validate() {
 
   # Test: Validate recipe against snapshot
   msg "--- Test: Validate recipe ---"
-  echo -e "${DIM}  \$ eidos validate --recipe recipe.yaml --snapshot cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}${NC}"
+  echo -e "${DIM}  \$ aicr validate --recipe recipe.yaml --snapshot cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}${NC}"
   local validation_result="${validate_dir}/validation.yaml"
   local validate_output
-  validate_output=$("${EIDOS_BIN}" validate \
+  validate_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --output "$validation_result" 2>&1) || true
@@ -839,7 +839,7 @@ test_validate_multiphase() {
 
   # Generate a recipe for testing
   local recipe_file="${validate_dir}/recipe.yaml"
-  "${EIDOS_BIN}" recipe \
+  "${AICR_BIN}" recipe \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --intent training \
     --output "$recipe_file" 2>&1 || true
@@ -851,10 +851,10 @@ test_validate_multiphase() {
 
   # Test 1: Readiness phase (default)
   msg "--- Test: Validate with --phase readiness ---"
-  echo -e "${DIM}  \$ eidos validate --phase readiness${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase readiness${NC}"
   local readiness_result="${validate_dir}/validation-readiness.yaml"
   local readiness_output
-  readiness_output=$("${EIDOS_BIN}" validate \
+  readiness_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase readiness \
@@ -869,9 +869,9 @@ test_validate_multiphase() {
 
   # Test 2: Deployment phase
   msg "--- Test: Validate with --phase deployment ---"
-  echo -e "${DIM}  \$ eidos validate --phase deployment${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase deployment${NC}"
   local deployment_output
-  deployment_output=$("${EIDOS_BIN}" validate \
+  deployment_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase deployment 2>&1) || true
@@ -885,9 +885,9 @@ test_validate_multiphase() {
 
   # Test 3: Performance phase
   msg "--- Test: Validate with --phase performance ---"
-  echo -e "${DIM}  \$ eidos validate --phase performance${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase performance${NC}"
   local performance_output
-  performance_output=$("${EIDOS_BIN}" validate \
+  performance_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase performance 2>&1) || true
@@ -901,10 +901,10 @@ test_validate_multiphase() {
 
   # Test 4: All phases
   msg "--- Test: Validate with --phase all ---"
-  echo -e "${DIM}  \$ eidos validate --phase all${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase all${NC}"
   local all_result="${validate_dir}/validation-all.yaml"
   local all_output
-  all_output=$("${EIDOS_BIN}" validate \
+  all_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase all \
@@ -954,7 +954,7 @@ test_validate_deployment_constraints() {
   msg "=========================================="
 
   # Create validation namespace for constraint tests
-  kubectl create namespace eidos-validation 2>&1 || true
+  kubectl create namespace aicr-validation 2>&1 || true
 
   if [ "$FAKE_GPU_ENABLED" != "true" ]; then
     skip "validate/deployment-constraints" "Fake GPU not enabled"
@@ -1004,7 +1004,7 @@ YAML
   local recipe_file="${validate_dir}/recipe-with-constraints.yaml"
   cat > "$recipe_file" <<RECIPE
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 componentRefs:
@@ -1019,10 +1019,10 @@ RECIPE
 
   # Test 1: Validate with passing constraint
   msg "--- Test: Deployment constraint (should pass) ---"
-  echo -e "${DIM}  \$ eidos validate --phase deployment --recipe recipe.yaml${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase deployment --recipe recipe.yaml${NC}"
   local deployment_result="${validate_dir}/validation-deployment-pass.yaml"
   local deployment_output
-  deployment_output=$("${EIDOS_BIN}" validate \
+  deployment_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase deployment \
@@ -1067,7 +1067,7 @@ RECIPE
   local recipe_file_fail="${validate_dir}/recipe-with-failing-constraint.yaml"
   cat > "$recipe_file_fail" <<RECIPE
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 componentRefs:
@@ -1080,10 +1080,10 @@ validation:
         value: ">= v25.0.0"
 RECIPE
 
-  echo -e "${DIM}  \$ eidos validate --phase deployment --recipe recipe.yaml${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase deployment --recipe recipe.yaml${NC}"
   local deployment_fail_result="${validate_dir}/validation-deployment-fail.yaml"
   local deployment_fail_output
-  deployment_fail_output=$("${EIDOS_BIN}" validate \
+  deployment_fail_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file_fail" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase deployment \
@@ -1170,7 +1170,7 @@ YAML
   local recipe_file="${validate_dir}/recipe-expected-resources.yaml"
   cat > "$recipe_file" <<RECIPE
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 componentRefs:
@@ -1186,14 +1186,14 @@ validation:
       - expected-resources
 RECIPE
 
-  echo -e "${DIM}  \$ eidos validate --phase deployment --recipe recipe.yaml${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase deployment --recipe recipe.yaml${NC}"
   local result_file="${validate_dir}/result-pass.yaml"
   local result_output
-  result_output=$("${EIDOS_BIN}" validate \
+  result_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase deployment \
-    --image "${EIDOS_VALIDATOR_IMAGE}" \
+    --image "${AICR_VALIDATOR_IMAGE}" \
     --output "$result_file" 2>&1) || true
 
   # DEBUG: Print captured output to see what's happening
@@ -1230,7 +1230,7 @@ RECIPE
   local recipe_file_fail="${validate_dir}/recipe-expected-resources-fail.yaml"
   cat > "$recipe_file_fail" <<RECIPE
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 componentRefs:
@@ -1246,14 +1246,14 @@ validation:
       - expected-resources
 RECIPE
 
-  echo -e "${DIM}  \$ eidos validate --phase deployment --recipe recipe-fail.yaml${NC}"
+  echo -e "${DIM}  \$ aicr validate --phase deployment --recipe recipe-fail.yaml${NC}"
   local result_file_fail="${validate_dir}/result-fail.yaml"
   local result_fail_output
-  result_fail_output=$("${EIDOS_BIN}" validate \
+  result_fail_output=$("${AICR_BIN}" validate \
     --recipe "$recipe_file_fail" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase deployment \
-    --image "${EIDOS_VALIDATOR_IMAGE}" \
+    --image "${AICR_VALIDATOR_IMAGE}" \
     --output "$result_file_fail" 2>&1) || true
 
   # Check the output file for expected-resources check results
@@ -1281,7 +1281,7 @@ RECIPE
     skip "validate/expected-resources-manual-pass" "helm CLI not available"
     skip "validate/expected-resources-manual-merge" "helm CLI not available"
   else
-    local nginx_ns="eidos-e2e-nginx"
+    local nginx_ns="aicr-e2e-nginx"
     local nginx_release="nginx-test"
     local helm_install_ok=false
 
@@ -1309,7 +1309,7 @@ RECIPE
       local recipe_manual="${validate_dir}/recipe-manual-pass.yaml"
       cat > "$recipe_manual" <<RECIPE
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 componentRefs:
@@ -1328,14 +1328,14 @@ validation:
       - expected-resources
 RECIPE
 
-      echo -e "${DIM}  \$ eidos validate --phase deployment --recipe recipe-manual-pass.yaml${NC}"
+      echo -e "${DIM}  \$ aicr validate --phase deployment --recipe recipe-manual-pass.yaml${NC}"
       local result_manual="${validate_dir}/result-manual-pass.yaml"
       local result_manual_output
-      result_manual_output=$("${EIDOS_BIN}" validate \
+      result_manual_output=$("${AICR_BIN}" validate \
         --recipe "$recipe_manual" \
         --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
         --phase deployment \
-        --image "${EIDOS_VALIDATOR_IMAGE}" \
+        --image "${AICR_VALIDATOR_IMAGE}" \
         --output "$result_manual" 2>&1) || true
 
       detail "Captured validation output:"
@@ -1358,7 +1358,7 @@ RECIPE
       local recipe_merge="${validate_dir}/recipe-manual-merge.yaml"
       cat > "$recipe_merge" <<RECIPE
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: dev
 componentRefs:
@@ -1380,14 +1380,14 @@ validation:
       - expected-resources
 RECIPE
 
-      echo -e "${DIM}  \$ eidos validate --phase deployment --recipe recipe-manual-merge.yaml${NC}"
+      echo -e "${DIM}  \$ aicr validate --phase deployment --recipe recipe-manual-merge.yaml${NC}"
       local result_merge="${validate_dir}/result-manual-merge.yaml"
       local result_merge_output
-      result_merge_output=$("${EIDOS_BIN}" validate \
+      result_merge_output=$("${AICR_BIN}" validate \
         --recipe "$recipe_merge" \
         --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
         --phase deployment \
-        --image "${EIDOS_VALIDATOR_IMAGE}" \
+        --image "${AICR_VALIDATOR_IMAGE}" \
         --output "$result_merge" 2>&1) || true
 
       detail "Captured validation output:"
@@ -1434,7 +1434,7 @@ test_validate_job_deployment() {
 
   # Generate a recipe for testing
   local recipe_file="${validate_dir}/recipe.yaml"
-  "${EIDOS_BIN}" recipe \
+  "${AICR_BIN}" recipe \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --intent training \
     --output "$recipe_file" 2>&1 || true
@@ -1446,15 +1446,15 @@ test_validate_job_deployment() {
 
   # Test 1: Validation with default namespace
   msg "--- Test: Validation Job in default namespace ---"
-  echo -e "${DIM}  \$ eidos validate --recipe recipe.yaml --snapshot cm://... --phase readiness${NC}"
+  echo -e "${DIM}  \$ aicr validate --recipe recipe.yaml --snapshot cm://... --phase readiness${NC}"
 
   # Create validation namespace if it doesn't exist
-  kubectl create namespace eidos-validation 2>&1 || true
+  kubectl create namespace aicr-validation 2>&1 || true
 
   # Run validation (this should create Jobs)
   local validation_result="${validate_dir}/validation-default-ns.yaml"
   local validation_exit=0
-  "${EIDOS_BIN}" validate \
+  "${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase readiness \
@@ -1462,16 +1462,16 @@ test_validate_job_deployment() {
     --cleanup=false 2>&1 || validation_exit=$?
 
   # Check if RBAC resources were created
-  if kubectl get sa eidos-validator -n eidos-validation &>/dev/null; then
-    detail "ServiceAccount created: eidos-validator"
+  if kubectl get sa aicr-validator -n aicr-validation &>/dev/null; then
+    detail "ServiceAccount created: aicr-validator"
     pass "validate/job-rbac-serviceaccount"
   else
     warn "ServiceAccount not found (may be expected if no checks defined)"
     pass "validate/job-rbac-serviceaccount"
   fi
 
-  if kubectl get role eidos-validator -n eidos-validation &>/dev/null; then
-    detail "Role created: eidos-validator"
+  if kubectl get role aicr-validator -n aicr-validation &>/dev/null; then
+    detail "Role created: aicr-validator"
     pass "validate/job-rbac-role"
   else
     warn "Role not found (may be expected if no checks defined)"
@@ -1480,7 +1480,7 @@ test_validate_job_deployment() {
 
   # Check if jobs were created (they may not exist if recipe has no checks)
   local job_count
-  job_count=$(kubectl get jobs -n eidos-validation --no-headers 2>/dev/null | grep -c "eidos-validation-" || echo "0")
+  job_count=$(kubectl get jobs -n aicr-validation --no-headers 2>/dev/null | grep -c "aicr-validation-" || echo "0")
 
   if [ "$job_count" -gt 0 ]; then
     detail "Validation jobs created: $job_count"
@@ -1489,24 +1489,24 @@ test_validate_job_deployment() {
     # Check job success status (not just completion)
     # Job status shows "1/1" for completion but we need to check .status.succeeded
     local succeeded_jobs
-    succeeded_jobs=$(kubectl get jobs -n eidos-validation -o jsonpath='{range .items[?(@.status.succeeded==1)]}{.metadata.name}{"\n"}{end}' 2>/dev/null | wc -l)
+    succeeded_jobs=$(kubectl get jobs -n aicr-validation -o jsonpath='{range .items[?(@.status.succeeded==1)]}{.metadata.name}{"\n"}{end}' 2>/dev/null | wc -l)
 
     if [ "$succeeded_jobs" -eq "$job_count" ]; then
       detail "All jobs succeeded: $succeeded_jobs/$job_count"
       pass "validate/job-success"
     else
       local failed_jobs
-      failed_jobs=$(kubectl get jobs -n eidos-validation -o jsonpath='{range .items[?(@.status.failed>=1)]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
+      failed_jobs=$(kubectl get jobs -n aicr-validation -o jsonpath='{range .items[?(@.status.failed>=1)]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
       if [ -n "$failed_jobs" ]; then
         warn "Some jobs failed:"
         echo "$failed_jobs" | while read -r job_name; do
           warn "  - $job_name"
           # Show logs for failed job
           local pod_name
-          pod_name=$(kubectl get pods -n eidos-validation -l "eidos.nvidia.com/job=$job_name" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          pod_name=$(kubectl get pods -n aicr-validation -l "aicr.nvidia.com/job=$job_name" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
           if [ -n "$pod_name" ]; then
             detail "Last 10 lines of logs:"
-            kubectl logs -n eidos-validation "$pod_name" --tail=10 2>&1 | sed 's/^/    /' || true
+            kubectl logs -n aicr-validation "$pod_name" --tail=10 2>&1 | sed 's/^/    /' || true
           fi
         done
       fi
@@ -1529,14 +1529,14 @@ test_validate_job_deployment() {
 
   # Test 2: Validation with custom namespace
   msg "--- Test: Validation Job in custom namespace ---"
-  echo -e "${DIM}  \$ eidos validate --validation-namespace custom-validation${NC}"
+  echo -e "${DIM}  \$ aicr validate --validation-namespace custom-validation${NC}"
 
   # Create custom validation namespace
   kubectl create namespace custom-validation 2>&1 || true
 
   # Run validation with custom namespace
   local validation_custom="${validate_dir}/validation-custom-ns.yaml"
-  "${EIDOS_BIN}" validate \
+  "${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase readiness \
@@ -1545,7 +1545,7 @@ test_validate_job_deployment() {
     --cleanup=false 2>&1 || true  # Keep || true here as this is just testing namespace config
 
   # Check if RBAC was created in custom namespace
-  if kubectl get sa eidos-validator -n custom-validation &>/dev/null; then
+  if kubectl get sa aicr-validator -n custom-validation &>/dev/null; then
     detail "ServiceAccount created in custom-validation namespace"
     pass "validate/job-custom-namespace"
   else
@@ -1555,14 +1555,14 @@ test_validate_job_deployment() {
 
   # Test 3: Job cleanup
   msg "--- Test: Validation Job cleanup ---"
-  echo -e "${DIM}  \$ eidos validate --cleanup=true${NC}"
+  echo -e "${DIM}  \$ aicr validate --cleanup=true${NC}"
 
   # Count existing jobs before cleanup test
   local jobs_before
-  jobs_before=$(kubectl get jobs -n eidos-validation --no-headers 2>/dev/null | wc -l || echo "0")
+  jobs_before=$(kubectl get jobs -n aicr-validation --no-headers 2>/dev/null | wc -l || echo "0")
 
   # Run validation with cleanup enabled
-  "${EIDOS_BIN}" validate \
+  "${AICR_BIN}" validate \
     --recipe "$recipe_file" \
     --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
     --phase readiness \
@@ -1573,7 +1573,7 @@ test_validate_job_deployment() {
 
   # Count jobs after (should be cleaned up)
   local jobs_after
-  jobs_after=$(kubectl get jobs -n eidos-validation --no-headers 2>/dev/null | wc -l || echo "0")
+  jobs_after=$(kubectl get jobs -n aicr-validation --no-headers 2>/dev/null | wc -l || echo "0")
 
   if [ "$jobs_after" -le "$jobs_before" ]; then
     detail "Jobs cleaned up successfully"
@@ -1587,7 +1587,7 @@ test_validate_job_deployment() {
   msg "--- Test: Validation result format ---"
   if [ -f "$validation_result" ]; then
     # Check for expected YAML structure
-    if grep -q "apiVersion: eidos.nvidia.com" "$validation_result" && \
+    if grep -q "apiVersion: aicr.nvidia.com" "$validation_result" && \
        grep -q "kind: ValidationResult" "$validation_result"; then
       detail "Validation result has correct structure"
       pass "validate/job-result-format"
@@ -1601,7 +1601,7 @@ test_validate_job_deployment() {
   fi
 
   # Cleanup test namespaces
-  kubectl delete namespace eidos-validation 2>&1 || true
+  kubectl delete namespace aicr-validation 2>&1 || true
   kubectl delete namespace custom-validation 2>&1 || true
 }
 
@@ -1624,8 +1624,8 @@ test_external_data() {
   # Test 1: Recipe with external data (should include dgxc-teleport)
   msg "--- Test: Recipe with external data ---"
   local recipe_file="${external_dir}/recipe-with-external.yaml"
-  echo -e "${DIM}  \$ eidos recipe --service eks --accelerator h100 --os ubuntu --intent training --data ./examples/data${NC}"
-  if "${EIDOS_BIN}" recipe \
+  echo -e "${DIM}  \$ aicr recipe --service eks --accelerator h100 --os ubuntu --intent training --data ./examples/data${NC}"
+  if "${AICR_BIN}" recipe \
     --service eks \
     --accelerator h100 \
     --os ubuntu \
@@ -1653,8 +1653,8 @@ test_external_data() {
   msg "--- Test: Bundle with external data ---"
   local bundle_dir="${external_dir}/bundle"
   mkdir -p "$bundle_dir"
-  echo -e "${DIM}  \$ eidos bundle --recipe recipe.yaml --data ./examples/data --output ./bundle${NC}"
-  if "${EIDOS_BIN}" bundle \
+  echo -e "${DIM}  \$ aicr bundle --recipe recipe.yaml --data ./examples/data --output ./bundle${NC}"
+  if "${AICR_BIN}" bundle \
     --recipe "$recipe_file" \
     --data "$data_dir" \
     --output "$bundle_dir" 2>&1; then
@@ -1680,11 +1680,11 @@ test_api_metrics() {
 
   # Test: GET /metrics (Prometheus format)
   msg "--- Test: GET /metrics ---"
-  echo -e "${DIM}  \$ curl ${eidosd_URL}/metrics${NC}"
+  echo -e "${DIM}  \$ curl ${aicrd_URL}/metrics${NC}"
 
   local metrics_output="${OUTPUT_DIR}/metrics.txt"
   local http_code
-  http_code=$(curl -s -w "%{http_code}" -o "$metrics_output" "${eidosd_URL}/metrics")
+  http_code=$(curl -s -w "%{http_code}" -o "$metrics_output" "${aicrd_URL}/metrics")
 
   if [ "$http_code" = "200" ] && [ -s "$metrics_output" ]; then
     # Verify it's Prometheus format (should contain # HELP or # TYPE)
@@ -1694,9 +1694,9 @@ test_api_metrics() {
       metric_count=$(grep -c "^# HELP" "$metrics_output" 2>/dev/null || echo "0")
       detail "HTTP ${http_code} OK - Prometheus format (${metric_count} metrics)"
 
-      # Check for expected eidos metrics
+      # Check for expected aicr metrics
       if grep -q "http_requests_total\|recipe_built_duration" "$metrics_output" 2>/dev/null; then
-        detail "eidos-specific metrics present"
+        detail "aicr-specific metrics present"
       fi
       pass "api/metrics"
     else
@@ -1722,8 +1722,8 @@ test_output_formats() {
   # Test 1: Recipe with JSON format
   msg "--- Test: Recipe with --format json ---"
   local json_recipe="${format_dir}/recipe.json"
-  echo -e "${DIM}  \$ eidos recipe --service eks --accelerator h100 --intent inference --format json${NC}"
-  if "${EIDOS_BIN}" recipe \
+  echo -e "${DIM}  \$ aicr recipe --service eks --accelerator h100 --intent inference --format json${NC}"
+  if "${AICR_BIN}" recipe \
     --service eks \
     --accelerator h100 \
     --intent inference \
@@ -1759,8 +1759,8 @@ test_output_formats() {
   # Test 2: Recipe with table format
   msg "--- Test: Recipe with --format table ---"
   local table_recipe="${format_dir}/recipe.txt"
-  echo -e "${DIM}  \$ eidos recipe --service eks --accelerator h100 --intent inference --format table${NC}"
-  if "${EIDOS_BIN}" recipe \
+  echo -e "${DIM}  \$ aicr recipe --service eks --accelerator h100 --intent inference --format table${NC}"
+  if "${AICR_BIN}" recipe \
     --service eks \
     --accelerator h100 \
     --intent inference \
@@ -1791,14 +1791,14 @@ test_output_formats() {
 
     # Generate recipe first
     local recipe_for_validate="${format_dir}/recipe-for-validate.yaml"
-    "${EIDOS_BIN}" recipe \
+    "${AICR_BIN}" recipe \
       --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
       --intent training \
       --output "$recipe_for_validate" 2>&1 || true
 
     if [ -f "$recipe_for_validate" ]; then
-      echo -e "${DIM}  \$ eidos validate --recipe recipe.yaml --snapshot cm://... --format json${NC}"
-      if "${EIDOS_BIN}" validate \
+      echo -e "${DIM}  \$ aicr validate --recipe recipe.yaml --snapshot cm://... --format json${NC}"
+      if "${AICR_BIN}" validate \
         --recipe "$recipe_for_validate" \
         --snapshot "cm://${SNAPSHOT_NAMESPACE}/${SNAPSHOT_CM}" \
         --format json \
@@ -1837,7 +1837,7 @@ test_deploy_agent_cli() {
   # Test 1: Help shows deploy-agent flag
   msg "--- Test: snapshot --help shows deploy-agent ---"
   local help_output
-  help_output=$("${EIDOS_BIN}" snapshot --help 2>&1)
+  help_output=$("${AICR_BIN}" snapshot --help 2>&1)
   if echo "$help_output" | grep -q "deploy-agent"; then
     detail "--deploy-agent flag documented"
     pass "cli/deploy-agent/help"
@@ -1848,12 +1848,12 @@ test_deploy_agent_cli() {
   # Test 2: deploy-agent with namespace flag
   msg "--- Test: deploy-agent requires namespace ---"
   # Running without a cluster should fail gracefully
-  echo -e "${DIM}  \$ eidos snapshot --deploy-agent --namespace test-ns --image test:latest (dry-run check)${NC}"
+  echo -e "${DIM}  \$ aicr snapshot --deploy-agent --namespace test-ns --image test:latest (dry-run check)${NC}"
 
   # We can't actually run deploy-agent without proper cluster access,
   # but we can verify the flags are accepted
   local deploy_output
-  deploy_output=$("${EIDOS_BIN}" snapshot --deploy-agent --namespace nonexistent-test-ns --image "test:latest" 2>&1) || true
+  deploy_output=$("${AICR_BIN}" snapshot --deploy-agent --namespace nonexistent-test-ns --image "test:latest" 2>&1) || true
 
   # Should fail with cluster/namespace error, not flag parsing error
   if echo "$deploy_output" | grep -qi "not found\|connection refused\|forbidden\|unauthorized\|cannot\|failed"; then
@@ -1898,7 +1898,7 @@ test_oci_bundle() {
 
   # Generate a recipe first
   local recipe_file="${oci_dir}/recipe.yaml"
-  "${EIDOS_BIN}" recipe \
+  "${AICR_BIN}" recipe \
     --service eks \
     --accelerator h100 \
     --intent training \
@@ -1914,9 +1914,9 @@ test_oci_bundle() {
   msg "--- Test: Bundle as OCI image ---"
   local digest_file="${oci_dir}/.digest"
   local bundle_output
-  bundle_output=$("${EIDOS_BIN}" bundle \
+  bundle_output=$("${AICR_BIN}" bundle \
     --recipe "$recipe_file" \
-    --output "oci://localhost:5001/eidos-e2e-bundle" \
+    --output "oci://localhost:5001/aicr-e2e-bundle" \
     --deployer helm \
     --insecure-tls \
     --image-refs "$digest_file" 2>&1) || true
@@ -1928,7 +1928,7 @@ test_oci_bundle() {
     # Known issue with local insecure registries
     warn "OCI push failed due to HTTP/HTTPS mismatch (expected with local registry)"
     skip "bundle/oci-push" "Local registry requires HTTPS client config"
-  elif curl -sf http://localhost:5001/v2/eidos-e2e-bundle/tags/list 2>/dev/null | grep -q "dev\|latest"; then
+  elif curl -sf http://localhost:5001/v2/aicr-e2e-bundle/tags/list 2>/dev/null | grep -q "dev\|latest"; then
     pass "bundle/oci-push"
   else
     fail "bundle/oci-push" "Command failed"
@@ -1945,7 +1945,7 @@ cleanup_e2e() {
   msg "=========================================="
 
   # Clean up snapshot resources
-  kubectl delete job eidos-e2e-snapshot -n "$SNAPSHOT_NAMESPACE" --ignore-not-found=true > /dev/null 2>&1 || true
+  kubectl delete job aicr-e2e-snapshot -n "$SNAPSHOT_NAMESPACE" --ignore-not-found=true > /dev/null 2>&1 || true
   kubectl delete cm "$SNAPSHOT_CM" -n "$SNAPSHOT_NAMESPACE" --ignore-not-found=true > /dev/null 2>&1 || true
 
   msg "Cleanup complete"
@@ -1977,9 +1977,9 @@ print_summary() {
 # =============================================================================
 
 main() {
-  msg "Eidos E2E Tests"
+  msg "AICR E2E Tests"
   msg "Output directory: ${OUTPUT_DIR}"
-  msg "API URL: ${eidosd_URL}"
+  msg "API URL: ${aicrd_URL}"
   echo ""
 
   # Check required tools

@@ -1,6 +1,6 @@
 # Automation and CI/CD Integration
 
-This guide describes integration patterns for using Eidos in automated pipelines.
+This guide describes integration patterns for using AICR in automated pipelines.
 
 ## Overview
 
@@ -38,18 +38,18 @@ jobs:
         with:
           kubeconfig: ${{ secrets.KUBECONFIG }}
       
-      - name: Deploy Eidos Agent
+      - name: Deploy AICR Agent
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/nvidia/eidos/main/deployments/eidos-agent/1-deps.yaml
-          kubectl apply -f https://raw.githubusercontent.com/nvidia/eidos/main/deployments/eidos-agent/2-job.yaml
+          kubectl apply -f https://raw.githubusercontent.com/nvidia/aicr/main/deployments/aicr-agent/1-deps.yaml
+          kubectl apply -f https://raw.githubusercontent.com/nvidia/aicr/main/deployments/aicr-agent/2-job.yaml
       
       - name: Wait for completion
         run: |
-          kubectl wait --for=condition=complete --timeout=300s job/eidos -n gpu-operator
+          kubectl wait --for=condition=complete --timeout=300s job/aicr -n gpu-operator
       
       - name: Capture snapshot from ConfigMap
         run: |
-          kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot-$(date +%Y%m%d-%H%M%S).yaml
+          kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot-$(date +%Y%m%d-%H%M%S).yaml
       
       - name: Compare with baseline
         run: |
@@ -88,21 +88,21 @@ capture_snapshot:
   stage: snapshot
   image: bitnami/kubectl:latest
   script:
-    - kubectl apply -f deployments/eidos-agent/2-job.yaml
-    - kubectl wait --for=condition=complete job/eidos -n gpu-operator
-    - kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
+    - kubectl apply -f deployments/aicr-agent/2-job.yaml
+    - kubectl wait --for=condition=complete job/aicr -n gpu-operator
+    - kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
   artifacts:
     paths:
       - snapshot.yaml
 
 generate_recipe:
   stage: recipe
-  image: ghcr.io/nvidia/eidos:latest
+  image: ghcr.io/nvidia/aicr:latest
   script:
     # Option 1: Use ConfigMap directly (no artifact needed)
-    - eidos recipe -s cm://gpu-operator/eidos-snapshot --intent training --platform kubeflow -o recipe.yaml
+    - aicr recipe -s cm://gpu-operator/aicr-snapshot --intent training --platform kubeflow -o recipe.yaml
     # Option 2: Use snapshot file from previous stage
-    # - eidos recipe --snapshot snapshot.yaml --intent training --platform kubeflow --output recipe.yaml
+    # - aicr recipe --snapshot snapshot.yaml --intent training --platform kubeflow --output recipe.yaml
   artifacts:
     paths:
       - recipe.yaml
@@ -111,11 +111,11 @@ generate_recipe:
 
 create_bundle:
   stage: bundle
-  image: ghcr.io/nvidia/eidos:latest
+  image: ghcr.io/nvidia/aicr:latest
   script:
-    - eidos bundle --recipe recipe.yaml --output ./bundles
+    - aicr bundle --recipe recipe.yaml --output ./bundles
     # Override values at bundle generation time
-    # - eidos bundle -r recipe.yaml --set gpuoperator:gds.enabled=true -o ./bundles
+    # - aicr bundle -r recipe.yaml --set gpuoperator:gds.enabled=true -o ./bundles
   artifacts:
     paths:
       - bundles/
@@ -225,23 +225,23 @@ for cluster_config in "${CLUSTERS[@]}"; do
   kubectl config use-context "$CLUSTER"
   
   # Capture snapshot
-  kubectl apply -f deployments/eidos-agent/2-job.yaml
-  kubectl wait --for=condition=complete --timeout=300s job/eidos -n gpu-operator
-  kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > "snapshot-${CLUSTER}.yaml"
+  kubectl apply -f deployments/aicr-agent/2-job.yaml
+  kubectl wait --for=condition=complete --timeout=300s job/aicr -n gpu-operator
+  kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > "snapshot-${CLUSTER}.yaml"
   
   # Generate recipe (can use ConfigMap directly or file)
   # Option 1: Use ConfigMap
-  eidos recipe -s "cm://gpu-operator/eidos-snapshot" --intent training --platform kubeflow -o "recipe-${CLUSTER}.yaml"
+  aicr recipe -s "cm://gpu-operator/aicr-snapshot" --intent training --platform kubeflow -o "recipe-${CLUSTER}.yaml"
   # Option 2: Use saved file
-  # eidos recipe --snapshot "snapshot-${CLUSTER}.yaml" --intent training --platform kubeflow --output "recipe-${CLUSTER}.yaml"
+  # aicr recipe --snapshot "snapshot-${CLUSTER}.yaml" --intent training --platform kubeflow --output "recipe-${CLUSTER}.yaml"
   
   # Create bundle
-  eidos bundle \
+  aicr bundle \
     --recipe "recipe-${CLUSTER}.yaml" \
     --output "./bundles/${CLUSTER}"
 
   # Or with value overrides for environment-specific customization
-  # eidos bundle \
+  # aicr bundle \
   #   --recipe "recipe-${CLUSTER}.yaml" \
   #   --set gpuoperator:gds.enabled=true \
   #   --set gpuoperator:mig.strategy=mixed \
@@ -257,7 +257,7 @@ for cluster_config in "${CLUSTERS[@]}"; do
   fi
   
   # Clean up
-  kubectl delete job eidos -n gpu-operator
+  kubectl delete job aicr -n gpu-operator
 done
 ```
 
@@ -281,15 +281,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup eidos
+      - name: Setup aicr
         run: |
-          curl -sLO https://github.com/nvidia/eidos/releases/latest/download/eidos_linux_amd64.tar.gz
-          tar -xzf eidos_linux_amd64.tar.gz
-          sudo mv eidos /usr/local/bin/
+          curl -sLO https://github.com/nvidia/aicr/releases/latest/download/aicr_linux_amd64.tar.gz
+          tar -xzf aicr_linux_amd64.tar.gz
+          sudo mv aicr /usr/local/bin/
       
       - name: Generate recipe
         run: |
-          eidos recipe \
+          aicr recipe \
             --service eks \
             --accelerator h100 \
             --intent training \
@@ -298,7 +298,7 @@ jobs:
       
       - name: Generate ArgoCD bundles
         run: |
-          eidos bundle \
+          aicr bundle \
             --recipe recipe.yaml \
             --deployer argocd \
             --repo https://github.com/${{ github.repository }}.git \
@@ -374,7 +374,7 @@ for env_config in "${ENVIRONMENTS[@]}"; do
   
   echo "Generating bundles for $ENV with $DEPLOYER deployer..."
   
-  eidos bundle \
+  aicr bundle \
     --recipe "recipes/${ENV}.yaml" \
     --deployer "$DEPLOYER" \
     --output "./bundles/${ENV}"
@@ -385,23 +385,23 @@ done
 
 ## Terraform Integration
 
-### Module: Eidos Agent Deployment
+### Module: AICR Agent Deployment
 
 ```hcl
-# modules/eidos-agent/main.tf
+# modules/aicr-agent/main.tf
 
-resource "kubectl_manifest" "eidos_deps" {
+resource "kubectl_manifest" "aicr_deps" {
   yaml_body = file("${path.module}/manifests/1-deps.yaml")
 }
 
-resource "kubectl_manifest" "eidos_job" {
+resource "kubectl_manifest" "aicr_job" {
   yaml_body = templatefile("${path.module}/manifests/2-job.yaml", {
     node_selector = var.node_selector
     tolerations   = var.tolerations
     image_version = var.image_version
   })
   
-  depends_on = [kubectl_manifest.eidos_deps]
+  depends_on = [kubectl_manifest.aicr_deps]
 }
 
 # Wait for job completion and get snapshot from ConfigMap
@@ -409,21 +409,21 @@ resource "null_resource" "wait_for_snapshot" {
   provisioner "local-exec" {
     command = <<-EOT
       kubectl wait --for=condition=complete \
-        --timeout=300s job/eidos -n gpu-operator
-      kubectl get configmap eidos-snapshot -n gpu-operator \
+        --timeout=300s job/aicr -n gpu-operator
+      kubectl get configmap aicr-snapshot -n gpu-operator \
         -o jsonpath='{.data.snapshot\.yaml}' > ${var.snapshot_output}
     EOT
   }
   
-  depends_on = [kubectl_manifest.eidos_job]
+  depends_on = [kubectl_manifest.aicr_job]
 }
 
 # Generate recipe (can use ConfigMap directly)
 resource "null_resource" "generate_recipe" {
   provisioner "local-exec" {
     command = <<-EOT
-      eidos recipe \
-        -s cm://gpu-operator/eidos-snapshot \
+      aicr recipe \
+        -s cm://gpu-operator/aicr-snapshot \
         --intent ${var.workload_intent} \
         -o ${var.recipe_output}
     EOT
@@ -450,7 +450,7 @@ variable "tolerations" {
 }
 
 variable "image_version" {
-  description = "Eidos image version"
+  description = "AICR image version"
   type        = string
   default     = "latest"
 }
@@ -486,8 +486,8 @@ output "recipe_file" {
 **Usage:**
 ```hcl
 # main.tf
-module "eidos_agent" {
-  source = "./modules/eidos-agent"
+module "aicr_agent" {
+  source = "./modules/aicr-agent"
   
   node_selector = {
     "nodeGroup" = "gpu-nodes"
@@ -528,7 +528,7 @@ type ConfigReconciler struct {
 }
 
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    // 1. Deploy Eidos agent
+    // 1. Deploy AICR agent
     if err := r.deployAgent(ctx); err != nil {
         return ctrl.Result{}, err
     }
@@ -589,31 +589,31 @@ func (r *ConfigReconciler) cleanupAgent(ctx context.Context) error {
 
 ### Prometheus Metrics
 
-**Scrape Eidos API Server:**
+**Scrape AICR API Server:**
 ```yaml
 # prometheus-config.yaml
 scrape_configs:
-  - job_name: 'eidosd'
+  - job_name: 'aicrd'
     static_configs:
-      - targets: ['eidosd.default.svc.cluster.local:8080']
+      - targets: ['aicrd.default.svc.cluster.local:8080']
     metrics_path: /metrics
 ```
 
 **Key metrics:**
 ```promql
 # Request rate
-rate(eidos_http_requests_total[5m])
+rate(aicr_http_requests_total[5m])
 
 # Error rate
-rate(eidos_http_requests_total{status=~"5.."}[5m])
+rate(aicr_http_requests_total{status=~"5.."}[5m])
 
 # Latency (p95)
 histogram_quantile(0.95, 
-  rate(eidos_http_request_duration_seconds_bucket[5m])
+  rate(aicr_http_request_duration_seconds_bucket[5m])
 )
 
 # Rate limit rejections
-rate(eidos_rate_limit_rejects_total[5m])
+rate(aicr_rate_limit_rejects_total[5m])
 ```
 
 ### Alerting Rules
@@ -621,39 +621,39 @@ rate(eidos_rate_limit_rejects_total[5m])
 ```yaml
 # prometheus-rules.yaml
 groups:
-  - name: eidos_alerts
+  - name: aicr_alerts
     interval: 30s
     rules:
-      - alert: EidosHighErrorRate
+      - alert: AICRHighErrorRate
         expr: |
-          rate(eidos_http_requests_total{status=~"5.."}[5m]) > 0.05
+          rate(aicr_http_requests_total{status=~"5.."}[5m]) > 0.05
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Eidos API high error rate"
+          summary: "AICR API high error rate"
           description: "Error rate is {{ $value | humanizePercentage }}"
       
-      - alert: EidosHighLatency
+      - alert: AICRHighLatency
         expr: |
           histogram_quantile(0.95,
-            rate(eidos_http_request_duration_seconds_bucket[5m])
+            rate(aicr_http_request_duration_seconds_bucket[5m])
           ) > 1
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Eidos API high latency"
+          summary: "AICR API high latency"
           description: "P95 latency is {{ $value }}s"
       
-      - alert: EidosRateLimitHit
+      - alert: AICRRateLimitHit
         expr: |
-          rate(eidos_rate_limit_rejects_total[5m]) > 1
+          rate(aicr_rate_limit_rejects_total[5m]) > 1
         for: 5m
         labels:
           severity: info
         annotations:
-          summary: "Eidos API rate limit reached"
+          summary: "AICR API rate limit reached"
           description: "Rate limit rejections: {{ $value }}/s"
 ```
 
@@ -750,7 +750,7 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 OUTPUT="snapshot-${CLUSTER}-${TIMESTAMP}.yaml"
 
 # Capture snapshot from ConfigMap
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > "$OUTPUT"
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > "$OUTPUT"
 
 # Add metadata
 cat << EOF > "${OUTPUT}.meta"
@@ -773,7 +773,7 @@ aws s3 cp "${OUTPUT}.meta" "s3://my-bucket/snapshots/"
 import os
 import requests
 
-API_KEY = os.environ.get('Eidos_API_KEY')
+API_KEY = os.environ.get('AICR_API_KEY')
 
 headers = {
     'Authorization': f'Bearer {API_KEY}',
@@ -789,18 +789,18 @@ response = requests.get(
 
 ### Network Policies
 
-Restrict Eidos agent network access:
+Restrict AICR agent network access:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: eidos-agent
+  name: aicr-agent
   namespace: gpu-operator
 spec:
   podSelector:
     matchLabels:
-      job-name: eidos
+      job-name: aicr
   policyTypes:
     - Egress
   egress:
@@ -818,7 +818,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: eidos-credentials
+  name: aicr-credentials
   namespace: gpu-operator
 type: Opaque
 stringData:
@@ -828,10 +828,10 @@ stringData:
 ```yaml
 # Reference in pod
 env:
-  - name: Eidos_API_KEY
+  - name: AICR_API_KEY
     valueFrom:
       secretKeyRef:
-        name: eidos-credentials
+        name: aicr-credentials
         key: api-key
 ```
 
@@ -868,7 +868,7 @@ yq eval '.measurements[] | .type' snapshot.yaml | sort -u
 
 ```bash
 # Generate and validate
-eidos recipe --os ubuntu --accelerator h100 --output recipe.yaml
+aicr recipe --os ubuntu --accelerator h100 --output recipe.yaml
 yamllint recipe.yaml
 
 # Check applied overlays

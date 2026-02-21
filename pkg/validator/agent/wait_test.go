@@ -279,7 +279,7 @@ func TestGetPodForJob(t *testing.T) {
 				Name:      "test-pod",
 				Namespace: deployer.config.Namespace,
 				Labels: map[string]string{
-					"eidos.nvidia.com/job": deployer.config.JobName,
+					"aicr.nvidia.com/job": deployer.config.JobName,
 				},
 			},
 			Spec: corev1.PodSpec{
@@ -410,7 +410,7 @@ func TestGoTestEvent(t *testing.T) {
 	event := GoTestEvent{
 		Time:    time.Now(),
 		Action:  "pass",
-		Package: "github.com/NVIDIA/eidos/pkg/validator",
+		Package: "github.com/NVIDIA/aicr/pkg/validator",
 		Test:    "TestGpuDetection",
 		Output:  "test output\n",
 		Elapsed: 1.5,

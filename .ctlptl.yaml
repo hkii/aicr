@@ -31,7 +31,7 @@ port: 5001
 apiVersion: ctlptl.dev/v1alpha1
 kind: Cluster
 product: kind
-name: kind-eidos
+name: kind-aicr
 registry: ctlptl-registry
 kindV1Alpha4Cluster:
   nodes:

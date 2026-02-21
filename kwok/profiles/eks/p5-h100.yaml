@@ -19,7 +19,7 @@
 # - 192 vCPUs, 2048 GiB memory
 # - 3200 Gbps network bandwidth (EFA)
 
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: KWOKNodeProfile
 metadata:
   name: p5-h100

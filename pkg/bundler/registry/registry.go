@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/bundler/types"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/bundler/types"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // Bundler defines the interface for creating application bundles.

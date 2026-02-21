@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/collector"
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/collector"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 func TestNewSnapshot(t *testing.T) {

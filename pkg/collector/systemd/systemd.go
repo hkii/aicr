@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 	"github.com/coreos/go-systemd/v22/dbus"
 )
 

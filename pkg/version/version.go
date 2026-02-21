@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	pkgerrors "github.com/NVIDIA/eidos/pkg/errors"
+	pkgerrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // Error types for version parsing failures

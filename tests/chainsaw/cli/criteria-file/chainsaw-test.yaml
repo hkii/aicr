@@ -37,7 +37,7 @@ spec:
 
               cat > "${WORK}/criteria.yaml" << 'EOF'
               kind: RecipeCriteria
-              apiVersion: eidos.nvidia.com/v1alpha1
+              apiVersion: aicr.nvidia.com/v1alpha1
               metadata:
                 name: test-criteria
               spec:
@@ -48,7 +48,7 @@ spec:
               EOF
 
               cat > "${WORK}/criteria.json" << 'EOF'
-              {"kind":"RecipeCriteria","apiVersion":"eidos.nvidia.com/v1alpha1","metadata":{"name":"test"},"spec":{"service":"gke","accelerator":"a100","os":"ubuntu","intent":"inference"}}
+              {"kind":"RecipeCriteria","apiVersion":"aicr.nvidia.com/v1alpha1","metadata":{"name":"test"},"spec":{"service":"gke","accelerator":"a100","os":"ubuntu","intent":"inference"}}
               EOF
 
               echo 'kind: wrongKind' > "${WORK}/invalid-kind.yaml"
@@ -60,14 +60,14 @@ spec:
 
               cat > "${WORK}/invalid-enum.yaml" << 'EOF'
               kind: RecipeCriteria
-              apiVersion: eidos.nvidia.com/v1alpha1
+              apiVersion: aicr.nvidia.com/v1alpha1
               spec:
                 service: invalid-service
               EOF
 
               cat > "${WORK}/partial.yaml" << 'EOF'
               kind: RecipeCriteria
-              apiVersion: eidos.nvidia.com/v1alpha1
+              apiVersion: aicr.nvidia.com/v1alpha1
               spec:
                 accelerator: h100
               EOF
@@ -77,9 +77,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/criteria.yaml" -o "${WORK}/yaml-recipe.yaml"
+              ${AICR_BIN} recipe --criteria "${WORK}/criteria.yaml" -o "${WORK}/yaml-recipe.yaml"
               test -f "${WORK}/yaml-recipe.yaml"
             check:
               ($error == null): true
@@ -89,9 +89,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/criteria.json" -o "${WORK}/json-recipe.yaml"
+              ${AICR_BIN} recipe --criteria "${WORK}/criteria.json" -o "${WORK}/json-recipe.yaml"
               test -f "${WORK}/json-recipe.yaml"
             check:
               ($error == null): true
@@ -101,9 +101,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/criteria.yaml" --service gke \
+              ${AICR_BIN} recipe --criteria "${WORK}/criteria.yaml" --service gke \
                 -o "${WORK}/override.yaml"
               grep -q "gke" "${WORK}/override.yaml"
             check:
@@ -114,9 +114,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/invalid-kind.yaml" -o /dev/null 2>&1
+              ${AICR_BIN} recipe --criteria "${WORK}/invalid-kind.yaml" -o /dev/null 2>&1
             check:
               ($error != null): true
 
@@ -125,9 +125,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/invalid-version.yaml" -o /dev/null 2>&1
+              ${AICR_BIN} recipe --criteria "${WORK}/invalid-version.yaml" -o /dev/null 2>&1
             check:
               ($error != null): true
 
@@ -136,9 +136,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/invalid-enum.yaml" -o /dev/null 2>&1
+              ${AICR_BIN} recipe --criteria "${WORK}/invalid-enum.yaml" -o /dev/null 2>&1
             check:
               ($error != null): true
 
@@ -147,8 +147,8 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
-              ${EIDOS_BIN} recipe --criteria "/non/existent/file.yaml" -o /dev/null 2>&1
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
+              ${AICR_BIN} recipe --criteria "/non/existent/file.yaml" -o /dev/null 2>&1
             check:
               ($error != null): true
 
@@ -157,9 +157,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} bundle -r "${WORK}/yaml-recipe.yaml" -o "${WORK}/bundle"
+              ${AICR_BIN} bundle -r "${WORK}/yaml-recipe.yaml" -o "${WORK}/bundle"
               test -f "${WORK}/bundle/deploy.sh"
               test -f "${WORK}/bundle/README.md"
               ls "${WORK}"/bundle/*/values.yaml >/dev/null 2>&1
@@ -171,9 +171,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-criteria-file"
-              ${EIDOS_BIN} recipe --criteria "${WORK}/partial.yaml" -o "${WORK}/partial-recipe.yaml"
+              ${AICR_BIN} recipe --criteria "${WORK}/partial.yaml" -o "${WORK}/partial-recipe.yaml"
               test -f "${WORK}/partial-recipe.yaml"
             check:
               ($error == null): true

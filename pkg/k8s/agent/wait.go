@@ -20,8 +20,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -101,7 +101,7 @@ func (d *Deployer) WaitForPodReady(ctx context.Context, timeout time.Duration) e
 			return errors.New(errors.ErrCodeTimeout, fmt.Sprintf("timeout waiting for Pod creation after %v", timeout))
 		case <-ticker.C:
 			pods, err := d.clientset.CoreV1().Pods(d.config.Namespace).List(pollCtx, metav1.ListOptions{
-				LabelSelector: "app.kubernetes.io/name=eidos",
+				LabelSelector: "app.kubernetes.io/name=aicr",
 			})
 			if err != nil {
 				return errors.Wrap(errors.ErrCodeInternal, "failed to list Pods", err)
@@ -132,7 +132,7 @@ foundPod:
 // findPodName finds the pod name by label selector for this Job.
 func (d *Deployer) findPodName(ctx context.Context) (string, error) {
 	pods, err := d.clientset.CoreV1().Pods(d.config.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/name=eidos",
+		LabelSelector: "app.kubernetes.io/name=aicr",
 	})
 	if err != nil {
 		return "", errors.Wrap(errors.ErrCodeInternal, "failed to list Pods", err)

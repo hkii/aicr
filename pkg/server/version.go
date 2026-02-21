@@ -26,7 +26,7 @@ const (
 
 // negotiateAPIVersion extracts the API version from the Accept header.
 // It supports version negotiation via Accept header like:
-// Accept: application/vnd.nvidia.eidos.v2+json
+// Accept: application/vnd.nvidia.aicr.v2+json
 // If no version is specified, it returns the default version (v1).
 func negotiateAPIVersion(r *http.Request) string {
 	accept := r.Header.Get("Accept")
@@ -35,8 +35,8 @@ func negotiateAPIVersion(r *http.Request) string {
 	}
 
 	// Parse Accept header for custom vendor MIME type
-	// Format: application/vnd.nvidia.eidos.v2+json
-	if strings.Contains(accept, "application/vnd.nvidia.eidos.v") {
+	// Format: application/vnd.nvidia.aicr.v2+json
+	if strings.Contains(accept, "application/vnd.nvidia.aicr.v") {
 		parts := strings.Split(accept, ".")
 		for i, part := range parts {
 			if strings.HasPrefix(part, "v") && i < len(parts) {

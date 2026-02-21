@@ -20,8 +20,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

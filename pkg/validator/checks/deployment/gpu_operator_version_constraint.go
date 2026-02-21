@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/validator"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/validator"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )

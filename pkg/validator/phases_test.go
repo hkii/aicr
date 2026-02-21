@@ -19,11 +19,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/k8s/client"
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func init() {

@@ -1,6 +1,6 @@
 # Release Process
 
-This document outlines the release process for NVIDIA Eidos. For contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+This document outlines the release process for NVIDIA AI Cluster Runtime (AICR). For contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Prerequisites
 
@@ -89,8 +89,8 @@ Built via GoReleaser for multiple platforms:
 
 | Binary | Platforms | Description |
 |--------|-----------|-------------|
-| `eidos` | darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 | CLI tool |
-| `eidosd` | linux/amd64, linux/arm64 | API server |
+| `aicr` | darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 | CLI tool |
+| `aicrd` | linux/amd64, linux/arm64 | API server |
 
 ### Container Images
 
@@ -98,8 +98,8 @@ Published to GitHub Container Registry (`ghcr.io/nvidia/`):
 
 | Image | Base | Description |
 |-------|------|-------------|
-| `eidos` | `nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04` | CLI with CUDA runtime |
-| `eidosd` | `gcr.io/distroless/static:nonroot` | Minimal API server |
+| `aicr` | `nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04` | CLI with CUDA runtime |
+| `aicrd` | `gcr.io/distroless/static:nonroot` | Minimal API server |
 
 Tags: `latest`, `v1.2.3`
 
@@ -127,25 +127,25 @@ All releases must pass:
 
 ```bash
 # Get latest release tag
-export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
+export TAG=$(curl -s https://api.github.com/repos/NVIDIA/aicr/releases/latest | jq -r '.tag_name')
 
 # Verify with GitHub CLI (recommended)
-gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG} --owner nvidia
-gh attestation verify oci://ghcr.io/nvidia/eidosd:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/aicr:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/aicrd:${TAG} --owner nvidia
 
 # Verify with Cosign
 cosign verify-attestation \
   --type spdxjson \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp 'https://github.com/NVIDIA/eidos/.github/workflows/.*' \
-  ghcr.io/nvidia/eidos:${TAG}
+  --certificate-identity-regexp 'https://github.com/NVIDIA/aicr/.github/workflows/.*' \
+  ghcr.io/nvidia/aicr:${TAG}
 ```
 
 ### Verify Binary Checksums
 
 ```bash
 # Download checksums file from GitHub Release
-curl -sL "https://github.com/NVIDIA/eidos/releases/download/${TAG}/eidos_checksums.txt" -o checksums.txt
+curl -sL "https://github.com/NVIDIA/aicr/releases/download/${TAG}/aicr_checksums.txt" -o checksums.txt
 
 # Verify downloaded binary
 sha256sum -c checksums.txt --ignore-missing
@@ -155,14 +155,14 @@ sha256sum -c checksums.txt --ignore-missing
 
 ```bash
 # Pull container images
-docker pull ghcr.io/nvidia/eidos:${TAG}
-docker pull ghcr.io/nvidia/eidosd:${TAG}
+docker pull ghcr.io/nvidia/aicr:${TAG}
+docker pull ghcr.io/nvidia/aicrd:${TAG}
 
 # Test CLI
-docker run --rm ghcr.io/nvidia/eidos:${TAG} --version
+docker run --rm ghcr.io/nvidia/aicr:${TAG} --version
 
 # Test API server
-docker run --rm -p 8080:8080 ghcr.io/nvidia/eidosd:${TAG} &
+docker run --rm -p 8080:8080 ghcr.io/nvidia/aicrd:${TAG} &
 curl http://localhost:8080/health
 ```
 
@@ -174,9 +174,9 @@ curl http://localhost:8080/health
 
 ## Demo Cloud Run Deployment
 
-> **Note**: This is a **demonstration deployment** for testing and development purposes only. It is not a production service. Users should self-host the `eidosd` API server in their own infrastructure for production use. See [API Server Documentation](docs/contributor/api-server.md) for deployment guidance.
+> **Note**: This is a **demonstration deployment** for testing and development purposes only. It is not a production service. Users should self-host the `aicrd` API server in their own infrastructure for production use. See [API Server Documentation](docs/contributor/api-server.md) for deployment guidance.
 
-The `eidosd` API server demo is automatically deployed to Google Cloud Run on successful release:
+The `aicrd` API server demo is automatically deployed to Google Cloud Run on successful release:
 
 - **Project**: `eidosx`
 - **Region**: `us-west1`

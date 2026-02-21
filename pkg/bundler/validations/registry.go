@@ -21,8 +21,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 var (

@@ -441,21 +441,21 @@ func TestAgentOutputURILogic(t *testing.T) {
 			name:               "file output uses default ConfigMap with agent namespace",
 			agentNamespace:     "gpu-operator",
 			userOutput:         "snapshot.yaml",
-			wantAgentOutputHas: "cm://gpu-operator/eidos-snapshot",
+			wantAgentOutputHas: "cm://gpu-operator/aicr-snapshot",
 			wantUsesUserOutput: false,
 		},
 		{
 			name:               "stdout uses default ConfigMap with agent namespace",
 			agentNamespace:     "gpu-operator",
 			userOutput:         "",
-			wantAgentOutputHas: "cm://gpu-operator/eidos-snapshot",
+			wantAgentOutputHas: "cm://gpu-operator/aicr-snapshot",
 			wantUsesUserOutput: false,
 		},
 		{
 			name:               "dash stdout uses default ConfigMap with agent namespace",
 			agentNamespace:     "gpu-operator",
 			userOutput:         "-",
-			wantAgentOutputHas: "cm://gpu-operator/eidos-snapshot",
+			wantAgentOutputHas: "cm://gpu-operator/aicr-snapshot",
 			wantUsesUserOutput: false,
 		},
 		{
@@ -469,7 +469,7 @@ func TestAgentOutputURILogic(t *testing.T) {
 			name:               "custom namespace uses that namespace for default ConfigMap",
 			agentNamespace:     "custom-namespace",
 			userOutput:         "output.yaml",
-			wantAgentOutputHas: "cm://custom-namespace/eidos-snapshot",
+			wantAgentOutputHas: "cm://custom-namespace/aicr-snapshot",
 			wantUsesUserOutput: false,
 		},
 	}
@@ -480,7 +480,7 @@ func TestAgentOutputURILogic(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Simulate the logic from measureWithAgent
 			finalOutput := tt.userOutput
-			agentOutput := configMapURIScheme + tt.agentNamespace + "/eidos-snapshot"
+			agentOutput := configMapURIScheme + tt.agentNamespace + "/aicr-snapshot"
 
 			hasConfigMapPrefix := len(finalOutput) >= len(configMapURIScheme) &&
 				finalOutput[:len(configMapURIScheme)] == configMapURIScheme

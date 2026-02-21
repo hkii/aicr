@@ -23,14 +23,14 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/logging"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/logging"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 )
 
 const (
-	name                   = "eidos"
+	name                   = "aicr"
 	versionDefault         = "dev"
 	functionalCategoryName = "Functional"
 )
@@ -74,7 +74,7 @@ var (
 func Execute() {
 	cmd := &cli.Command{
 		Name:                  name,
-		Usage:                 "Eidos CLI",
+		Usage:                 "AICR CLI",
 		Version:               fmt.Sprintf("%s (commit: %s, date: %s)", version, commit, date),
 		EnableShellCompletion: true,
 		HideHelpCommand:       true,
@@ -91,12 +91,12 @@ func Execute() {
 			&cli.BoolFlag{
 				Name:    "debug",
 				Usage:   "enable debug logging",
-				Sources: cli.EnvVars("EIDOS_DEBUG"),
+				Sources: cli.EnvVars("AICR_DEBUG"),
 			},
 			&cli.BoolFlag{
 				Name:    "log-json",
 				Usage:   "enable structured logging",
-				Sources: cli.EnvVars("EIDOS_LOG_JSON"),
+				Sources: cli.EnvVars("AICR_LOG_JSON"),
 			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {

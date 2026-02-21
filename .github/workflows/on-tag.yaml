@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VALIDATOR_IMAGE: ghcr.io/nvidia/eidos-validator
+  VALIDATOR_IMAGE: ghcr.io/nvidia/aicr-validator
 
 jobs:
 
@@ -158,7 +158,7 @@ jobs:
           cache-to: type=gha,mode=max
           labels: |
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
-            org.opencontainers.image.title=eidos-validator
+            org.opencontainers.image.title=aicr-validator
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ github.ref_name }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
@@ -208,9 +208,9 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - ghcr.io/nvidia/eidos
-          - ghcr.io/nvidia/eidosd
-          - ghcr.io/nvidia/eidos-validator
+          - ghcr.io/nvidia/aicr
+          - ghcr.io/nvidia/aicrd
+          - ghcr.io/nvidia/aicr-validator
     steps:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -277,24 +277,24 @@ jobs:
         id: versions
         uses: ./.github/actions/load-versions
 
-      - name: Attest eidos image
+      - name: Attest aicr image
         uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/nvidia/eidos
+          image_name: ghcr.io/nvidia/aicr
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 
-      - name: Attest eidosd image
+      - name: Attest aicrd image
         uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/nvidia/eidosd
+          image_name: ghcr.io/nvidia/aicrd
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 
-      - name: Attest eidos-validator image
+      - name: Attest aicr-validator image
         uses: ./.github/actions/attest-image-from-tag
         with:
-          image_name: ghcr.io/nvidia/eidos-validator
+          image_name: ghcr.io/nvidia/aicr-validator
           tag: ${{ github.ref_name }}
           crane_version: ${{ steps.versions.outputs.crane }}
 
@@ -338,7 +338,7 @@ jobs:
       RUN_REGION: 'us-west1'
       RUN_SERVICE: 'api'
       # Source: GHCR image built by GoReleaser
-      SOURCE_IMAGE: 'ghcr.io/nvidia/eidosd'
+      SOURCE_IMAGE: 'ghcr.io/nvidia/aicrd'
       # Target: Artifact Registry demo repository
       TARGET_REGISTRY: 'us-docker.pkg.dev/eidosx/demo'
     steps:
@@ -361,6 +361,6 @@ jobs:
           service: ${{ env.RUN_SERVICE }}
           source_image: "${{ env.SOURCE_IMAGE }}:${{ github.ref_name }}"
           target_registry: ${{ env.TARGET_REGISTRY }}
-          image_name: 'eidosd'
+          image_name: 'aicrd'
           ghcr_token: ${{ github.token }}
           crane_version: ${{ steps.versions.outputs.crane }}

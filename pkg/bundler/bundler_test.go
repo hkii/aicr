@@ -23,8 +23,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 func TestNew(t *testing.T) {
@@ -183,7 +183,7 @@ func TestMake_Success(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		Criteria: &recipe.Criteria{
 			Service:     "eks",
@@ -267,7 +267,7 @@ func TestMake_WithValueOverrides(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		ComponentRefs: []recipe.ComponentRef{
 			{
@@ -313,7 +313,7 @@ func TestMake_WithNodeSelectors(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		ComponentRefs: []recipe.ComponentRef{
 			{
@@ -355,7 +355,7 @@ func TestMake_WithTolerations(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		ComponentRefs: []recipe.ComponentRef{
 			{
@@ -389,7 +389,7 @@ func TestMake_ContextCancellation(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		ComponentRefs: []recipe.ComponentRef{
 			{
@@ -416,7 +416,7 @@ func TestMake_DefaultOutputDir(t *testing.T) {
 	ctx := context.Background()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		ComponentRefs: []recipe.ComponentRef{
 			{
@@ -459,7 +459,7 @@ func TestMake_ArgoCD(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		Criteria: &recipe.Criteria{
 			Service:     "eks",
@@ -704,7 +704,7 @@ func TestCollectComponentManifests(t *testing.T) {
 // Running Make() twice with the same input should produce identical output.
 func TestMake_Reproducible(t *testing.T) {
 	recipeResult := &recipe.RecipeResult{
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Kind:       "Recipe",
 		Criteria: &recipe.Criteria{
 			Service:     "eks",

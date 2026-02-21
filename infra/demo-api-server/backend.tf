@@ -14,7 +14,7 @@
 
 terraform {
   backend "gcs" {
-    bucket = "eidos-tf-state"
+    bucket = "aicr-tf-state"
     prefix = "demo"
   }
 }

@@ -15,7 +15,7 @@
 # Skyhook Helm values
 # Base configuration for all deployments
 
-# Override release name prefix to avoid eidos-stack- prefix in resource names
+# Override release name prefix to avoid aicr-stack- prefix in resource names
 fullnameOverride: skyhook-operator
 
 # Disable the namespace-wide LimitRange. The upstream default (512Mi) was too low

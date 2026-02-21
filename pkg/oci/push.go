@@ -35,19 +35,19 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
 
-	apperrors "github.com/NVIDIA/eidos/pkg/errors"
+	apperrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 const (
-	// ArtifactType is the OCI media type for Eidos bundle artifacts.
+	// ArtifactType is the OCI media type for AICR bundle artifacts.
 	//
 	// Artifacts with this type package a directory tree into an OCI artifact using ORAS.
 	// The artifact contains standard OCI layout (manifest, config, layers) but is not
 	// a runnable container image - it's an opaque bundle of files.
 	//
-	// Use cases: distributing Eidos bundles (configs, assets) via OCI registries.
+	// Use cases: distributing AICR bundles (configs, assets) via OCI registries.
 	// Consumers that don't understand this type should treat it as a non-executable blob.
-	ArtifactType = "application/vnd.nvidia.eidos.artifact"
+	ArtifactType = "application/vnd.nvidia.aicr.artifact"
 
 	// Default timestamp for reproducible builds.
 	// Use a fixed date (Unix epoch) to ensure builds are deterministic.
@@ -68,7 +68,7 @@ type PackageOptions struct {
 	OutputDir string
 	// Registry is the OCI registry host for the reference (e.g., "ghcr.io").
 	Registry string
-	// Repository is the image repository path (e.g., "nvidia/eidos").
+	// Repository is the image repository path (e.g., "nvidia/aicr").
 	Repository string
 	// Tag is the image tag (e.g., "v1.0.0", "latest").
 	Tag string
@@ -95,7 +95,7 @@ type PushOptions struct {
 	SourceDir string
 	// Registry is the OCI registry host (e.g., "ghcr.io", "localhost:5000").
 	Registry string
-	// Repository is the image repository path (e.g., "nvidia/eidos").
+	// Repository is the image repository path (e.g., "nvidia/aicr").
 	Repository string
 	// Tag is the image tag (e.g., "v1.0.0", "latest").
 	Tag string

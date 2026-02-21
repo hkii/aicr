@@ -1,6 +1,6 @@
 # Constraint Expression Reference
 
-This document describes the constraint expression language used in Eidos validation recipes.
+This document describes the constraint expression language used in AICR validation recipes.
 
 ## Overview
 

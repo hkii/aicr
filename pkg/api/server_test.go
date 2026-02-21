@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // Test Coverage Note:
@@ -52,8 +52,8 @@ import (
 
 // TestConstants verifies package constants are properly defined
 func TestConstants(t *testing.T) {
-	if name != "eidosd" {
-		t.Errorf("name = %q, want %q", name, "eidosd")
+	if name != "aicrd" {
+		t.Errorf("name = %q, want %q", name, "aicrd")
 	}
 
 	if versionDefault != "dev" {
@@ -167,19 +167,19 @@ func TestRecipeEndpointPOST(t *testing.T) {
 	}{
 		{
 			name:        "valid JSON body",
-			body:        `{"kind":"RecipeCriteria","apiVersion":"eidos.nvidia.com/v1alpha1","spec":{"service":"eks","accelerator":"h100"}}`,
+			body:        `{"kind":"RecipeCriteria","apiVersion":"aicr.nvidia.com/v1alpha1","spec":{"service":"eks","accelerator":"h100"}}`,
 			contentType: "application/json",
 			wantStatus:  http.StatusOK,
 		},
 		{
 			name:        "valid YAML body",
-			body:        "kind: RecipeCriteria\napiVersion: eidos.nvidia.com/v1alpha1\nspec:\n  service: gke\n  accelerator: a100",
+			body:        "kind: RecipeCriteria\napiVersion: aicr.nvidia.com/v1alpha1\nspec:\n  service: gke\n  accelerator: a100",
 			contentType: "application/x-yaml",
 			wantStatus:  http.StatusOK,
 		},
 		{
 			name:        "valid JSON body with platform",
-			body:        `{"kind":"RecipeCriteria","apiVersion":"eidos.nvidia.com/v1alpha1","spec":{"service":"eks","accelerator":"h100","platform":"kubeflow"}}`,
+			body:        `{"kind":"RecipeCriteria","apiVersion":"aicr.nvidia.com/v1alpha1","spec":{"service":"eks","accelerator":"h100","platform":"kubeflow"}}`,
 			contentType: "application/json",
 			wantStatus:  http.StatusOK,
 		},

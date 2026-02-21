@@ -104,6 +104,6 @@ Kustomize Component Example:
 
 Note: A component must have either 'helm' OR 'kustomize' configuration, not both.
 
-See https://github.com/NVIDIA/eidos for more information.
+See https://github.com/NVIDIA/aicr for more information.
 */
 package bundler

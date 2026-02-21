@@ -4,10 +4,10 @@ set -euo pipefail
 
 # Configuration
 OWNER="NVIDIA"
-PROJECT="eidos"
+PROJECT="aicr"
 REPO="$OWNER/$PROJECT"
-BIN_NAME="eidos"
-CHECKSUMS_FILE="eidos_checksums.txt"
+BIN_NAME="aicr"
+CHECKSUMS_FILE="aicr_checksums.txt"
 REQUIRED_TOOLS=(curl)
 INSTALL_DIR="${1:-/usr/local/bin}"
 

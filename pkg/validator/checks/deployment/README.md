@@ -60,8 +60,8 @@ The validator handles various image tag formats:
 
 ```go
 import (
-    "github.com/NVIDIA/eidos/pkg/recipe"
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/recipe"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // Get the registered validator

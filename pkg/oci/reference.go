@@ -23,7 +23,7 @@ import (
 
 	"github.com/distribution/reference"
 
-	apperrors "github.com/NVIDIA/eidos/pkg/errors"
+	apperrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // URIScheme is the URI scheme for OCI registry output (e.g., "oci://ghcr.io/org/repo:tag").
@@ -146,7 +146,7 @@ type OutputConfig struct {
 	// InsecureTLS skips TLS certificate verification.
 	InsecureTLS bool
 	// Annotations are additional manifest annotations to include.
-	// If nil, default Eidos annotations will be used.
+	// If nil, default AICR annotations will be used.
 	Annotations map[string]string
 }
 
@@ -193,8 +193,8 @@ func PackageAndPush(ctx context.Context, cfg OutputConfig) (*PackageAndPushResul
 		annotations = map[string]string{
 			"org.opencontainers.image.version": cfg.Version,
 			"org.opencontainers.image.vendor":  "NVIDIA",
-			"org.opencontainers.image.title":   "Eidos Bundle",
-			"org.opencontainers.image.source":  "https://github.com/NVIDIA/eidos",
+			"org.opencontainers.image.title":   "AICR Bundle",
+			"org.opencontainers.image.source":  "https://github.com/NVIDIA/aicr",
 		}
 	}
 

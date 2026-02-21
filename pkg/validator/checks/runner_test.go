@@ -20,9 +20,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -178,16 +178,16 @@ func TestRunCheck_Failure(t *testing.T) {
 
 func TestLoadValidationContext_MissingSnapshotFile(t *testing.T) {
 	// Set environment variable to non-existent file
-	originalPath := os.Getenv("EIDOS_SNAPSHOT_PATH")
+	originalPath := os.Getenv("AICR_SNAPSHOT_PATH")
 	defer func() {
 		if originalPath != "" {
-			os.Setenv("EIDOS_SNAPSHOT_PATH", originalPath)
+			os.Setenv("AICR_SNAPSHOT_PATH", originalPath)
 		} else {
-			os.Unsetenv("EIDOS_SNAPSHOT_PATH")
+			os.Unsetenv("AICR_SNAPSHOT_PATH")
 		}
 	}()
 
-	os.Setenv("EIDOS_SNAPSHOT_PATH", "/nonexistent/snapshot.yaml")
+	os.Setenv("AICR_SNAPSHOT_PATH", "/nonexistent/snapshot.yaml")
 
 	// Should fail to load context (will also fail on in-cluster config)
 	ctx, cancel, err := LoadValidationContext()
@@ -211,7 +211,7 @@ func TestLoadValidationContext_WithValidSnapshot(t *testing.T) {
 	snapshotPath := filepath.Join(tmpDir, "snapshot.yaml")
 
 	// Write valid snapshot YAML
-	snapshotYAML := `apiVersion: eidos.nvidia.com/v1alpha1
+	snapshotYAML := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: Snapshot
 metadata:
   version: test
@@ -228,16 +228,16 @@ measurements:
 	}
 
 	// Set environment variable
-	originalPath := os.Getenv("EIDOS_SNAPSHOT_PATH")
+	originalPath := os.Getenv("AICR_SNAPSHOT_PATH")
 	defer func() {
 		if originalPath != "" {
-			os.Setenv("EIDOS_SNAPSHOT_PATH", originalPath)
+			os.Setenv("AICR_SNAPSHOT_PATH", originalPath)
 		} else {
-			os.Unsetenv("EIDOS_SNAPSHOT_PATH")
+			os.Unsetenv("AICR_SNAPSHOT_PATH")
 		}
 	}()
 
-	os.Setenv("EIDOS_SNAPSHOT_PATH", snapshotPath)
+	os.Setenv("AICR_SNAPSHOT_PATH", snapshotPath)
 
 	// Attempt to load context
 	// This will still fail on in-cluster config, but we can verify it tries to load the snapshot
@@ -263,16 +263,16 @@ measurements:
 
 func TestLoadValidationContext_DefaultSnapshotPath(t *testing.T) {
 	// Unset custom path to test default
-	originalPath := os.Getenv("EIDOS_SNAPSHOT_PATH")
+	originalPath := os.Getenv("AICR_SNAPSHOT_PATH")
 	defer func() {
 		if originalPath != "" {
-			os.Setenv("EIDOS_SNAPSHOT_PATH", originalPath)
+			os.Setenv("AICR_SNAPSHOT_PATH", originalPath)
 		} else {
-			os.Unsetenv("EIDOS_SNAPSHOT_PATH")
+			os.Unsetenv("AICR_SNAPSHOT_PATH")
 		}
 	}()
 
-	os.Unsetenv("EIDOS_SNAPSHOT_PATH")
+	os.Unsetenv("AICR_SNAPSHOT_PATH")
 
 	// Should use default path /data/snapshot/snapshot.yaml
 	ctx, cancel, err := LoadValidationContext()
@@ -296,17 +296,17 @@ func TestLoadValidationContext_DefaultSnapshotPath(t *testing.T) {
 
 func TestLoadValidationContext_WithRecipeData(t *testing.T) {
 	// Set recipe data environment variable
-	originalRecipe := os.Getenv("EIDOS_RECIPE_DATA")
+	originalRecipe := os.Getenv("AICR_RECIPE_DATA")
 	defer func() {
 		if originalRecipe != "" {
-			os.Setenv("EIDOS_RECIPE_DATA", originalRecipe)
+			os.Setenv("AICR_RECIPE_DATA", originalRecipe)
 		} else {
-			os.Unsetenv("EIDOS_RECIPE_DATA")
+			os.Unsetenv("AICR_RECIPE_DATA")
 		}
 	}()
 
 	recipeJSON := `{"key":"value","number":42}`
-	os.Setenv("EIDOS_RECIPE_DATA", recipeJSON)
+	os.Setenv("AICR_RECIPE_DATA", recipeJSON)
 
 	// Will fail on in-cluster config, but that's expected
 	// This test verifies the recipe data parsing logic
@@ -331,16 +331,16 @@ func TestLoadValidationContext_WithRecipeData(t *testing.T) {
 
 func TestLoadValidationContext_InvalidRecipeData(t *testing.T) {
 	// Set invalid recipe data
-	originalRecipe := os.Getenv("EIDOS_RECIPE_DATA")
+	originalRecipe := os.Getenv("AICR_RECIPE_DATA")
 	defer func() {
 		if originalRecipe != "" {
-			os.Setenv("EIDOS_RECIPE_DATA", originalRecipe)
+			os.Setenv("AICR_RECIPE_DATA", originalRecipe)
 		} else {
-			os.Unsetenv("EIDOS_RECIPE_DATA")
+			os.Unsetenv("AICR_RECIPE_DATA")
 		}
 	}()
 
-	os.Setenv("EIDOS_RECIPE_DATA", "invalid json{")
+	os.Setenv("AICR_RECIPE_DATA", "invalid json{")
 
 	// Will fail on in-cluster config first, but we're testing recipe parsing
 	ctx, cancel, err := LoadValidationContext()

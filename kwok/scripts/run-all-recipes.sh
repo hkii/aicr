@@ -25,7 +25,7 @@ KWOK_DIR="${SCRIPT_DIR}/.."
 REPO_ROOT="${KWOK_DIR}/.."
 OVERLAYS_DIR="${REPO_ROOT}/recipes/overlays"
 
-CLUSTER_NAME="${KWOK_CLUSTER:-eidos-kwok-test}"
+CLUSTER_NAME="${KWOK_CLUSTER:-aicr-kwok-test}"
 CONTEXT="kind-${CLUSTER_NAME}"
 
 RED='\033[0;31m'
@@ -94,7 +94,7 @@ cleanup_between_tests() {
     kubectl delete nodes -l type=kwok --ignore-not-found --force --grace-period=0 2>/dev/null || true
 
     # Clean up orphaned CRDs from cert-manager (cluster-scoped, not cleaned by ns delete)
-    kubectl delete crd -l app.kubernetes.io/instance=eidos-test --ignore-not-found 2>/dev/null || true
+    kubectl delete crd -l app.kubernetes.io/instance=aicr-test --ignore-not-found 2>/dev/null || true
 
     # Wait for any still-terminating namespaces before next recipe
     local system_ns="default|kube-node-lease|kube-public|kube-system|kwok-system|local-path-storage"

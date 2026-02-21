@@ -249,7 +249,7 @@ Checks use Go's `init()` pattern for self-registration. Use `TestName` to specif
 // pkg/validator/checks/deployment/my_check_check.go
 package deployment
 
-import "github.com/NVIDIA/eidos/pkg/validator/checks"
+import "github.com/NVIDIA/aicr/pkg/validator/checks"
 
 func init() {
     checks.RegisterCheck(&checks.Check{
@@ -276,8 +276,8 @@ Constraint validators evaluate constraints that need cluster access:
 package deployment
 
 import (
-    "github.com/NVIDIA/eidos/pkg/recipe"
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/recipe"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func init() {
@@ -388,8 +388,8 @@ The test wrapper function name must match the check name pattern:
 The `checks.NewTestRunner(t)` function:
 
 1. **Creates in-cluster Kubernetes client** using `rest.InClusterConfig()`
-2. **Loads snapshot** from mounted file at `$EIDOS_SNAPSHOT_PATH` (default: `/data/snapshot/snapshot.yaml`)
-3. **Loads recipe data** from `$EIDOS_RECIPE_DATA` environment variable (optional)
+2. **Loads snapshot** from mounted file at `$AICR_SNAPSHOT_PATH` (default: `/data/snapshot/snapshot.yaml`)
+3. **Loads recipe data** from `$AICR_RECIPE_DATA` environment variable (optional)
 4. **Returns TestRunner** with fully initialized ValidationContext
 
 The `runner.RunCheck("check-name")` method:
@@ -406,7 +406,7 @@ package performance
 
 import (
     "fmt"
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func init() {
@@ -430,7 +430,7 @@ package performance
 
 import (
     "testing"
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // Test wrapper for Job execution
@@ -471,10 +471,10 @@ The validation Job automatically sets these environment variables:
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `EIDOS_SNAPSHOT_PATH` | Path to mounted snapshot file | `/data/snapshot/snapshot.yaml` |
-| `EIDOS_RECIPE_PATH` | Path to mounted recipe file | `/data/recipe/recipe.yaml` |
-| `EIDOS_NAMESPACE` | Namespace where Job is running | `eidos-validation` |
-| `EIDOS_RESULT_CONFIGMAP` | ConfigMap name for results | `eidos-validation-readiness-gpu-detection-result` |
+| `AICR_SNAPSHOT_PATH` | Path to mounted snapshot file | `/data/snapshot/snapshot.yaml` |
+| `AICR_RECIPE_PATH` | Path to mounted recipe file | `/data/recipe/recipe.yaml` |
+| `AICR_NAMESPACE` | Namespace where Job is running | `aicr-validation` |
+| `AICR_RESULT_CONFIGMAP` | ConfigMap name for results | `aicr-validation-readiness-gpu-detection-result` |
 
 ### Local vs Job Execution
 
@@ -512,7 +512,7 @@ package deployment
 import (
     "fmt"
 
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -559,7 +559,7 @@ package deployment
 
 import (
     "testing"
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func TestOperatorHealth(t *testing.T) {
@@ -587,7 +587,7 @@ If the package isn't already imported, add it to trigger `init()`:
 
 ```go
 // In main.go or test file
-import _ "github.com/NVIDIA/eidos/pkg/validator/checks/deployment"
+import _ "github.com/NVIDIA/aicr/pkg/validator/checks/deployment"
 ```
 
 ### Adding a Constraint Validator
@@ -611,9 +611,9 @@ import (
     "context"
     "fmt"
 
-    "github.com/NVIDIA/eidos/pkg/recipe"
-    "github.com/NVIDIA/eidos/pkg/validator"
-    "github.com/NVIDIA/eidos/pkg/validator/checks"
+    "github.com/NVIDIA/aicr/pkg/recipe"
+    "github.com/NVIDIA/aicr/pkg/validator"
+    "github.com/NVIDIA/aicr/pkg/validator/checks"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
 )
@@ -1034,7 +1034,7 @@ func CheckPerformance(ctx *checks.ValidationContext) error {
     job := &batchv1.Job{
         ObjectMeta: metav1.ObjectMeta{
             Name:      "perf-test",
-            Namespace: "eidos-validation",
+            Namespace: "aicr-validation",
         },
         Spec: batchv1.JobSpec{
             Template: corev1.PodTemplateSpec{
@@ -1053,7 +1053,7 @@ func CheckPerformance(ctx *checks.ValidationContext) error {
     }
 
     // 2. Create and wait for Job
-    _, err := ctx.Clientset.BatchV1().Jobs("eidos-validation").Create(
+    _, err := ctx.Clientset.BatchV1().Jobs("aicr-validation").Create(
         ctx.Context, job, metav1.CreateOptions{},
     )
     if err != nil {
@@ -1070,7 +1070,7 @@ func CheckPerformance(ctx *checks.ValidationContext) error {
 
 ## Adding Constraint Validators (New Approach)
 
-For constraint validators, Eidos provides an automated code generator that scaffolds all necessary files with proper structure. This ensures consistency and catches registration issues automatically.
+For constraint validators, AICR provides an automated code generator that scaffolds all necessary files with proper structure. This ensures consistency and catches registration issues automatically.
 
 ### Quick Start with Generator
 
@@ -1231,7 +1231,7 @@ func TestMyAppVersion(t *testing.T) {
 make test
 
 # Integration test in Job (requires cluster)
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml --phase deployment
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml --phase deployment
 ```
 
 **6. Submit PR:**
@@ -1569,7 +1569,7 @@ Job logs: Failed to create test runner: failed to load validation context:
 
 Check Job pod volumes:
 ```bash
-kubectl get pod <pod-name> -n eidos-validation -o yaml | grep -A 10 volumes
+kubectl get pod <pod-name> -n aicr-validation -o yaml | grep -A 10 volumes
 ```
 
 Expected volumes:
@@ -1604,7 +1604,7 @@ kubectl get cm -n <namespace> <snapshot-configmap> -o jsonpath='{.data.snapshot\
 
 **Symptom:**
 ```
-Error: failed to wait for Job completion: Job "eidos-validation-deployment" not found
+Error: failed to wait for Job completion: Job "aicr-validation-deployment" not found
 ```
 
 **Causes:**
@@ -1616,18 +1616,18 @@ Error: failed to wait for Job completion: Job "eidos-validation-deployment" not 
 
 Check if namespace exists:
 ```bash
-kubectl get namespace eidos-validation
+kubectl get namespace aicr-validation
 ```
 
 Create namespace if missing:
 ```bash
-kubectl create namespace eidos-validation
+kubectl create namespace aicr-validation
 ```
 
 Check Job status:
 ```bash
-kubectl get jobs -n eidos-validation
-kubectl describe job eidos-validation-deployment -n eidos-validation
+kubectl get jobs -n aicr-validation
+kubectl describe job aicr-validation-deployment -n aicr-validation
 ```
 
 #### Job Failed to Start
@@ -1646,20 +1646,20 @@ Error: Job failed with status: ImagePullBackOff
 
 Check Job events:
 ```bash
-kubectl describe job eidos-validation-deployment -n eidos-validation
+kubectl describe job aicr-validation-deployment -n aicr-validation
 ```
 
 Check Pod logs:
 ```bash
-kubectl get pods -n eidos-validation
-kubectl describe pod <pod-name> -n eidos-validation
+kubectl get pods -n aicr-validation
+kubectl describe pod <pod-name> -n aicr-validation
 ```
 
 Verify image exists:
 ```bash
-docker pull ghcr.io/nvidia/eidos-validator:latest
+docker pull ghcr.io/nvidia/aicr-validator:latest
 # or
-kubectl run test --image=ghcr.io/nvidia/eidos-validator:latest --rm -it --restart=Never -- /bin/sh
+kubectl run test --image=ghcr.io/nvidia/aicr-validator:latest --rm -it --restart=Never -- /bin/sh
 ```
 
 #### Job Pods Crash
@@ -1674,13 +1674,13 @@ Error: Job pod exited with code 1
 View pod logs:
 ```bash
 # Get pod name
-kubectl get pods -n eidos-validation -l job-name=eidos-validation-deployment
+kubectl get pods -n aicr-validation -l job-name=aicr-validation-deployment
 
 # View logs
-kubectl logs <pod-name> -n eidos-validation
+kubectl logs <pod-name> -n aicr-validation
 
 # View logs of crashed pod
-kubectl logs <pod-name> -n eidos-validation --previous
+kubectl logs <pod-name> -n aicr-validation --previous
 ```
 
 Common causes in logs:
@@ -1696,7 +1696,7 @@ Common causes in logs:
 **Symptom:**
 ```
 Error: failed to list GPU operator pods: pods is forbidden:
-User "system:serviceaccount:eidos-validation:eidos-validator" cannot list resource "pods"
+User "system:serviceaccount:aicr-validation:aicr-validator" cannot list resource "pods"
 in API group "" in the namespace "gpu-operator"
 ```
 
@@ -1707,13 +1707,13 @@ in API group "" in the namespace "gpu-operator"
 Check current permissions:
 ```bash
 kubectl auth can-i list pods --namespace=gpu-operator \
-  --as=system:serviceaccount:eidos-validation:eidos-validator
+  --as=system:serviceaccount:aicr-validation:aicr-validator
 ```
 
 View current Role/RoleBinding:
 ```bash
-kubectl get role eidos-validator -n eidos-validation -o yaml
-kubectl get rolebinding eidos-validator -n eidos-validation -o yaml
+kubectl get role aicr-validator -n aicr-validation -o yaml
+kubectl get rolebinding aicr-validator -n aicr-validation -o yaml
 ```
 
 **Fix:** Create proper RBAC resources:
@@ -1723,7 +1723,7 @@ kubectl get rolebinding eidos-validator -n eidos-validation -o yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: eidos-validator
+  name: aicr-validator
 rules:
   # Readiness phase
   - apiGroups: [""]
@@ -1755,14 +1755,14 @@ rules:
 Apply RBAC:
 ```bash
 kubectl apply -f role.yaml
-kubectl create clusterrolebinding eidos-validator \
-  --clusterrole=eidos-validator \
-  --serviceaccount=eidos-validation:eidos-validator
+kubectl create clusterrolebinding aicr-validator \
+  --clusterrole=aicr-validator \
+  --serviceaccount=aicr-validation:aicr-validator
 ```
 
 #### RBAC for Cross-Namespace Access
 
-**Issue:** Check needs to access resources in `gpu-operator` namespace but only has permissions in `eidos-validation`
+**Issue:** Check needs to access resources in `gpu-operator` namespace but only has permissions in `aicr-validation`
 
 **Solution:** Use ClusterRole instead of Role:
 
@@ -1770,7 +1770,7 @@ kubectl create clusterrolebinding eidos-validator \
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: eidos-validator
+  name: aicr-validator
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments"]
@@ -1781,15 +1781,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: eidos-validator
+  name: aicr-validator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: eidos-validator
+  name: aicr-validator
 subjects:
   - kind: ServiceAccount
-    name: eidos-validator
-    namespace: eidos-validation
+    name: aicr-validator
+    namespace: aicr-validation
 ```
 
 ### Timeout Problems
@@ -1855,7 +1855,7 @@ func LongRunningCheck(ctx *checks.ValidationContext) error {
 **Symptom:**
 ```
 Error: Job did not complete within timeout period
-Job: eidos-validation-performance
+Job: aicr-validation-performance
 Timeout: 5m0s
 ```
 
@@ -1870,13 +1870,13 @@ config := agent.Config{
 
 Check if Job is actually running:
 ```bash
-kubectl get pods -n eidos-validation -l job-name=eidos-validation-performance
-kubectl logs <pod-name> -n eidos-validation --follow
+kubectl get pods -n aicr-validation -l job-name=aicr-validation-performance
+kubectl logs <pod-name> -n aicr-validation --follow
 ```
 
 Check Job status:
 ```bash
-kubectl describe job eidos-validation-performance -n eidos-validation
+kubectl describe job aicr-validation-performance -n aicr-validation
 ```
 
 ### Check Registration Issues
@@ -1909,7 +1909,7 @@ func TestCheckRegistered(t *testing.T) {
 Ensure package is imported:
 ```go
 // Import with blank identifier to trigger init()
-import _ "github.com/NVIDIA/eidos/pkg/validator/checks/deployment"
+import _ "github.com/NVIDIA/aicr/pkg/validator/checks/deployment"
 ```
 
 List all registered checks:
@@ -1940,7 +1940,7 @@ go test -v ./pkg/validator/checks/... -run TestList
 
 Verify import:
 ```go
-import _ "github.com/NVIDIA/eidos/pkg/validator/checks/deployment"
+import _ "github.com/NVIDIA/aicr/pkg/validator/checks/deployment"
 ```
 
 Check pattern match:
@@ -1965,11 +1965,11 @@ panic: constraint validator for pattern "Deployment.gpu-operator.version" is alr
 
 **Solution:** Only import check packages once, typically in main:
 ```go
-// cmd/eidos/main.go
+// cmd/aicr/main.go
 import (
-    _ "github.com/NVIDIA/eidos/pkg/validator/checks/deployment"  // Once here
-    _ "github.com/NVIDIA/eidos/pkg/validator/checks/performance"
-    _ "github.com/NVIDIA/eidos/pkg/validator/checks/conformance"
+    _ "github.com/NVIDIA/aicr/pkg/validator/checks/deployment"  // Once here
+    _ "github.com/NVIDIA/aicr/pkg/validator/checks/performance"
+    _ "github.com/NVIDIA/aicr/pkg/validator/checks/conformance"
 )
 ```
 
@@ -2179,7 +2179,7 @@ Reason: skipped - Job deployment failed (test mode)
 
 Create test namespace:
 ```bash
-kubectl create namespace eidos-validation
+kubectl create namespace aicr-validation
 ```
 
 Or run tests with fake clientset:
@@ -2217,21 +2217,21 @@ func init() {
 
 ```bash
 # Watch for new Jobs
-kubectl get jobs -n eidos-validation -w
+kubectl get jobs -n aicr-validation -w
 
 # Stream logs from running Job
-POD=$(kubectl get pods -n eidos-validation -l job-name=eidos-validation-deployment -o name | head -1)
-kubectl logs -n eidos-validation $POD --follow
+POD=$(kubectl get pods -n aicr-validation -l job-name=aicr-validation-deployment -o name | head -1)
+kubectl logs -n aicr-validation $POD --follow
 ```
 
 #### Check Job Results ConfigMap
 
 ```bash
 # List result ConfigMaps
-kubectl get configmaps -n eidos-validation
+kubectl get configmaps -n aicr-validation
 
 # View specific result
-kubectl get configmap eidos-validation-deployment-result -n eidos-validation -o yaml
+kubectl get configmap aicr-validation-deployment-result -n aicr-validation -o yaml
 ```
 
 #### Debug Check Function Directly
@@ -2289,12 +2289,12 @@ func ValidateGPUOperatorVersion(ctx *checks.ValidationContext, constraint recipe
 
 ```bash
 # Debug a running Job pod
-kubectl debug -n eidos-validation <pod-name> -it --image=busybox
+kubectl debug -n aicr-validation <pod-name> -it --image=busybox
 
 # Check environment and mounts
-env | grep EIDOS
-ls -la /eidos/snapshot
-cat /eidos/snapshot/snapshot.yaml
+env | grep AICR
+ls -la /aicr/snapshot
+cat /aicr/snapshot/snapshot.yaml
 ```
 
 #### Collect Diagnostic Information
@@ -2307,35 +2307,35 @@ kubectl version
 kubectl get nodes
 
 # Validation namespace
-kubectl get all -n eidos-validation
+kubectl get all -n aicr-validation
 
 # Job details
-kubectl describe job <job-name> -n eidos-validation
+kubectl describe job <job-name> -n aicr-validation
 
 # Pod logs
-kubectl logs <pod-name> -n eidos-validation
+kubectl logs <pod-name> -n aicr-validation
 
 # RBAC
-kubectl auth can-i --list --as=system:serviceaccount:eidos-validation:eidos-validator
+kubectl auth can-i --list --as=system:serviceaccount:aicr-validation:aicr-validator
 ```
 
 #### Common kubectl Commands
 
 ```bash
 # List all validation Jobs
-kubectl get jobs -n eidos-validation
+kubectl get jobs -n aicr-validation
 
 # Delete failed Jobs
-kubectl delete job -n eidos-validation -l status=failed
+kubectl delete job -n aicr-validation -l status=failed
 
 # Clean up validation namespace
-kubectl delete namespace eidos-validation
+kubectl delete namespace aicr-validation
 
 # Re-create validation namespace
-kubectl create namespace eidos-validation
+kubectl create namespace aicr-validation
 
 # View events
-kubectl get events -n eidos-validation --sort-by='.lastTimestamp'
+kubectl get events -n aicr-validation --sort-by='.lastTimestamp'
 ```
 
 ## Migration from Inline Validation

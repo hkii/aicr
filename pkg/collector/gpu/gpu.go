@@ -23,9 +23,9 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 // Collector collects NVIDIA SMI configurations from nvidia-smi command output in XML format

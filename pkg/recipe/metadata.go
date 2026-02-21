@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // RecipeMetadataKind is the kind value for RecipeMetadata resources.
@@ -31,7 +31,7 @@ const RecipeMetadataKind = "RecipeMetadata"
 const RecipeResultKind = "RecipeResult"
 
 // RecipeAPIVersion is the API version for recipe metadata and result resources.
-const RecipeAPIVersion = "eidos.nvidia.com/v1alpha1"
+const RecipeAPIVersion = "aicr.nvidia.com/v1alpha1"
 
 // ComponentType represents the type of component deployment.
 type ComponentType string
@@ -244,7 +244,7 @@ type RecipeMetadataHeader struct {
 	// Kind is always "RecipeMetadata".
 	Kind string `json:"kind" yaml:"kind"`
 
-	// APIVersion is the API version (e.g., "eidos.nvidia.com/v1alpha1").
+	// APIVersion is the API version (e.g., "aicr.nvidia.com/v1alpha1").
 	APIVersion string `json:"apiVersion" yaml:"apiVersion"`
 
 	// Metadata contains the name and other metadata.

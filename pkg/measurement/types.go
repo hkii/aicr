@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -116,7 +116,7 @@ func (st *Subtype) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, &tmp); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "failed to unmarshal subtype JSON", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "failed to unmarshal subtype JSON", err)
 	}
 
 	st.Name = tmp.Name
@@ -141,7 +141,7 @@ func (st *Subtype) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if err := node.Decode(&tmp); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "failed to decode subtype YAML", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "failed to decode subtype YAML", err)
 	}
 
 	st.Name = tmp.Name
@@ -271,14 +271,14 @@ func Str(v string) Reading      { return &Scalar[string]{V: v} }
 // Validate checks if the measurement is properly formed.
 func (m *Measurement) Validate() error {
 	if m.Type == "" {
-		return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, "measurement type cannot be empty")
+		return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, "measurement type cannot be empty")
 	}
 	if len(m.Subtypes) == 0 {
-		return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, "measurement must have at least one subtype")
+		return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, "measurement must have at least one subtype")
 	}
 	for i, st := range m.Subtypes {
 		if err := st.Validate(); err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("subtype[%d]", i), err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("subtype[%d]", i), err)
 		}
 	}
 	return nil
@@ -329,7 +329,7 @@ func (m *Measurement) SubtypeNames() []string {
 // Returns an error if the measurements have different types.
 func (m *Measurement) Merge(other *Measurement) error {
 	if m.Type != other.Type {
-		return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("cannot merge measurements of different types: %s and %s", m.Type, other.Type))
+		return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("cannot merge measurements of different types: %s and %s", m.Type, other.Type))
 	}
 
 	for _, otherSt := range other.Subtypes {
@@ -362,7 +362,7 @@ func copyReadings(src map[string]Reading) map[string]Reading {
 // Validate checks if the subtype is properly formed.
 func (st *Subtype) Validate() error {
 	if len(st.Data) == 0 {
-		return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, "subtype data cannot be empty")
+		return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, "subtype data cannot be empty")
 	}
 	return nil
 }
@@ -391,11 +391,11 @@ func (st *Subtype) Keys() []string {
 func (st *Subtype) GetString(key string) (string, error) {
 	reading := st.Data[key]
 	if reading == nil {
-		return "", eidoserrors.New(eidoserrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
+		return "", aicrerrors.New(aicrerrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
 	}
 	v, ok := reading.Any().(string)
 	if !ok {
-		return "", eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not a string", key))
+		return "", aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not a string", key))
 	}
 	return v, nil
 }
@@ -404,7 +404,7 @@ func (st *Subtype) GetString(key string) (string, error) {
 func (st *Subtype) GetInt64(key string) (int64, error) {
 	reading := st.Data[key]
 	if reading == nil {
-		return 0, eidoserrors.New(eidoserrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
+		return 0, aicrerrors.New(aicrerrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
 	}
 	// Handle both int64 and int
 	switch v := reading.Any().(type) {
@@ -413,7 +413,7 @@ func (st *Subtype) GetInt64(key string) (int64, error) {
 	case int:
 		return int64(v), nil
 	default:
-		return 0, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not an integer", key))
+		return 0, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not an integer", key))
 	}
 }
 
@@ -421,7 +421,7 @@ func (st *Subtype) GetInt64(key string) (int64, error) {
 func (st *Subtype) GetUint64(key string) (uint64, error) {
 	reading := st.Data[key]
 	if reading == nil {
-		return 0, eidoserrors.New(eidoserrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
+		return 0, aicrerrors.New(aicrerrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
 	}
 	// Handle both uint64 and uint
 	switch v := reading.Any().(type) {
@@ -430,7 +430,7 @@ func (st *Subtype) GetUint64(key string) (uint64, error) {
 	case uint:
 		return uint64(v), nil
 	default:
-		return 0, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not an unsigned integer", key))
+		return 0, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not an unsigned integer", key))
 	}
 }
 
@@ -438,11 +438,11 @@ func (st *Subtype) GetUint64(key string) (uint64, error) {
 func (st *Subtype) GetFloat64(key string) (float64, error) {
 	reading := st.Data[key]
 	if reading == nil {
-		return 0, eidoserrors.New(eidoserrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
+		return 0, aicrerrors.New(aicrerrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
 	}
 	v, ok := reading.Any().(float64)
 	if !ok {
-		return 0, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not a float64", key))
+		return 0, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not a float64", key))
 	}
 	return v, nil
 }
@@ -451,11 +451,11 @@ func (st *Subtype) GetFloat64(key string) (float64, error) {
 func (st *Subtype) GetBool(key string) (bool, error) {
 	reading := st.Data[key]
 	if reading == nil {
-		return false, eidoserrors.New(eidoserrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
+		return false, aicrerrors.New(aicrerrors.ErrCodeNotFound, fmt.Sprintf("key %q not found", key))
 	}
 	v, ok := reading.Any().(bool)
 	if !ok {
-		return false, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not a bool", key))
+		return false, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("key %q is not a bool", key))
 	}
 	return v, nil
 }

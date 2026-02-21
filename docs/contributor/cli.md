@@ -1,6 +1,6 @@
 # CLI Architecture
 
-The `eidos` CLI provides command-line access to Eidos configuration management capabilities.
+The `aicr` CLI provides command-line access to AICR configuration management capabilities.
 
 ## Overview
 
@@ -86,7 +86,7 @@ Constraints use fully qualified measurement paths: `{Type}.{Subtype}.{Key}`
 
 By default, the command exits with non-zero status when constraints fail (ideal for CI/CD). To run in informational mode without failing:
 ```shell
-eidos validate -r recipe.yaml -s cm://gpu-operator/eidos-snapshot --fail-on-error=false
+aicr validate -r recipe.yaml -s cm://gpu-operator/aicr-snapshot --fail-on-error=false
 ```
 
 ### Step 4: Bundle Command
@@ -117,7 +117,7 @@ Generates deployment artifacts from recipes:
 
 The `--set` flag allows runtime customization of generated bundle values:
 ```shell
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:gds.enabled=true \
   --set gpuoperator:driver.version=570.86.16
 ```
@@ -127,12 +127,12 @@ eidos bundle -r recipe.yaml \
 The bundle command supports node selector and toleration flags for controlling workload placement:
 ```shell
 # Schedule system components (operators, controllers) on specific nodes
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --system-node-selector nodeGroup=system-pool \
   --system-node-toleration dedicated=system:NoSchedule
 
 # Schedule GPU workloads (drivers, device plugins) on GPU nodes
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --accelerated-node-selector nvidia.com/gpu.present=true \
   --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule
 ```
@@ -157,7 +157,7 @@ These flags apply selectors/tolerations to bundler-specific paths (e.g., GPU Ope
 
 ```mermaid
 flowchart TD
-    A["eidos CLI<br/>cmd/eidos/main.go"] --> B["Root Command<br/>pkg/cli/root.go"]
+    A["aicr CLI<br/>cmd/aicr/main.go"] --> B["Root Command<br/>pkg/cli/root.go"]
     
     B --> B1["Version info (ldflags)<br/>Debug flag → Logging<br/>Shell completion"]
     
@@ -182,13 +182,13 @@ The CLI supports Kubernetes-native ConfigMap storage using the `cm://namespace/n
 
 ```mermaid
 flowchart LR
-    A["eidos snapshot<br/>-o cm://ns/snap"] -->|"Write"| CM1["ConfigMap<br/>eidos-snapshot"]
+    A["aicr snapshot<br/>-o cm://ns/snap"] -->|"Write"| CM1["ConfigMap<br/>aicr-snapshot"]
     
-    CM1 -->|"Read"| B["eidos recipe<br/>-s cm://ns/snap<br/>-o cm://ns/recipe"]
+    CM1 -->|"Read"| B["aicr recipe<br/>-s cm://ns/snap<br/>-o cm://ns/recipe"]
     
-    B -->|"Write"| CM2["ConfigMap<br/>eidos-recipe"]
+    B -->|"Write"| CM2["ConfigMap<br/>aicr-recipe"]
     
-    CM2 -->|"Read"| C["eidos bundle<br/>-r cm://ns/recipe<br/>-o ./bundles"]
+    CM2 -->|"Read"| C["aicr bundle<br/>-r cm://ns/recipe<br/>-o ./bundles"]
     
     C --> D["Local Bundle<br/>Directory"]
     
@@ -209,14 +209,14 @@ flowchart LR
 
 ## Component Details
 
-### Entry Point: `cmd/eidos/main.go`
+### Entry Point: `cmd/aicr/main.go`
 
 Minimal entry point that delegates to the CLI package:
 
 ```go
 package main
 
-import "github.com/NVIDIA/eidos/pkg/cli"
+import "github.com/NVIDIA/aicr/pkg/cli"
 
 func main() {
     cli.Execute()
@@ -291,7 +291,7 @@ flowchart TD
     
     D1 & D2 & D3 & D4 & D5 --> E["All goroutines complete<br/>or first error returns"]
     
-    E --> F["Snapshot Structure<br/>kind: Snapshot<br/>apiVersion: eidos.nvidia.com/v1alpha1<br/>measurements: [k8s, systemd, os, gpu]"]
+    E --> F["Snapshot Structure<br/>kind: Snapshot<br/>apiVersion: aicr.nvidia.com/v1alpha1<br/>measurements: [k8s, systemd, os, gpu]"]
     
     F --> G[serializer.NewFileWriterOrStdout]
     
@@ -303,16 +303,16 @@ flowchart TD
 
 ```bash
 # Output to stdout in JSON format
-eidos snapshot
+aicr snapshot
 
 # Save to file in YAML format
-eidos snapshot --output system.yaml --format yaml
+aicr snapshot --output system.yaml --format yaml
 
 # Human-readable table format
-eidos snapshot --format table
+aicr snapshot --format table
 
 # ConfigMap output (Kubernetes-native)
-eidos snapshot --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --output cm://gpu-operator/aicr-snapshot
 ```
 
 ### Agent Deployment Pattern
@@ -321,11 +321,11 @@ The snapshot command can be deployed as a Kubernetes Job for automated cluster a
 
 ```mermaid
 flowchart TD
-    A["Kubernetes Job<br/>eidos snapshot"] --> B{"Has RBAC?"}
-    B -->|Yes| C["Write to ConfigMap<br/>eidos-snapshot"]
+    A["Kubernetes Job<br/>aicr snapshot"] --> B{"Has RBAC?"}
+    B -->|Yes| C["Write to ConfigMap<br/>aicr-snapshot"]
     B -->|No| D["Error: Forbidden"]
     
-    C --> E["External CLI<br/>eidos recipe<br/>-s cm://ns/snap"]
+    C --> E["External CLI<br/>aicr recipe<br/>-s cm://ns/snap"]
     
     E --> F["Generate Recipe<br/>from ConfigMap"]
     
@@ -340,20 +340,20 @@ flowchart TD
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 spec:
   template:
     spec:
-      serviceAccountName: eidos
+      serviceAccountName: aicr
       containers:
-      - name: eidos
-        image: ghcr.io/nvidia/eidos-validator:latest
+      - name: aicr
+        image: ghcr.io/nvidia/aicr-validator:latest
         command:
-        - eidos
+        - aicr
         - snapshot
         - --output
-        - cm://gpu-operator/eidos-snapshot
+        - cm://gpu-operator/aicr-snapshot
       restartPolicy: Never
 ```
 
@@ -362,13 +362,13 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 rules:
 - apiGroups: [""]
@@ -378,15 +378,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: eidos
+  name: aicr
 subjects:
 - kind: ServiceAccount
-  name: eidos
+  name: aicr
   namespace: gpu-operator  # Must match ServiceAccount namespace
 ```
 
@@ -395,7 +395,7 @@ subjects:
 - RBAC RoleBinding must reference correct namespace
 - ConfigMap automatically created if doesn't exist
 - Supports update pattern (overwrite existing snapshots)
-- For complete examples, see [deployments/eidos-agent/](../../../deployments/eidos-agent/)
+- For complete examples, see [deployments/aicr-agent/](../../../deployments/aicr-agent/)
 ```
 
 ### Recipe Command: `pkg/cli/recipe.go`
@@ -461,10 +461,10 @@ This asymmetric behavior ensures generic queries (e.g., `--service eks --intent 
 
 ```bash
 # Basic recipe for Ubuntu with gb200 GPU
-eidos recipe --os ubuntu --gpu gb200
+aicr recipe --os ubuntu --gpu gb200
 
 # Full specification with all parameters
-eidos recipe \
+aicr recipe \
   --service eks \
   --accelerator gb200 \
   --intent training \
@@ -474,13 +474,13 @@ eidos recipe \
   --output recipe.yaml
 
 # Inference workload on GKE  
-eidos recipe --service gke --gpu gb200 --intent inference
+aicr recipe --service gke --gpu gb200 --intent inference
 
 # Snapshot mode - analyze captured snapshot for training
-eidos recipe --snapshot system.yaml --intent training
+aicr recipe --snapshot system.yaml --intent training
 
 # Snapshot mode - analyze for inference optimization
-eidos recipe \
+aicr recipe \
   --snapshot cluster-snapshot.yaml \
   --intent inference \
   --format yaml \
@@ -570,16 +570,16 @@ flowchart TD
 
 ```bash
 # Query mode - generate recipe from parameters
-eidos recipe --os ubuntu --service eks --accelerator h100 --intent training
+aicr recipe --os ubuntu --service eks --accelerator h100 --intent training
 
 # Snapshot mode - analyze snapshot for training workloads
-eidos recipe --snapshot system.yaml --intent training
+aicr recipe --snapshot system.yaml --intent training
 
 # Snapshot mode with output file
-eidos recipe -s system.yaml -i inference -o recipe.yaml
+aicr recipe -s system.yaml -i inference -o recipe.yaml
 
 # Query mode with full specification
-eidos recipe \
+aicr recipe \
   --service eks \
   --accelerator gb200 \
   --intent training \
@@ -589,16 +589,16 @@ eidos recipe \
   --format yaml
 
 # Use external data directory
-eidos recipe --service eks --accelerator h100 --data ./my-custom-data
+aicr recipe --service eks --accelerator h100 --data ./my-custom-data
 
 # Bundle with external data
-eidos bundle --recipe recipe.yaml --data ./my-custom-data --output ./bundles
+aicr bundle --recipe recipe.yaml --data ./my-custom-data --output ./bundles
 ```
 
 #### Recipe Output Structure
 
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: Recipe
 metadata:
   version: v1.0.0
@@ -806,31 +806,31 @@ bundler.MustRegister("gpu-operator", NewBundler())
 
 ```bash
 # Generate all recipe components (parallel by default)
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 
 # Use short flags
-eidos bundle -r recipe.yaml -o ./bundles
+aicr bundle -r recipe.yaml -o ./bundles
 
 # Override values at generation time
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:gds.enabled=true \
   --set gpuoperator:driver.version=570.86.16 \
   -o ./bundles
 
 # Override values for multiple components
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:mig.strategy=mixed \
   --set networkoperator:rdma.enabled=true \
   -o ./bundles
 
 # Schedule system components on system node pool
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --system-node-selector nodeGroup=system-pool \
   --system-node-toleration dedicated=system:NoSchedule \
   -o ./bundles
 
 # Schedule GPU workloads on labeled GPU nodes
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --accelerated-node-selector nvidia.com/gpu.present=true \
   --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule \
   -o ./bundles
@@ -891,11 +891,11 @@ eidos bundle -r recipe.yaml \
 **Common Error Scenarios:**
 ```bash
 # Missing recipe file
-$ eidos bundle --output ./bundles
+$ aicr bundle --output ./bundles
 Error: required flag "recipe" not set
 
 # Bundler failures (FailFast=false)
-$ eidos bundle -r recipe.yaml
+$ aicr bundle -r recipe.yaml
 Error: bundle generation completed with errors: 1/2 bundlers failed
 ```
 
@@ -987,15 +987,15 @@ type Reading struct {
 
 ```bash
 # Invalid accelerator type
-$ eidos recipe --accelerator invalid-gpu
+$ aicr recipe --accelerator invalid-gpu
 Error: invalid accelerator type: must be one of h100, gb200, a100, l40, any
 
 # Unknown output format
-$ eidos snapshot --format xml
+$ aicr snapshot --format xml
 Error: unknown output format: "xml"
 
 # Missing required parameters
-$ eidos recipe
+$ aicr recipe
 # Still succeeds - generates base recipe with no overlays
 ```
 
@@ -1026,11 +1026,11 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse --short HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
-LDFLAGS := -X github.com/NVIDIA/eidos/pkg/cli.version=$(VERSION)
-LDFLAGS += -X github.com/NVIDIA/eidos/pkg/cli.commit=$(COMMIT)
-LDFLAGS += -X github.com/NVIDIA/eidos/pkg/cli.date=$(DATE)
+LDFLAGS := -X github.com/NVIDIA/aicr/pkg/cli.version=$(VERSION)
+LDFLAGS += -X github.com/NVIDIA/aicr/pkg/cli.commit=$(COMMIT)
+LDFLAGS += -X github.com/NVIDIA/aicr/pkg/cli.date=$(DATE)
 
-go build -ldflags="$(LDFLAGS)" -o bin/eidos ./cmd/eidos
+go build -ldflags="$(LDFLAGS)" -o bin/aicr ./cmd/aicr
 ```
 
 ## Testing Strategy
@@ -1091,7 +1091,7 @@ func TestSnapshotCommand(t *testing.T) {
 ### Short-Term (< 3 months)
 
 1. **Caching Layer**  
-   **Rationale**: Reduce latency for repeated `eidos snapshot` calls in scripts  
+   **Rationale**: Reduce latency for repeated `aicr snapshot` calls in scripts  
    **Implementation**: `sync.Map` with TTL-based eviction using `time.AfterFunc`  
    **Trade-off**: Stale data risk vs 5-10x performance improvement  
    **Reference**: [sync.Map](https://pkg.go.dev/sync#Map)
@@ -1100,18 +1100,18 @@ func TestSnapshotCommand(t *testing.T) {
    **Use Case**: CI/CD pipelines detecting configuration drift  
    **Implementation**: `github.com/google/go-cmp/cmp` for deep comparison  
    **Output**: JSON Patch (RFC 6902) format for machine consumption  
-   **CLI**: `eidos diff baseline.yaml current.yaml --format patch`
+   **CLI**: `aicr diff baseline.yaml current.yaml --format patch`
 
 3. **Measurement Filtering**  
    **Use Case**: Extract only GPU data without K8s overhead  
-   **CLI**: `eidos snapshot --filter gpu,os --exclude k8s`  
+   **CLI**: `aicr snapshot --filter gpu,os --exclude k8s`  
    **Implementation**: Post-collection filtering before serialization  
    **Performance**: Saves 60-70% execution time when K8s excluded
 
 4. **Batch Mode**  
    **Use Case**: Fleet-wide configuration auditing (100s of nodes)  
    **Implementation**: Worker pool with `errgroup.SetLimit()`  
-   **CLI**: `eidos snapshot --nodes nodes.txt --workers 10 --output results/`  
+   **CLI**: `aicr snapshot --nodes nodes.txt --workers 10 --output results/`  
    **Reference**: [errgroup Limits](https://pkg.go.dev/golang.org/x/sync/errgroup#Group.SetLimit)
 
 ### Mid-Term (3-6 months)
@@ -1126,7 +1126,7 @@ func TestSnapshotCommand(t *testing.T) {
 6. **Configuration Files**  
    **Use Case**: Avoid repeating --os, --gpu flags  
    **Format**: YAML following XDG Base Directory spec  
-   **Location**: `~/.config/eidos/config.yaml` (Linux/macOS), `%APPDATA%\eidos\config.yaml` (Windows)  
+   **Location**: `~/.config/aicr/config.yaml` (Linux/macOS), `%APPDATA%\aicr\config.yaml` (Windows)  
    **Example**:
    ```yaml
    defaults:
@@ -1139,7 +1139,7 @@ func TestSnapshotCommand(t *testing.T) {
 
 7. **Watch Mode**  
    **Implementation**: Hybrid of `fsnotify` + periodic polling  
-   **CLI**: `eidos snapshot --watch --interval 30s --on-change ./alert.sh`  
+   **CLI**: `aicr snapshot --watch --interval 30s --on-change ./alert.sh`  
    **Output**: Stream of JSON diffs to stdout  
    **Use Case**: Real-time monitoring with alerting
 
@@ -1147,7 +1147,7 @@ func TestSnapshotCommand(t *testing.T) {
    **Use Case**: Ensure snapshots conform to API version spec  
    **Implementation**: Embed JSON Schema in binary with `go:embed`  
    **Library**: `github.com/santhosh-tekuri/jsonschema/v5` (fastest Go validator)  
-   **CLI**: `eidos validate --schema v1 snapshot.json`
+   **CLI**: `aicr validate --schema v1 snapshot.json`
 
 ### Long-Term (6-12 months)
 
@@ -1161,19 +1161,19 @@ func TestSnapshotCommand(t *testing.T) {
     **Use Case**: Debug performance issues across collectors  
     **Implementation**: OpenTelemetry SDK with span per collector  
     **Exporter**: OTLP to Jaeger/Tempo  
-    **CLI**: `eidos snapshot --trace --trace-endpoint localhost:4317`  
+    **CLI**: `aicr snapshot --trace --trace-endpoint localhost:4317`  
     **Reference**: [OpenTelemetry Go](https://opentelemetry.io/docs/languages/go/)
 
 11. **Policy Enforcement**  
     **Use Case**: Block non-compliant configs in CI/CD  
     **Implementation**: Embed OPA (`github.com/open-policy-agent/opa`)  
-    **CLI**: `eidos validate --policy policy.rego snapshot.yaml`  
+    **CLI**: `aicr validate --policy policy.rego snapshot.yaml`  
     **Exit Code**: 0 = pass, 1 = policy violations  
     **Reference**: [OPA Go Integration](https://www.openpolicyagent.org/docs/latest/integration/)
 
 12. **Cloud Storage Integration**  
     **Use Case**: Centralized storage for fleet management  
-    **CLI**: `eidos snapshot --upload s3://bucket/snapshots/$(hostname).yaml`  
+    **CLI**: `aicr snapshot --upload s3://bucket/snapshots/$(hostname).yaml`  
     **Implementation**: AWS SDK v2 with resumable uploads  
     **Authentication**: IAM roles, service accounts, credential chain  
     **Reference**: [AWS SDK for Go V2](https://aws.github.io/aws-sdk-go-v2/)
@@ -1188,13 +1188,13 @@ func TestSnapshotCommand(t *testing.T) {
 ```yaml
 validate_gpu_config:
   stage: test
-  image: ghcr.io/nvidia/eidos:latest
+  image: ghcr.io/nvidia/aicr:latest
   script:
-    - eidos snapshot --format json > snapshot.json
+    - aicr snapshot --format json > snapshot.json
     # Validate against known-good baseline
     - diff -u expected_snapshot.json snapshot.json
     # Or use OPA policy (future enhancement)
-    # - eidos validate --policy policies/gpu_baseline.rego snapshot.json
+    # - aicr validate --policy policies/gpu_baseline.rego snapshot.json
   only:
     - merge_requests
   artifacts:
@@ -1218,16 +1218,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install eidos
+      - name: Install aicr
         run: |
           curl -sfL https://raw.githubusercontent.com/.../installer | bash -s --
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       
       - name: Capture snapshot
-        run: eidos snapshot --format yaml --output snapshot.yaml
+        run: aicr snapshot --format yaml --output snapshot.yaml
       
       - name: Generate recipe
-        run: eidos recipe --os ubuntu --gpu h100 > recipe.yaml
+        run: aicr recipe --os ubuntu --gpu h100 > recipe.yaml
       
       - name: Compare configurations
         run: |
@@ -1254,7 +1254,7 @@ pipeline {
     stages {
         stage('Snapshot') {
             steps {
-                sh 'eidos snapshot --format json > snapshot.json'
+                sh 'aicr snapshot --format json > snapshot.json'
             }
         }
         
@@ -1292,7 +1292,7 @@ pipeline {
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: eidos-audit
+  name: aicr-audit
   namespace: monitoring
 spec:
   schedule: "0 2 * * *"  # 2 AM daily
@@ -1304,9 +1304,9 @@ spec:
       template:
         metadata:
           labels:
-            app: eidos-audit
+            app: aicr-audit
         spec:
-          serviceAccountName: eidos
+          serviceAccountName: aicr
           nodeSelector:
             node-role.kubernetes.io/gpu: "true"
           tolerations:
@@ -1314,8 +1314,8 @@ spec:
             operator: Exists
             effect: NoSchedule
           containers:
-          - name: eidos
-            image: ghcr.io/nvidia/eidos:v0.6.4
+          - name: aicr
+            image: ghcr.io/nvidia/aicr:v0.6.4
             command:
               - /bin/sh
               - -c
@@ -1325,17 +1325,17 @@ spec:
                 HOSTNAME=$(hostname)
                 
                 # Capture snapshot
-                eidos snapshot --format yaml > /tmp/snapshot.yaml
+                aicr snapshot --format yaml > /tmp/snapshot.yaml
                 
                 # Store as ConfigMap with retention
                 kubectl create configmap \
-                  "eidos-snapshot-${HOSTNAME}-${TIMESTAMP}" \
+                  "aicr-snapshot-${HOSTNAME}-${TIMESTAMP}" \
                   --from-file=snapshot=/tmp/snapshot.yaml \
                   --dry-run=client -o yaml | \
                 kubectl apply -f -
                 
                 # Cleanup old snapshots (keep last 30 days)
-                kubectl get configmaps -l eidos-snapshot=true \
+                kubectl get configmaps -l aicr-snapshot=true \
                   --sort-by=.metadata.creationTimestamp | \
                 head -n -30 | \
                 xargs -r kubectl delete configmap
@@ -1350,29 +1350,29 @@ spec:
 
 **Systemd Timer (Bare Metal)**:
 ```ini
-# /etc/systemd/system/eidos-audit.service
+# /etc/systemd/system/aicr-audit.service
 [Unit]
-Description=Eidos Configuration Audit
+Description=AICR Configuration Audit
 After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/eidos snapshot --format json --output /var/log/eidos/snapshot-%Y%m%d.json
-User=eidos
-Group=eidos
+ExecStart=/usr/local/bin/aicr snapshot --format json --output /var/log/aicr/snapshot-%Y%m%d.json
+User=aicr
+Group=aicr
 
 # Hardening
 PrivateTmp=true
 NoNewPrivileges=true
 ReadOnlyPaths=/usr /etc
-ReadWritePaths=/var/log/eidos
+ReadWritePaths=/var/log/aicr
 
 [Install]
 WantedBy=multi-user.target
 
-# /etc/systemd/system/eidos-audit.timer
+# /etc/systemd/system/aicr-audit.timer
 [Unit]
-Description=Eidos Audit Timer
+Description=AICR Audit Timer
 
 [Timer]
 OnCalendar=daily
@@ -1384,8 +1384,8 @@ WantedBy=timers.target
 
 Enable with:
 ```bash
-sudo systemctl enable --now eidos-audit.timer
-sudo systemctl list-timers eidos-audit.timer
+sudo systemctl enable --now aicr-audit.timer
+sudo systemctl list-timers aicr-audit.timer
 ```
 
 ### Pattern 3: Fleet Management
@@ -1395,19 +1395,19 @@ sudo systemctl list-timers eidos-audit.timer
 **Ansible Playbook**:
 ```yaml
 ---
-- name: Collect Eidos Snapshots from GPU Fleet
+- name: Collect AICR Snapshots from GPU Fleet
   hosts: gpu_nodes
   gather_facts: yes
   serial: 10  # Process 10 nodes at a time
   tasks:
-    - name: Ensure eidos is installed
+    - name: Ensure aicr is installed
       stat:
-        path: /usr/local/bin/eidos
-      register: eidos_binary
-      failed_when: not eidos_binary.stat.exists
+        path: /usr/local/bin/aicr
+      register: aicr_binary
+      failed_when: not aicr_binary.stat.exists
     
     - name: Collect snapshot
-      shell: eidos snapshot --format json
+      shell: aicr snapshot --format json
       register: snapshot
       changed_when: false
       failed_when: snapshot.rc != 0
@@ -1447,12 +1447,12 @@ sudo systemctl list-timers eidos-audit.timer
 
 **Terraform Provisioning**:
 ```hcl
-resource "null_resource" "eidos_snapshot" {
+resource "null_resource" "aicr_snapshot" {
   count = length(var.gpu_instance_ids)
   
   provisioner "remote-exec" {
     inline = [
-      "eidos snapshot --format json > /tmp/snapshot.json",
+      "aicr snapshot --format json > /tmp/snapshot.json",
       "aws s3 cp /tmp/snapshot.json s3://fleet-snapshots/${self.id}/"
     ]
     
@@ -1472,7 +1472,7 @@ resource "null_resource" "eidos_snapshot" {
 
 data "aws_s3_objects" "snapshots" {
   bucket     = "fleet-snapshots"
-  depends_on = [null_resource.eidos_snapshot]
+  depends_on = [null_resource.aicr_snapshot]
 }
 
 output "snapshot_count" {
@@ -1495,13 +1495,13 @@ import (
     
     "github.com/prometheus/client_golang/prometheus"
     "github.com/prometheus/client_golang/prometheus/promhttp"
-    "github.com/NVIDIA/eidos/pkg/snapshotter"
+    "github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 var (
     gpuDriverVersion = prometheus.NewGaugeVec(
         prometheus.GaugeOpts{
-            Name: "eidos_gpu_driver_version",
+            Name: "aicr_gpu_driver_version",
             Help: "NVIDIA driver version (encoded as float)",
         },
         []string{"node", "gpu_model"},
@@ -1509,7 +1509,7 @@ var (
     
     k8sVersion = prometheus.NewGaugeVec(
         prometheus.GaugeOpts{
-            Name: "eidos_k8s_version",
+            Name: "aicr_k8s_version",
             Help: "Kubernetes version (encoded)",
         },
         []string{"node"},
@@ -1560,12 +1560,12 @@ func main() {
 **Prometheus Alerting Rules**:
 ```yaml
 groups:
-- name: eidos_configuration
+- name: aicr_configuration
   interval: 60s
   rules:
   - alert: GPUDriverVersionMismatch
     expr: |
-      count(count by (eidos_gpu_driver_version) (eidos_gpu_driver_version)) > 1
+      count(count by (aicr_gpu_driver_version) (aicr_gpu_driver_version)) > 1
     for: 5m
     labels:
       severity: warning
@@ -1575,7 +1575,7 @@ groups:
   
   - alert: KubernetesVersionSkew
     expr: |
-      abs(eidos_k8s_version - scalar(avg(eidos_k8s_version))) > 0.01
+      abs(aicr_k8s_version - scalar(avg(aicr_k8s_version))) > 0.01
     for: 10m
     labels:
       severity: critical
@@ -1591,13 +1591,13 @@ groups:
 ```bash
 #!/bin/bash
 # Capture baseline before changes
-eidos snapshot --format json > baseline.json
+aicr snapshot --format json > baseline.json
 
 # Apply configuration changes (Ansible, Terraform, etc.)
 # ...
 
 # Capture new snapshot
-eidos snapshot --format json > current.json
+aicr snapshot --format json > current.json
 
 # Diff specific sections
 echo "=== GPU Configuration Changes ==="
@@ -1644,7 +1644,7 @@ for gpu in "${GPU_TYPES[@]}"; do
       output="${OUTPUT_DIR}/${os}-${service}-${gpu}.yaml"
       
       # Generate recipe
-      if eidos recipe --os "$os" --service "$service" --gpu "$gpu" \
+      if aicr recipe --os "$os" --service "$service" --gpu "$gpu" \
            --format yaml > "$output" 2>/dev/null; then
         echo "✓ Generated $output"
         ((total++))
@@ -1693,10 +1693,10 @@ done
 set -euo pipefail
 
 # Capture current state
-current=$(eidos snapshot --format json)
+current=$(aicr snapshot --format json)
 
 # Generate recommended recipe
-recipe=$(eidos recipe --os ubuntu --gpu h100 --format json)
+recipe=$(aicr recipe --os ubuntu --gpu h100 --format json)
 
 # Extract recommended GRUB parameters
 recommended_grub=$(echo "$recipe" | jq -r '
@@ -1746,14 +1746,14 @@ echo "$recipe" | jq -r '
   .data | 
   to_entries[] | 
   "\(.key) = \(.value)"' | \
-sudo tee /etc/sysctl.d/99-eidos-recommended.conf
+sudo tee /etc/sysctl.d/99-aicr-recommended.conf
 
 sudo sysctl --system
 echo "Sysctl parameters applied"
 
 # Log changes
-echo "$(date -Iseconds): Applied Eidos recommendations" | \
-sudo tee -a /var/log/eidos-remediation.log
+echo "$(date -Iseconds): Applied AICR recommendations" | \
+sudo tee -a /var/log/aicr-remediation.log
 ```
 
 ## Troubleshooting Guide
@@ -1829,21 +1829,21 @@ ls -l /var/run/secrets/kubernetes.io/serviceaccount/
 ```bash
 # Option 1: Set KUBECONFIG explicitly
 export KUBECONFIG=~/.kube/config
-eidos snapshot
+aicr snapshot
 
 # Option 2: Copy admin kubeconfig
 sudo cp /etc/kubernetes/admin.conf ~/.kube/config
 sudo chown $(id -u):$(id -g) ~/.kube/config
 
 # Option 3: Use service account token (in-cluster)
-kubectl create serviceaccount eidos
-kubectl create clusterrolebinding eidos --clusterrole=view --serviceaccount=default:eidos
+kubectl create serviceaccount aicr
+kubectl create clusterrolebinding aicr --clusterrole=view --serviceaccount=default:aicr
 
 # Option 4: Debug with kubectl proxy
 kubectl proxy &
 export KUBERNETES_SERVICE_HOST=localhost
 export KUBERNETES_SERVICE_PORT=8001
-eidos snapshot
+aicr snapshot
 ```
 
 ### Issue: "Snapshot too slow (> 5s)"
@@ -1854,7 +1854,7 @@ eidos snapshot
 **Diagnosis**:
 ```bash
 # Enable debug logging to identify slow collectors
-eidos --debug snapshot 2>&1 | grep -E 'collector|duration'
+aicr --debug snapshot 2>&1 | grep -E 'collector|duration'
 # Expected output shows timing per collector:
 # time="..." level=debug msg="k8s collector finished" duration=3.2s
 # time="..." level=debug msg="gpu collector finished" duration=0.8s
@@ -1868,19 +1868,19 @@ nvidia-smi --list-gpus | wc -l
 # Many: > 8 GPUs
 
 # Profile execution
-time eidos snapshot > /dev/null
+time aicr snapshot > /dev/null
 ```
 
 **Resolution**:
 ```bash
 # Option 1: Filter to specific collectors (future enhancement)
-eidos snapshot --filter gpu,os  # Skip K8s (saves 60-70% time)
+aicr snapshot --filter gpu,os  # Skip K8s (saves 60-70% time)
 
 # Option 2: Increase timeout (future enhancement)
-eidos snapshot --timeout 30s
+aicr snapshot --timeout 30s
 
 # Option 3: Use caching for repeated calls
-eidos snapshot > /tmp/snapshot.json
+aicr snapshot > /tmp/snapshot.json
 # Reuse /tmp/snapshot.json for subsequent analysis
 
 # Option 4: Optimize K8s collector
@@ -1902,14 +1902,14 @@ eidos snapshot > /tmp/snapshot.json
 **Diagnosis**:
 ```bash
 # Check memory usage during snapshot
-/usr/bin/time -v eidos snapshot > /dev/null 2>&1
+/usr/bin/time -v aicr snapshot > /dev/null 2>&1
 # Look for "Maximum resident set size"
 
 # Monitor memory in real-time
 # Terminal 1:
-watch -n 1 'ps aux | grep eidos'
+watch -n 1 'ps aux | grep aicr'
 # Terminal 2:
-eidos snapshot
+aicr snapshot
 
 # In Kubernetes, check OOMKilled events
 kubectl get events --field-selector reason=OOMKilling
@@ -1919,15 +1919,15 @@ kubectl get events --field-selector reason=OOMKilling
 ```bash
 # Option 1: Use streaming serialization (already implemented)
 # Data never fully materialized in memory
-eidos snapshot --format json > snapshot.json
+aicr snapshot --format json > snapshot.json
 
 # Option 2: Increase memory limit in Kubernetes
-kubectl set resources deployment eidos-agent \
+kubectl set resources deployment aicr-agent \
   --limits=memory=1Gi \
   --requests=memory=512Mi
 
 # Option 3: Filter measurements (future enhancement)
-eidos snapshot --filter gpu,os  # Exclude large K8s data
+aicr snapshot --filter gpu,os  # Exclude large K8s data
 
 # Option 4: Optimize code to reduce allocations
 # Use object pooling for repeated structs:
@@ -1951,10 +1951,10 @@ pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 
 ```bash
 # Build with profiling enabled
-go build -o eidos cmd/eidos/main.go
+go build -o aicr cmd/aicr/main.go
 
 # Capture CPU profile
-./eidos snapshot --cpuprofile=cpu.prof
+./aicr snapshot --cpuprofile=cpu.prof
 
 # Analyze profile
 go tool pprof cpu.prof
@@ -1978,7 +1978,7 @@ go tool pprof cpu.prof
 
 ```bash
 # Capture memory profile
-./eidos snapshot --memprofile=mem.prof
+./aicr snapshot --memprofile=mem.prof
 
 # Analyze allocations
 go tool pprof -alloc_space mem.prof
@@ -2001,18 +2001,18 @@ go tool pprof -alloc_space mem.prof
 ```bash
 # Benchmark snapshot performance (10 iterations)
 for i in {1..10}; do
-  time eidos snapshot --format json > /dev/null
+  time aicr snapshot --format json > /dev/null
 done 2>&1 | grep real | awk '{print $2}' | \
 sed 's/0m//' | sed 's/s//' | \
 awk '{sum+=$1; count++} END {printf "Average: %.3fs\n", sum/count}'
 
 # Compare formats
 echo "JSON:"
-time eidos snapshot --format json > /dev/null
+time aicr snapshot --format json > /dev/null
 echo "YAML:"
-time eidos snapshot --format yaml > /dev/null
+time aicr snapshot --format yaml > /dev/null
 echo "Table:"
-time eidos snapshot --format table > /dev/null
+time aicr snapshot --format table > /dev/null
 
 # Expected results:
 # JSON:  ~50ms  (fastest, minimal processing)
@@ -2026,7 +2026,7 @@ for pods in 10 100 1000 5000; do
   kubectl wait --for=condition=ready pod -l app=test-app --timeout=5m
   
   echo "Cluster with $pods pods:"
-  time eidos snapshot --format json > /dev/null
+  time aicr snapshot --format json > /dev/null
 done
 ```
 
@@ -2087,14 +2087,14 @@ done
 **CLI**:
 ```bash
 # CLI runs as current user (no special privileges needed)
-eidos snapshot  # Works as non-root
+aicr snapshot  # Works as non-root
 
 # Verify no setuid/setgid
-ls -l $(which eidos)
+ls -l $(which aicr)
 # Expected: -rwxr-xr-x (not -rwsr-xr-x)
 
 # Verify no capabilities
-getcap $(which eidos)
+getcap $(which aicr)
 # Expected: (no output)
 ```
 
@@ -2103,7 +2103,7 @@ getcap $(which eidos)
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos
+  name: aicr
 spec:
   template:
     spec:
@@ -2115,8 +2115,8 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-      - name: eidos
-        image: ghcr.io/nvidia/eidos-validator:latest
+      - name: aicr
+        image: ghcr.io/nvidia/aicr-validator:latest
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -2135,32 +2135,32 @@ spec:
 
 ```bash
 # Never log sensitive data
-# eidos already filters passwords/tokens from output
+# aicr already filters passwords/tokens from output
 
 # Verify no secrets in snapshot
-eidos snapshot --format json | \
+aicr snapshot --format json | \
   jq '.measurements[].subtypes[].data | 
       keys | map(select(test("(?i)(password|token|key|secret)"))) | 
       unique'
 # Expected: []
 
 # Use environment variables for API credentials (future feature)
-export Eidos_API_TOKEN=$(vault kv get -field=token secret/eidos)
-eidos recipe --os ubuntu --gpu h100
+export AICR_API_TOKEN=$(vault kv get -field=token secret/aicr)
+aicr recipe --os ubuntu --gpu h100
 
 # Or use Kubernetes secrets
-kubectl create secret generic eidos-api-creds \
-  --from-literal=token=$(vault kv get -field=token secret/eidos)
+kubectl create secret generic aicr-api-creds \
+  --from-literal=token=$(vault kv get -field=token secret/aicr)
 
 # Mount in pod:
 volumeMounts:
 - name: api-creds
-  mountPath: /var/run/secrets/eidos
+  mountPath: /var/run/secrets/aicr
   readOnly: true
 volumes:
 - name: api-creds
   secret:
-    secretName: eidos-api-creds
+    secretName: aicr-api-creds
 ```
 
 ### Input Validation
@@ -2169,23 +2169,23 @@ volumes:
 
 ```bash
 # Invalid OS type
-eidos recipe --os invalid_os
+aicr recipe --os invalid_os
 # Error: invalid os type "invalid_os", must be one of: ubuntu, rhel, cos
 
 # Invalid version format
-eidos recipe --osv -1.0
+aicr recipe --osv -1.0
 # Error: invalid version "-1.0": negative version components not allowed
 
 # Invalid GPU type
-eidos recipe --gpu h100@latest
+aicr recipe --gpu h100@latest
 # Error: invalid gpu type "h100@latest": special characters not allowed
 
 # Invalid format
-eidos snapshot --format xml
+aicr snapshot --format xml
 # Error: invalid format "xml", must be one of: json, yaml, table
 
 # Path traversal prevention
-eidos snapshot --output ../../etc/passwd
+aicr snapshot --output ../../etc/passwd
 # Error: output path escapes current directory
 
 # Verify validation in code:
@@ -2199,17 +2199,17 @@ if !isValidOS(os) {
 
 ```bash
 # Verify TLS for API calls (future feature)
-eidos recipe --os ubuntu --gpu h100 --debug 2>&1 | grep -i tls
+aicr recipe --os ubuntu --gpu h100 --debug 2>&1 | grep -i tls
 # Expected: "Using TLS 1.3"
 
 # Certificate pinning (future enhancement)
-export Eidos_API_CERT_FINGERPRINT="sha256:abc123..."
-eidos recipe --os ubuntu --gpu h100
+export AICR_API_CERT_FINGERPRINT="sha256:abc123..."
+aicr recipe --os ubuntu --gpu h100
 
 # Use corporate proxy with authentication
 export HTTPS_PROXY=https://proxy.corp.com:8080
-export Eidos_PROXY_CA_CERT=/etc/ssl/certs/corp-ca.pem
-eidos recipe --os ubuntu --gpu h100
+export AICR_PROXY_CA_CERT=/etc/ssl/certs/corp-ca.pem
+aicr recipe --os ubuntu --gpu h100
 ```
 
 ## Bundle Command: Deployment Artifact Generation
@@ -2218,7 +2218,7 @@ The `bundle` command generates deployment-ready bundles from configuration recip
 
 ### Overview
 
-**Purpose**: Convert Eidos recipes into deployment-ready bundles containing:
+**Purpose**: Convert AICR recipes into deployment-ready bundles containing:
 - **Helm Values**: Chart configuration with version management
 - **Kubernetes Manifests**: ClusterPolicy and custom resources
 - **Scripts**: Installation and uninstallation automation
@@ -2255,13 +2255,13 @@ flowchart TD
 
 ```bash
 # Generate GPU Operator bundle from recipe
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 
 # Generate from snapshot with workload intent
-eidos bundle --snapshot system.yaml --intent training --output ./bundles
+aicr bundle --snapshot system.yaml --intent training --output ./bundles
 
 # Specify bundler types explicitly
-eidos bundle --recipe recipe.yaml --bundler gpu-operator --output ./bundles
+aicr bundle --recipe recipe.yaml --bundler gpu-operator --output ./bundles
 ```
 
 ### Bundler Framework Architecture
@@ -2654,10 +2654,10 @@ Adding a new component requires **no Go code**. Components are configured declar
 4. **Test the Component**:
    ```bash
    # Generate recipe with new component
-   eidos recipe --service eks --accelerator h100 -o recipe.yaml
+   aicr recipe --service eks --accelerator h100 -o recipe.yaml
 
    # Generate bundle
-   eidos bundle -r recipe.yaml -o ./bundles
+   aicr bundle -r recipe.yaml -o ./bundles
 
    # Verify output
    cat ./bundles/values.yaml
@@ -2856,18 +2856,18 @@ sequenceDiagram
 
 ```bash
 # Default: Helm per-component bundle
-eidos bundle -r recipe.yaml -o ./bundles
+aicr bundle -r recipe.yaml -o ./bundles
 
 # Generate bundle with ArgoCD Applications
-eidos bundle -r recipe.yaml --deployer argocd -o ./bundles
+aicr bundle -r recipe.yaml --deployer argocd -o ./bundles
 
 # ArgoCD with Git repository URL (sets repoURL in app-of-apps.yaml)
-eidos bundle -r recipe.yaml --deployer argocd \
+aicr bundle -r recipe.yaml --deployer argocd \
   --repo https://github.com/my-org/my-gitops-repo.git \
   -o ./bundles
 
 # Combine with deployer
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --deployer argocd \
   -o ./bundles
 ```
@@ -2938,7 +2938,7 @@ func TestDeployer_Generate_DeploymentOrder(t *testing.T) {
 ## References
 
 ### Official Documentation
-- [urfave/cli Framework](https://cli.urfave.org/) - CLI framework used by eidos  
+- [urfave/cli Framework](https://cli.urfave.org/) - CLI framework used by aicr  
 - [errgroup Patterns](https://pkg.go.dev/golang.org/x/sync/errgroup) - Concurrent error handling  
 - [YAML v3 Library](https://pkg.go.dev/gopkg.in/yaml.v3) - YAML parsing and serialization  
 - [Structured Logging (slog)](https://pkg.go.dev/log/slog) - Standard library logging  

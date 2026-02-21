@@ -13,7 +13,7 @@
 # limitations under the License.
 
 kind: Snapshot
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
     source-node: cluster-058da623-pool-e3c5ba51-9twwh-z526z
     timestamp: "2026-02-06T15:09:20Z"
@@ -1795,7 +1795,7 @@ measurements:
             csi-snapshotter: v8.1.0
             dcgm-exporter: 4.4.2-4.7.0-distroless
             driver: 580.105.08-ubuntu24.04
-            eidos: latest
+            aicr: latest
             etcd: 3.6.5-0
             gpu-operator: v25.10.1
             hubble-relay: v1.18.1

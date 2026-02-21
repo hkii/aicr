@@ -23,7 +23,7 @@ variable "project_id" {
 variable "git_repo" {
   description = "GitHub Repo"
   type        = string
-  default     = "NVIDIA/eidos"
+  default     = "NVIDIA/aicr"
 }
 
 # Region for Artifact Registry and Cloud Run

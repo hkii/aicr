@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,9 +44,9 @@ func TestParseConfigMapName_Extended(t *testing.T) {
 		},
 		{
 			name:     "valid URI with dashes",
-			uri:      "cm://kube-system/eidos-snapshot",
+			uri:      "cm://kube-system/aicr-snapshot",
 			wantNS:   "kube-system",
-			wantName: "eidos-snapshot",
+			wantName: "aicr-snapshot",
 		},
 		{
 			name:    "missing prefix",
@@ -102,7 +102,7 @@ func TestParseConfigMapName_Extended(t *testing.T) {
 func TestDeployer_GetSnapshotFromConfigMap(t *testing.T) {
 	const (
 		ns       = "test-ns"
-		cmName   = "eidos-snapshot"
+		cmName   = "aicr-snapshot"
 		snapshot = "type: k8s\nsubtypes: []"
 	)
 
@@ -265,7 +265,7 @@ func TestDeployer_WaitForPodReady_Extended(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-pod",
 				Namespace: ns,
-				Labels:    map[string]string{"app.kubernetes.io/name": "eidos"},
+				Labels:    map[string]string{"app.kubernetes.io/name": "aicr"},
 			},
 			Status: corev1.PodStatus{
 				Phase: corev1.PodRunning,
@@ -295,7 +295,7 @@ func TestDeployer_WaitForPodReady_Extended(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-pod",
 				Namespace: ns,
-				Labels:    map[string]string{"app.kubernetes.io/name": "eidos"},
+				Labels:    map[string]string{"app.kubernetes.io/name": "aicr"},
 			},
 			Status: corev1.PodStatus{
 				Phase:   corev1.PodFailed,

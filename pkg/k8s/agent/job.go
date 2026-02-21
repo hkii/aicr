@@ -18,8 +18,8 @@ import (
 	"context"
 	"time"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -41,14 +41,14 @@ func (d *Deployer) ensureJob(ctx context.Context) error {
 		},
 	)
 	if err != nil && !errors.IsNotFound(err) {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to delete existing Job", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to delete existing Job", err)
 	}
 
 	// Wait for Job to be fully deleted
 	jobExisted := err == nil // Job existed and was deleted
 	if jobExisted {
 		if waitErr := d.waitForJobDeletion(ctx); waitErr != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeTimeout, "timeout waiting for Job deletion", waitErr)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeTimeout, "timeout waiting for Job deletion", waitErr)
 		}
 	}
 
@@ -57,7 +57,7 @@ func (d *Deployer) ensureJob(ctx context.Context) error {
 	_, err = d.clientset.BatchV1().Jobs(d.config.Namespace).
 		Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create Job", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create Job", err)
 	}
 
 	return nil
@@ -79,7 +79,7 @@ func (d *Deployer) buildJob() *batchv1.Job {
 			Name:      d.config.JobName,
 			Namespace: d.config.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name": "eidos",
+				"app.kubernetes.io/name": "aicr",
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -92,7 +92,7 @@ func (d *Deployer) buildJob() *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app.kubernetes.io/name": "eidos",
+						"app.kubernetes.io/name": "aicr",
 					},
 				},
 				Spec: podSpec,
@@ -113,13 +113,13 @@ func (d *Deployer) buildPodSpec(args []string) corev1.PodSpec {
 		ImagePullSecrets:   toLocalObjectReferences(d.config.ImagePullSecrets),
 		Containers: []corev1.Container{
 			{
-				Name:    "eidos",
+				Name:    "aicr",
 				Image:   d.config.Image,
-				Command: []string{"eidos"},
+				Command: []string{"aicr"},
 				Args:    args,
 				Env: []corev1.EnvVar{
 					{
-						Name:  "Eidos_LOG_PREFIX",
+						Name:  "AICR_LOG_PREFIX",
 						Value: "agent",
 					},
 					{

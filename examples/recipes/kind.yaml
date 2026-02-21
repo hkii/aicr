@@ -13,7 +13,7 @@
 # limitations under the License.
 
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   version: v0.26.7-next
 criteria:

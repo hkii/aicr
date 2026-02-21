@@ -28,9 +28,9 @@ func TestNegotiateAPIVersion(t *testing.T) {
 	}{
 		{"empty accept defaults", "", DefaultAPIVersion},
 		{"non-vendor accept defaults", "application/json", DefaultAPIVersion},
-		{"vendor v1", "application/vnd.nvidia.eidos.v1+json", "v1"},
-		{"vendor v2 unsupported defaults", "application/vnd.nvidia.eidos.v2+json", DefaultAPIVersion},
-		{"vendor malformed defaults", "application/vnd.nvidia.eidos.vBAD+json", DefaultAPIVersion},
+		{"vendor v1", "application/vnd.nvidia.aicr.v1+json", "v1"},
+		{"vendor v2 unsupported defaults", "application/vnd.nvidia.aicr.v2+json", DefaultAPIVersion},
+		{"vendor malformed defaults", "application/vnd.nvidia.aicr.vBAD+json", DefaultAPIVersion},
 	}
 
 	for _, tt := range tests {

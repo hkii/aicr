@@ -23,7 +23,7 @@ import (
 )
 
 // testEmptyRegistryContent is a minimal registry.yaml for testing.
-const testEmptyRegistryContent = `apiVersion: eidos.nvidia.com/v1alpha1
+const testEmptyRegistryContent = `apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components: []
 `
@@ -78,7 +78,7 @@ func TestLayeredDataProvider_MergesRegistry(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a registry with a custom component
-	registryContent := `apiVersion: eidos.nvidia.com/v1alpha1
+	registryContent := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: custom-component
@@ -132,7 +132,7 @@ func TestLayeredDataProvider_OverridesFile(t *testing.T) {
 	}
 
 	// Create a custom base.yaml that will override embedded (now in overlays/)
-	baseContent := `apiVersion: eidos.nvidia.com/v1alpha1
+	baseContent := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: RecipeMetadata
 metadata:
   name: custom-base
@@ -185,7 +185,7 @@ func TestLayeredDataProvider_AddsNewFile(t *testing.T) {
 		t.Fatalf("failed to create overlays dir: %v", err)
 	}
 
-	overlayContent := `apiVersion: eidos.nvidia.com/v1alpha1
+	overlayContent := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: RecipeMetadata
 metadata:
   name: custom-overlay
@@ -320,7 +320,7 @@ func TestLayeredDataProvider_IntegrationWithRegistry(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a registry with an additional custom component
-	registryContent := `apiVersion: eidos.nvidia.com/v1alpha1
+	registryContent := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: custom-operator
@@ -449,7 +449,7 @@ func TestLayeredDataProvider_WalkDir(t *testing.T) {
 		t.Fatalf("failed to create overlays dir: %v", err)
 	}
 
-	customOverlay := `apiVersion: eidos.nvidia.com/v1alpha1
+	customOverlay := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: RecipeMetadata
 metadata:
   name: walk-test-overlay
@@ -540,7 +540,7 @@ func TestLayeredDataProvider_WalkDirWithOverride(t *testing.T) {
 	}
 
 	// Create an overlay file with unique content
-	externalOverlay := `apiVersion: eidos.nvidia.com/v1alpha1
+	externalOverlay := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: RecipeMetadata
 metadata:
   name: external-only-overlay
@@ -626,7 +626,7 @@ func TestLayeredDataProvider_SourceForRegistry(t *testing.T) {
 func TestLayeredDataProvider_CachedRegistry(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	registryContent := `apiVersion: eidos.nvidia.com/v1alpha1
+	registryContent := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: cache-test-component
@@ -712,7 +712,7 @@ func TestLayeredDataProvider_InvalidExternalRegistry(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create invalid YAML registry
-	invalidRegistry := `apiVersion: eidos.nvidia.com/v1alpha1
+	invalidRegistry := `apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: [invalid yaml structure

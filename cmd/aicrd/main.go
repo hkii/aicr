@@ -15,14 +15,13 @@
 package main
 
 import (
-	"github.com/NVIDIA/eidos/pkg/cli"
+	"log"
 
-	// Import check packages for side-effect registration.
-	// Each package's init() function registers its validators.
-	_ "github.com/NVIDIA/eidos/pkg/validator/checks/deployment"
-	_ "github.com/NVIDIA/eidos/pkg/validator/checks/readiness"
+	"github.com/NVIDIA/aicr/pkg/api"
 )
 
 func main() {
-	cli.Execute()
+	if err := api.Serve(); err != nil {
+		log.Fatal(err)
+	}
 }

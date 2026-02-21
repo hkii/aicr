@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/defaults"
 	"golang.org/x/time/rate"
 )
 

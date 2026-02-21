@@ -19,8 +19,8 @@ import (
 	"time"
 )
 
-// Test API version constant - matches eidos.nvidia.com/v1alpha1 used by snapshotter and recipe packages
-const testAPIVersion = "eidos.nvidia.com/v1alpha1"
+// Test API version constant - matches aicr.nvidia.com/v1alpha1 used by snapshotter and recipe packages
+const testAPIVersion = "aicr.nvidia.com/v1alpha1"
 
 func TestKind_String(t *testing.T) {
 	tests := []struct {
@@ -197,8 +197,8 @@ func TestWithAPIVersion(t *testing.T) {
 	}{
 		{
 			name:    "Set v1alpha1 API version",
-			version: "eidos.nvidia.com/v1alpha1",
-			want:    "eidos.nvidia.com/v1alpha1",
+			version: "aicr.nvidia.com/v1alpha1",
+			want:    "aicr.nvidia.com/v1alpha1",
 		},
 		{
 			name:    "Set custom API version",
@@ -391,7 +391,7 @@ func TestNew(t *testing.T) {
 			name: "Create header with all options",
 			opts: []Option{
 				WithKind(KindRecipe),
-				WithAPIVersion("eidos.nvidia.com/v1alpha1"),
+				WithAPIVersion("aicr.nvidia.com/v1alpha1"),
 				WithMetadata("version", "1.0.0"),
 				WithMetadata("created", "2025-01-01T00:00:00Z"),
 			},
@@ -399,8 +399,8 @@ func TestNew(t *testing.T) {
 				if h.Kind != KindRecipe {
 					t.Errorf("Kind = %v, want %v", h.Kind, KindRecipe)
 				}
-				if h.APIVersion != "eidos.nvidia.com/v1alpha1" {
-					t.Errorf("APIVersion = %v, want eidos.nvidia.com/v1alpha1", h.APIVersion)
+				if h.APIVersion != "aicr.nvidia.com/v1alpha1" {
+					t.Errorf("APIVersion = %v, want aicr.nvidia.com/v1alpha1", h.APIVersion)
 				}
 				if len(h.Metadata) != 2 {
 					t.Errorf("Metadata length = %v, want 2", len(h.Metadata))

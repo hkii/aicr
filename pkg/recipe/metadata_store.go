@@ -24,7 +24,7 @@ import (
 	"strings"
 	"sync"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,7 +62,7 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 		// Load all YAML files from data directory
 		err := provider.WalkDir("", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk data directory", err)
+				return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to walk data directory", err)
 			}
 			if d.IsDir() {
 				return nil
@@ -74,7 +74,7 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 			if strings.Contains(path, "components/") {
 				content, readErr := provider.ReadFile(path)
 				if readErr != nil {
-					return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, fmt.Sprintf("failed to read component file %s", path), readErr)
+					return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, fmt.Sprintf("failed to read component file %s", path), readErr)
 				}
 				// Store with relative path (e.g., "components/cert-manager/values.yaml")
 				store.ValuesFiles[path] = content
@@ -94,17 +94,17 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 			// Read and parse metadata file
 			content, readErr := provider.ReadFile(path)
 			if readErr != nil {
-				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, fmt.Sprintf("failed to read %s", path), readErr)
+				return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, fmt.Sprintf("failed to read %s", path), readErr)
 			}
 
 			var metadata RecipeMetadata
 			if parseErr := yaml.Unmarshal(content, &metadata); parseErr != nil {
-				return eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, fmt.Sprintf("failed to parse %s", path), parseErr)
+				return aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, fmt.Sprintf("failed to parse %s", path), parseErr)
 			}
 
 			// Validate kind field
 			if metadata.Kind != "" && metadata.Kind != RecipeMetadataKind {
-				return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+				return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 					fmt.Sprintf("invalid kind in %s: got %q, expected %q", path, metadata.Kind, RecipeMetadataKind))
 			}
 
@@ -125,13 +125,13 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 		}
 
 		if store.Base == nil {
-			cachedMetadataErr = eidoserrors.New(eidoserrors.ErrCodeInternal, "base.yaml not found")
+			cachedMetadataErr = aicrerrors.New(aicrerrors.ErrCodeInternal, "base.yaml not found")
 			return
 		}
 
 		// Validate base recipe dependencies
 		if err := store.Base.Spec.ValidateDependencies(); err != nil {
-			cachedMetadataErr = eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "base recipe validation failed", err)
+			cachedMetadataErr = aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "base recipe validation failed", err)
 			return
 		}
 
@@ -147,7 +147,7 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 		return nil, cachedMetadataErr
 	}
 	if cachedMetadataStore == nil {
-		return nil, eidoserrors.New(eidoserrors.ErrCodeInternal, "metadata store not initialized")
+		return nil, aicrerrors.New(aicrerrors.ErrCodeInternal, "metadata store not initialized")
 	}
 	return cachedMetadataStore, nil
 }
@@ -156,7 +156,7 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 func (s *MetadataStore) GetValuesFile(filename string) ([]byte, error) {
 	content, exists := s.ValuesFiles[filename]
 	if !exists {
-		return nil, eidoserrors.New(eidoserrors.ErrCodeNotFound, fmt.Sprintf("values file not found: %s", filename))
+		return nil, aicrerrors.New(aicrerrors.ErrCodeNotFound, fmt.Sprintf("values file not found: %s", filename))
 	}
 	return content, nil
 }
@@ -183,7 +183,7 @@ func (s *MetadataStore) resolveInheritanceChain(recipeName string) ([]*RecipeMet
 	for currentName != "" && currentName != "base" {
 		// Check for cycle
 		if visited[currentName] {
-			return nil, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+			return nil, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 				fmt.Sprintf("circular inheritance detected: recipe %q references itself in inheritance chain", currentName))
 		}
 		visited[currentName] = true
@@ -191,7 +191,7 @@ func (s *MetadataStore) resolveInheritanceChain(recipeName string) ([]*RecipeMet
 		// Get the recipe
 		recipe, exists := s.GetRecipeByName(currentName)
 		if !exists {
-			return nil, eidoserrors.New(eidoserrors.ErrCodeNotFound,
+			return nil, aicrerrors.New(aicrerrors.ErrCodeNotFound,
 				fmt.Sprintf("recipe %q not found (referenced in inheritance chain)", currentName))
 		}
 
@@ -255,8 +255,8 @@ func (s *MetadataStore) mergeOverlayChains(overlays []*RecipeMetadata, mergedSpe
 	for _, overlay := range overlays {
 		chain, err := s.resolveInheritanceChain(overlay.Metadata.Name)
 		if err != nil {
-			return appliedOverlays, eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return appliedOverlays, aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"failed to resolve inheritance chain",
 				err,
 				map[string]any{
@@ -283,12 +283,12 @@ func (s *MetadataStore) mergeOverlayChains(overlays []*RecipeMetadata, mergedSpe
 // finalizeRecipeResult validates, sorts, and builds the final RecipeResult.
 func finalizeRecipeResult(criteria *Criteria, mergedSpec *RecipeMetadataSpec, appliedOverlays []string) (*RecipeResult, error) {
 	if err := mergedSpec.ValidateDependencies(); err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInvalidRequest, "merged recipe validation failed", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "merged recipe validation failed", err)
 	}
 
 	deployOrder, err := mergedSpec.TopologicalSort()
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to compute deployment order", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to compute deployment order", err)
 	}
 
 	applyRegistryDefaults(mergedSpec.ComponentRefs)
@@ -313,8 +313,8 @@ func finalizeRecipeResult(criteria *Criteria, mergedSpec *RecipeMetadataSpec, ap
 func (s *MetadataStore) BuildRecipeResult(ctx context.Context, criteria *Criteria) (*RecipeResult, error) {
 	select {
 	case <-ctx.Done():
-		return nil, eidoserrors.WrapWithContext(
-			eidoserrors.ErrCodeTimeout,
+		return nil, aicrerrors.WrapWithContext(
+			aicrerrors.ErrCodeTimeout,
 			"build recipe result context cancelled during initialization",
 			ctx.Err(),
 			map[string]any{"stage": "initialization"},
@@ -356,8 +356,8 @@ func (s *MetadataStore) BuildRecipeResultWithEvaluator(ctx context.Context, crit
 
 	select {
 	case <-ctx.Done():
-		return nil, eidoserrors.WrapWithContext(
-			eidoserrors.ErrCodeTimeout,
+		return nil, aicrerrors.WrapWithContext(
+			aicrerrors.ErrCodeTimeout,
 			"build recipe result context cancelled during initialization",
 			ctx.Err(),
 			map[string]any{"stage": "initialization"},

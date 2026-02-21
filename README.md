@@ -1,20 +1,20 @@
-# Eidos
+# AI Cluster Runtime (AICR)
 
-[![On Push CI](https://github.com/NVIDIA/eidos/actions/workflows/on-push.yaml/badge.svg)](https://github.com/NVIDIA/eidos/actions/workflows/on-push.yaml)
-[![On Tag Release](https://github.com/NVIDIA/eidos/actions/workflows/on-tag.yaml/badge.svg)](https://github.com/NVIDIA/eidos/actions/workflows/on-tag.yaml)
+[![On Push CI](https://github.com/NVIDIA/aicr/actions/workflows/on-push.yaml/badge.svg)](https://github.com/NVIDIA/aicr/actions/workflows/on-push.yaml)
+[![On Tag Release](https://github.com/NVIDIA/aicr/actions/workflows/on-tag.yaml/badge.svg)](https://github.com/NVIDIA/aicr/actions/workflows/on-tag.yaml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Eidos provides tooling for deploying optimized and validated GPU-accelerated AI runtime in Kubernetes. It captures known-good combinations of drivers, operators, kernels, and system configurations to create a reproducible artifacts for common Kubernetes deployment frameworks like Helm and ArgoCD.
+AICR provides tooling for deploying optimized and validated GPU-accelerated AI runtime in Kubernetes. It captures known-good combinations of drivers, operators, kernels, and system configurations to create a reproducible artifacts for common Kubernetes deployment frameworks like Helm and ArgoCD.
 
 ## Why We Built This
 
 Running GPU-accelerated Kubernetes clusters reliably is hard. Small differences in kernel versions, drivers, container runtimes, operators, and Kubernetes releases can cause failures that are difficult to diagnose and expensive to reproduce.
 
-Historically, this knowledge has lived in internal validation pipelines, playbooks, and tribal knowledge. Eidos exists to externalize that experience. Its goal is to make validated configurations visible, repeatable, and reusable across environments.
+Historically, this knowledge has lived in internal validation pipelines, playbooks, and tribal knowledge. AICR exists to externalize that experience. Its goal is to make validated configurations visible, repeatable, and reusable across environments.
 
-## What Eidos Is (and Is Not)
+## What AICR Is (and Is Not)
 
-Eidos is a **source of validated configuration knowledge** for NVIDIA-accelerated Kubernetes environments.
+AICR is a **source of validated configuration knowledge** for NVIDIA-accelerated Kubernetes environments.
 
 It **is**:
 - A curated set of tested and validated component combinations
@@ -30,7 +30,7 @@ It **is not**:
 
 ## How It Works
 
-Eidos separates **validated configuration knowledge** from **how that knowledge is consumed**.
+AICR separates **validated configuration knowledge** from **how that knowledge is consumed**.
 
 - Human-readable documentation lives under `docs/`.
 - Version-locked configuration definitions (“recipes”) capture known-good system states.
@@ -52,14 +52,14 @@ Install the latest version using the installation script:
 
 ```shell
 curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
+  https://raw.githubusercontent.com/NVIDIA/aicr/main/install | bash -s --
 ```
 
 See [Installation Guide](docs/user/installation.md) for manual installation, building from source, and container images.
 
 ### Quick Start
 
-Get started quickly with Eidos:
+Get started quickly with AICR:
 1. Review the documentation under `docs/` to understand supported platforms and required components.
 2. Identify your target environment:
    - GPU architecture
@@ -73,24 +73,24 @@ Get started quickly with Eidos:
 
 ```bash
 # Generate a recipe for your environment
-eidos recipe --service eks --accelerator gb200 --os ubuntu --intent training --platform kubeflow -o recipe.yaml
+aicr recipe --service eks --accelerator gb200 --os ubuntu --intent training --platform kubeflow -o recipe.yaml
 
 # Render the recipe into Helm values for your GitOps pipeline
-eidos bundle --recipe recipe.yaml -o ./bundles
+aicr bundle --recipe recipe.yaml -o ./bundles
 ```
 
 The generated `bundles/` directory contains a Helm per-component bundle ready to deploy or commit to your GitOps repository. See [CLI Reference](docs/user/cli-reference.md) for more options.
 
 ### Get Started by Use Case
 
-Choose the documentation path that matches how you'll use Eidos.
+Choose the documentation path that matches how you'll use AICR.
 
 <details>
 <summary><strong>User</strong> – Platform and Infrastructure Operators</summary>
 
 You deploy and operate GPU-accelerated Kubernetes clusters using validated configurations.
 
-- **[Installation Guide](docs/user/installation.md)** – Install the eidos CLI (automated script, manual, or build from source)
+- **[Installation Guide](docs/user/installation.md)** – Install the aicr CLI (automated script, manual, or build from source)
 - **[CLI Reference](docs/user/cli-reference.md)** – Complete command reference with examples
 - **[API Reference](docs/user/api-reference.md)** – REST API quick start
 - **[Agent Deployment](docs/user/agent-deployment.md)** – Deploy the Kubernetes agent for automated snapshots
@@ -99,7 +99,7 @@ You deploy and operate GPU-accelerated Kubernetes clusters using validated confi
 <details>
 <summary><strong>Contributor</strong> – Developers and Maintainers</summary>
 
-You contribute code, extend functionality, or work on Eidos internals.
+You contribute code, extend functionality, or work on AICR internals.
 
 - **[Contributing Guide](CONTRIBUTING.md)** – Development setup, testing, and PR process
 - **[Development Guide](DEVELOPMENT.md)** – Local development, Make targets, and tooling
@@ -111,7 +111,7 @@ You contribute code, extend functionality, or work on Eidos internals.
 <details>
 <summary><strong>Integrator</strong> – Automation and Platform Engineers</summary>
 
-You integrate Eidos into CI/CD pipelines, GitOps workflows, or larger platforms.
+You integrate AICR into CI/CD pipelines, GitOps workflows, or larger platforms.
 
 - **[API Reference](docs/user/api-reference.md)** – REST API endpoints and usage examples
 - **[Data Flow](docs/integrator/data-flow.md)** – Understanding snapshots, recipes, and bundles
@@ -123,7 +123,7 @@ You integrate Eidos into CI/CD pipelines, GitOps workflows, or larger platforms.
 ## Project Structure
 
 - `api/` — OpenAPI specifications for the REST API
-- `cmd/` — Entry points for CLI (`eidos`) and API server (`eidosd`)
+- `cmd/` — Entry points for CLI (`aicr`) and API server (`aicrd`)
 - `deployments/` — Kubernetes manifests for agent deployment
 - `docs/` — User-facing documentation, guides, and architecture docs
 - `examples/` — Example snapshots, recipes, and comparisons
@@ -137,8 +137,8 @@ You integrate Eidos into CI/CD pipelines, GitOps workflows, or larger platforms.
 - **[Roadmap](ROADMAP.md)** – Feature priorities and development timeline
 - **[Overview](docs/README.md)** - Detailed system overview and glossary
 - **[Security](SECURITY.md)** - Security-related resources 
-- **[Releases](https://github.com/NVIDIA/eidos/releases)** - Binaries, SBOMs, and other artifacts
-- **[Issues](https://github.com/NVIDIA/eidos/issues)** - Bugs, feature requests, and questions
+- **[Releases](https://github.com/NVIDIA/aicr/releases)** - Binaries, SBOMs, and other artifacts
+- **[Issues](https://github.com/NVIDIA/aicr/issues)** - Bugs, feature requests, and questions
 
 ## Contributing
 

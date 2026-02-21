@@ -20,12 +20,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/collector"
-	"github.com/NVIDIA/eidos/pkg/collector/k8s"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/collector"
+	"github.com/NVIDIA/aicr/pkg/collector/k8s"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 
 	"golang.org/x/sync/errgroup"
 )

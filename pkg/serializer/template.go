@@ -24,7 +24,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // TemplateWriter executes Go templates with snapshot data.

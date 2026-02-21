@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/pod"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -202,7 +202,7 @@ func (d *Deployer) getPodLogsAsString(ctx context.Context) (string, error) {
 // getPodForJob finds the pod created by the Job.
 func (d *Deployer) getPodForJob(ctx context.Context) (*corev1.Pod, error) {
 	pods, err := d.clientset.CoreV1().Pods(d.config.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("eidos.nvidia.com/job=%s", d.config.JobName),
+		LabelSelector: fmt.Sprintf("aicr.nvidia.com/job=%s", d.config.JobName),
 	})
 	if err != nil {
 		return nil, err

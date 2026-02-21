@@ -18,9 +18,9 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/client"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

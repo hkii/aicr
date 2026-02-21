@@ -21,8 +21,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/deployer/shared"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/deployer/shared"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 const testVersion = "v1.0.0"

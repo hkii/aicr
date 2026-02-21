@@ -17,7 +17,7 @@ description: 'Combines per-arch images into multi-arch manifests with standard v
 
 inputs:
   image:
-    description: 'Full image name without tag (e.g. ghcr.io/nvidia/eidos-validator)'
+    description: 'Full image name without tag (e.g. ghcr.io/nvidia/aicr-validator)'
     required: true
   tag:
     description: 'Release tag (e.g. v0.5.11)'

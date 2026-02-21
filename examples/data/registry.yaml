@@ -18,10 +18,10 @@
 # Components defined here are added to (or override) the embedded components.
 #
 # Usage:
-#   eidos recipe --service eks --accelerator gb200 --intent training --data ./examples/data
-#   eidos bundle --recipe recipe.yaml --data ./examples/data --output ./bundles
+#   aicr recipe --service eks --accelerator gb200 --intent training --data ./examples/data
+#   aicr bundle --recipe recipe.yaml --data ./examples/data --output ./bundles
 
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   # DGXC Teleport - Kubernetes access via Teleport

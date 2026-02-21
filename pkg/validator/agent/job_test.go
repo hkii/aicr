@@ -38,9 +38,9 @@ func TestBuildJobSpec(t *testing.T) {
 
 	// Verify labels
 	expectedLabels := map[string]string{
-		"app.kubernetes.io/name":      "eidos",
+		"app.kubernetes.io/name":      "aicr",
 		"app.kubernetes.io/component": "validation",
-		"eidos.nvidia.com/job-type":   "validation",
+		"aicr.nvidia.com/job-type":    "validation",
 	}
 	for key, expectedValue := range expectedLabels {
 		if value, ok := job.Labels[key]; !ok || value != expectedValue {
@@ -50,9 +50,9 @@ func TestBuildJobSpec(t *testing.T) {
 
 	// Verify pod labels
 	expectedPodLabels := map[string]string{
-		"app.kubernetes.io/name":      "eidos",
+		"app.kubernetes.io/name":      "aicr",
 		"app.kubernetes.io/component": "validation",
-		"eidos.nvidia.com/job":        deployer.config.JobName,
+		"aicr.nvidia.com/job":         deployer.config.JobName,
 	}
 	for key, expectedValue := range expectedPodLabels {
 		if value, ok := job.Spec.Template.Labels[key]; !ok || value != expectedValue {
@@ -224,20 +224,20 @@ func TestBuildJobSpec_WithDebug(t *testing.T) {
 
 	job := deployer.buildJobSpec()
 
-	// Verify EIDOS_DEBUG env var is set
+	// Verify AICR_DEBUG env var is set
 	container := job.Spec.Template.Spec.Containers[0]
 	found := false
 	for _, env := range container.Env {
-		if env.Name == "EIDOS_DEBUG" {
+		if env.Name == "AICR_DEBUG" {
 			found = true
 			if env.Value != "true" {
-				t.Errorf("expected EIDOS_DEBUG=true, got %q", env.Value)
+				t.Errorf("expected AICR_DEBUG=true, got %q", env.Value)
 			}
 			break
 		}
 	}
 	if !found {
-		t.Error("EIDOS_DEBUG environment variable not found")
+		t.Error("AICR_DEBUG environment variable not found")
 	}
 }
 
@@ -248,8 +248,8 @@ func TestBuildJobSpec_EnvironmentVariables(t *testing.T) {
 	container := job.Spec.Template.Spec.Containers[0]
 
 	expectedEnvVars := map[string]string{
-		"EIDOS_SNAPSHOT_PATH": "/data/snapshot/snapshot.yaml",
-		"EIDOS_RECIPE_PATH":   "/data/recipe/recipe.yaml",
+		"AICR_SNAPSHOT_PATH": "/data/snapshot/snapshot.yaml",
+		"AICR_RECIPE_PATH":   "/data/recipe/recipe.yaml",
 	}
 
 	for name, expectedValue := range expectedEnvVars {
@@ -268,13 +268,13 @@ func TestBuildJobSpec_EnvironmentVariables(t *testing.T) {
 		}
 	}
 
-	// Verify EIDOS_NAMESPACE is set from field ref
+	// Verify AICR_NAMESPACE is set from field ref
 	found := false
 	for _, env := range container.Env {
-		if env.Name == "EIDOS_NAMESPACE" {
+		if env.Name == "AICR_NAMESPACE" {
 			found = true
 			if env.ValueFrom == nil || env.ValueFrom.FieldRef == nil {
-				t.Error("EIDOS_NAMESPACE should be set from FieldRef")
+				t.Error("AICR_NAMESPACE should be set from FieldRef")
 			} else if env.ValueFrom.FieldRef.FieldPath != "metadata.namespace" {
 				t.Errorf("expected FieldPath metadata.namespace, got %q", env.ValueFrom.FieldRef.FieldPath)
 			}
@@ -282,7 +282,7 @@ func TestBuildJobSpec_EnvironmentVariables(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("EIDOS_NAMESPACE environment variable not found")
+		t.Error("AICR_NAMESPACE environment variable not found")
 	}
 }
 

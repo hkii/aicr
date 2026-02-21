@@ -21,7 +21,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 )
 
 func TestParseOutputFormat(t *testing.T) {

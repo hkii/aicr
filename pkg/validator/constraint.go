@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/version"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/version"
 )
 
 // Operator represents a comparison operator in constraint expressions.

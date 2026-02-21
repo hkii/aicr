@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 // Validator defines the interface for validating recipes before bundling.

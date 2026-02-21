@@ -14,7 +14,7 @@
 
 # Assert that gpu-operator values.yaml has scheduling options injected.
 #
-# When `eidos bundle` is run with:
+# When `aicr bundle` is run with:
 #   --system-node-selector nodeGroup=system-pool
 #   --accelerated-node-selector nodeGroup=customer-gpu
 #   --accelerated-node-toleration nvidia.com/gpu=present:NoSchedule

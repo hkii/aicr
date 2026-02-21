@@ -23,11 +23,11 @@ import (
 	"github.com/urfave/cli/v3"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
-	"github.com/NVIDIA/eidos/pkg/validator"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/validator"
 )
 
 // validateAgentConfig holds parsed agent configuration for validate command.
@@ -222,9 +222,9 @@ func runValidation(
 		slog.Info("cleanup disabled - Jobs and RBAC kept for debugging",
 			"namespace", validationNamespace,
 			"runID", v.RunID)
-		slog.Info("to inspect Job logs: kubectl logs -l eidos.nvidia.com/job -n " + validationNamespace)
+		slog.Info("to inspect Job logs: kubectl logs -l aicr.nvidia.com/job -n " + validationNamespace)
 		slog.Info("to list Jobs: kubectl get jobs -n " + validationNamespace)
-		slog.Info("to cleanup manually: kubectl delete jobs -l app.kubernetes.io/name=eidos -n " + validationNamespace)
+		slog.Info("to cleanup manually: kubectl delete jobs -l app.kubernetes.io/name=aicr -n " + validationNamespace)
 	}
 
 	// Check if we should fail on validation errors
@@ -274,20 +274,20 @@ func validateCmdFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:    "namespace",
 			Usage:   "Kubernetes namespace for snapshot agent deployment (enables agent mode when set without --snapshot)",
-			Sources: cli.EnvVars("EIDOS_NAMESPACE"),
+			Sources: cli.EnvVars("AICR_NAMESPACE"),
 			Value:   "gpu-operator",
 		},
 		&cli.StringFlag{
 			Name:    "validation-namespace",
-			Usage:   "Kubernetes namespace where validation jobs will run. If not set via this flag or EIDOS_VALIDATION_NAMESPACE, defaults to the --namespace value.",
-			Sources: cli.EnvVars("EIDOS_VALIDATION_NAMESPACE"),
-			Value:   "eidos-validation",
+			Usage:   "Kubernetes namespace where validation jobs will run. If not set via this flag or AICR_VALIDATION_NAMESPACE, defaults to the --namespace value.",
+			Sources: cli.EnvVars("AICR_VALIDATION_NAMESPACE"),
+			Value:   "aicr-validation",
 		},
 		&cli.StringFlag{
 			Name:    "image",
 			Usage:   "Container image for validation Jobs (must include Go toolchain)",
-			Sources: cli.EnvVars("EIDOS_VALIDATOR_IMAGE"),
-			Value:   "ghcr.io/nvidia/eidos-validator:latest",
+			Sources: cli.EnvVars("AICR_VALIDATOR_IMAGE"),
+			Value:   "ghcr.io/nvidia/aicr-validator:latest",
 		},
 		&cli.StringSliceFlag{
 			Name:  "image-pull-secret",
@@ -296,12 +296,12 @@ func validateCmdFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:  "job-name",
 			Usage: "Override default Job name",
-			Value: "eidos-validate",
+			Value: "aicr-validate",
 		},
 		&cli.StringFlag{
 			Name:  "service-account-name",
 			Usage: "Override default ServiceAccount name",
-			Value: "eidos",
+			Value: "aicr",
 		},
 		&cli.StringSliceFlag{
 			Name:  "node-selector",
@@ -328,7 +328,7 @@ func validateCmdFlags() []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:    "require-gpu",
-			Sources: cli.EnvVars("EIDOS_REQUIRE_GPU"),
+			Sources: cli.EnvVars("AICR_REQUIRE_GPU"),
 			Usage:   "Request nvidia.com/gpu resource for the agent pod. Required in CDI environments where GPU devices are only injected when explicitly requested.",
 		},
 		outputFlag,
@@ -355,35 +355,35 @@ a fresh snapshot from the cluster.
 # Examples
 
 Validate using an existing snapshot file:
-  eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
+  aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
 
 Load snapshot from ConfigMap:
-  eidos validate --recipe recipe.yaml --snapshot cm://gpu-operator/eidos-snapshot
+  aicr validate --recipe recipe.yaml --snapshot cm://gpu-operator/aicr-snapshot
 
 Deploy agent to capture and validate in one step:
-  eidos validate --recipe recipe.yaml --namespace gpu-operator
+  aicr validate --recipe recipe.yaml --namespace gpu-operator
 
 Target specific GPU nodes with node selector:
-  eidos validate --recipe recipe.yaml \
+  aicr validate --recipe recipe.yaml \
     --namespace gpu-operator \
     --node-selector nodeGroup=customer-gpu
 
 Run multiple validation phases:
-  eidos validate -r recipe.yaml -s snapshot.yaml \
+  aicr validate -r recipe.yaml -s snapshot.yaml \
     --phase readiness --phase deployment --phase conformance
 
 Run all validation phases:
-  eidos validate -r recipe.yaml -s snapshot.yaml --phase all
+  aicr validate -r recipe.yaml -s snapshot.yaml --phase all
 
 Run validation jobs in custom namespace:
-  eidos validate -r recipe.yaml -s snapshot.yaml \
+  aicr validate -r recipe.yaml -s snapshot.yaml \
     --validation-namespace my-validation-ns
 
 Run validation without failing on constraint errors (informational mode):
-  eidos validate -r recipe.yaml -s snapshot.yaml --fail-on-error=false
+  aicr validate -r recipe.yaml -s snapshot.yaml --fail-on-error=false
 
 Resume a previous validation run from where it left off:
-  eidos validate -r recipe.yaml -s snapshot.yaml --resume 20260206-140523-a3f9
+  aicr validate -r recipe.yaml -s snapshot.yaml --resume 20260206-140523-a3f9
 `,
 		Flags: validateCmdFlags(),
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -400,7 +400,7 @@ Resume a previous validation run from where it left off:
 			// If validation-namespace is not explicitly set, default to namespace value,
 			// but only when still at its default (to avoid overriding env var values).
 			validationNamespace := cmd.String("validation-namespace")
-			if !cmd.IsSet("validation-namespace") && validationNamespace == "eidos-validation" {
+			if !cmd.IsSet("validation-namespace") && validationNamespace == "aicr-validation" {
 				validationNamespace = cmd.String("namespace")
 			}
 

@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"time"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 	"github.com/google/uuid"
 )
 
@@ -83,7 +83,7 @@ func (s *Server) rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			rateLimitRejects.Inc()
 			retryAfterSeconds := "1"
 			w.Header().Set("Retry-After", retryAfterSeconds)
-			WriteError(w, r, http.StatusTooManyRequests, eidoserrors.ErrCodeRateLimitExceeded,
+			WriteError(w, r, http.StatusTooManyRequests, aicrerrors.ErrCodeRateLimitExceeded,
 				"Rate limit exceeded", true, map[string]any{
 					"limit": s.config.RateLimit,
 					"burst": s.config.RateLimitBurst,
@@ -119,7 +119,7 @@ func (s *Server) panicRecoveryMiddleware(next http.HandlerFunc) http.HandlerFunc
 					"path", r.URL.Path,
 					"method", r.Method,
 				)
-				WriteError(w, r, http.StatusInternalServerError, eidoserrors.ErrCodeInternal,
+				WriteError(w, r, http.StatusInternalServerError, aicrerrors.ErrCodeInternal,
 					"Internal server error", true, nil)
 			}
 		}()

@@ -22,11 +22,11 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
-	"github.com/NVIDIA/eidos/pkg/validator"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/validator"
 )
 
 func recipeCmd() *cli.Command {
@@ -48,25 +48,25 @@ Output can be in JSON or YAML format.
 Examples:
 
 Generate recipe from explicit criteria:
-  eidos recipe --service eks --accelerator h100 --os ubuntu --intent training
+  aicr recipe --service eks --accelerator h100 --os ubuntu --intent training
 
 Generate recipe from a criteria file:
-  eidos recipe --criteria criteria.yaml
+  aicr recipe --criteria criteria.yaml
 
 Generate recipe from a snapshot file:
-  eidos recipe --snapshot snapshot.yaml
+  aicr recipe --snapshot snapshot.yaml
 
 Generate recipe from a ConfigMap snapshot:
-  eidos recipe --snapshot cm://gpu-operator/eidos-snapshot
+  aicr recipe --snapshot cm://gpu-operator/aicr-snapshot
 
 Save recipe to a file:
-  eidos recipe --snapshot cm://gpu-operator/eidos-snapshot -o recipe.yaml
+  aicr recipe --snapshot cm://gpu-operator/aicr-snapshot -o recipe.yaml
 
 Override criteria file values with flags:
-  eidos recipe --criteria criteria.yaml --service gke
+  aicr recipe --criteria criteria.yaml --service gke
 
 Override snapshot-detected criteria:
-  eidos recipe --snapshot cm://gpu-operator/eidos-snapshot --service gke`,
+  aicr recipe --snapshot cm://gpu-operator/aicr-snapshot --service gke`,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "service",

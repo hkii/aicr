@@ -15,10 +15,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   labels:
-    app.kubernetes.io/name: eidosd
+    app.kubernetes.io/name: aicrd
     app.kubernetes.io/component: api-server
 spec:
   type: ClusterIP
@@ -32,4 +32,4 @@ spec:
       targetPort: metrics
       protocol: TCP
   selector:
-    app.kubernetes.io/name: eidosd
+    app.kubernetes.io/name: aicrd

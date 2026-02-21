@@ -201,7 +201,7 @@ func TestNewHTTPReader_Defaults(t *testing.T) {
 	}
 
 	if reader.UserAgent != HTTPReaderUserAgent {
-		t.Errorf("expected UserAgent 'Eidos-Serializer/1.0', got %s", reader.UserAgent)
+		t.Errorf("expected UserAgent 'AICR-Serializer/1.0', got %s", reader.UserAgent)
 	}
 }
 

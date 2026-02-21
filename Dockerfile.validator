@@ -16,7 +16,7 @@
 # Built natively per-arch via CI (no cross-compilation or QEMU needed).
 
 # ---------------------------------------------------------------------------
-# Builder stage: compile eidos CLI and pre-compiled test binaries
+# Builder stage: compile aicr CLI and pre-compiled test binaries
 # ---------------------------------------------------------------------------
 FROM golang:1.25-bookworm AS builder
 
@@ -32,7 +32,7 @@ COPY vendor ./vendor/
 # changes don't re-download deps. See .dockerignore for context trimming.
 COPY . .
 
-# Build the eidos CLI binary
+# Build the aicr CLI binary
 # Build flags match .goreleaser.yaml configuration
 # ARG values can be overridden via --build-arg during CI builds
 ARG VERSION
@@ -42,11 +42,11 @@ RUN set -e; \
     CGO_ENABLED=0 go build \
         -trimpath \
         -ldflags="-w -s -extldflags '-static' \
-          -X github.com/NVIDIA/eidos/pkg/cli.version=${VERSION} \
-          -X github.com/NVIDIA/eidos/pkg/cli.commit=${COMMIT} \
-          -X github.com/NVIDIA/eidos/pkg/cli.date=${DATE}" \
-        -o /out/eidos \
-        ./cmd/eidos
+          -X github.com/NVIDIA/aicr/pkg/cli.version=${VERSION} \
+          -X github.com/NVIDIA/aicr/pkg/cli.commit=${COMMIT} \
+          -X github.com/NVIDIA/aicr/pkg/cli.date=${DATE}" \
+        -o /out/aicr \
+        ./cmd/aicr
 
 # Pre-compile test binaries for in-cluster validation Jobs
 RUN CGO_ENABLED=0 go test -c -o /out/readiness.test ./pkg/validator/checks/readiness && \
@@ -62,12 +62,12 @@ RUN CGO_ENABLED=0 go build -o /out/test2json cmd/test2json
 # ---------------------------------------------------------------------------
 FROM nvcr.io/nvidia/cuda:13.1.0-runtime-ubuntu24.04
 
-LABEL org.opencontainers.image.title="eidos-validator" \
-      org.opencontainers.image.description="NVIDIA Eidos validation test runner" \
+LABEL org.opencontainers.image.title="aicr-validator" \
+      org.opencontainers.image.description="NVIDIA AICR validation test runner" \
       org.opencontainers.image.vendor="NVIDIA Corporation"
 
 # Copy compiled binaries
-COPY --from=builder /out/eidos /usr/local/bin/eidos
+COPY --from=builder /out/aicr /usr/local/bin/aicr
 COPY --from=builder /out/readiness.test /usr/local/bin/readiness.test
 COPY --from=builder /out/deployment.test /usr/local/bin/deployment.test
 COPY --from=builder /out/test2json /usr/local/bin/test2json

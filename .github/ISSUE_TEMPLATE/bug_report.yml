@@ -27,7 +27,7 @@ body:
           required: true
         - label: I can reproduce this issue consistently
           required: true
-        - label: This is not a security vulnerability (use [Security Advisories](https://github.com/NVIDIA/eidos/security/advisories/new) instead)
+        - label: This is not a security vulnerability (use [Security Advisories](https://github.com/NVIDIA/aicr/security/advisories/new) instead)
           required: true
 
   - type: textarea
@@ -56,8 +56,8 @@ body:
     attributes:
       label: Component
       options:
-        - CLI (eidos)
-        - API server (eidosd)
+        - CLI (aicr)
+        - API server (aicrd)
         - Recipe engine / data
         - Bundlers (gpu-operator, network-operator, etc.)
         - Collectors / snapshotter
@@ -111,7 +111,7 @@ body:
     attributes:
       label: Environment
       placeholder: |
-        - Eidos version (CLI `eidos version`, API image tag, or commit SHA):
+        - AICR version (CLI `aicr version`, API image tag, or commit SHA):
         - Install method (release binary / build from source / container image):
         - Platform (eks/gke/aks/self-managed):
         - Kubernetes version:
@@ -120,7 +120,7 @@ body:
         - GPU type (h100/gb200/a100/l40/other):
         - Workload intent (training/inference):
       value: |
-        - Eidos version (CLI `eidos version`, API image tag, or commit SHA):
+        - AICR version (CLI `aicr version`, API image tag, or commit SHA):
         - Install method (release binary / build from source / container image):
         - Platform (eks/gke/aks/self-managed):
         - Kubernetes version:
@@ -138,7 +138,7 @@ body:
       description: Paste the exact CLI command(s) or API request(s) that triggered the issue.
       placeholder: |
         ```bash
-        eidos recipe --snapshot ... --intent training
+        aicr recipe --snapshot ... --intent training
         ```
 
         ```bash

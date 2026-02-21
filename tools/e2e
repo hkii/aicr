@@ -2,15 +2,15 @@
 set -euo pipefail
 
 # =============================================================================
-# E2E Integration Tests for eidos CLI
+# E2E Integration Tests for aicr CLI
 # =============================================================================
 #
 # PURPOSE:
-# Builds the eidos binary and runs Chainsaw-based CLI integration tests.
+# Builds the aicr binary and runs Chainsaw-based CLI integration tests.
 # Tests are defined declaratively in tests/chainsaw/cli/*/chainsaw-test.yaml.
 #
 # WHAT THIS SCRIPT DOES:
-# 1. Builds the eidos binary via make build
+# 1. Builds the aicr binary via make build
 # 2. Locates the platform-specific binary
 # 3. Runs chainsaw test --no-cluster on tests/chainsaw/cli/
 #
@@ -33,12 +33,12 @@ has_tools chainsaw make uname goreleaser
 # ============================================================================
 
 build_binary() {
-  msg "Building eidos binary"
+  msg "Building aicr binary"
 
   cd "${ROOT}"
 
   if ! make build 2>&1; then
-    err "Failed to build eidos binary"
+    err "Failed to build aicr binary"
   fi
 
   # Find the built binary (platform-specific)
@@ -56,24 +56,24 @@ build_binary() {
   # goreleaser uses different suffixes:
   # - _v1 for amd64 (x86_64 microarchitecture level 1)
   # - _v8.0 for arm64 (ARMv8.0 baseline)
-  EIDOS_BIN=""
+  AICR_BIN=""
   for pattern in \
-    "${ROOT}/dist/eidos_${os_name}_${arch_name}/eidos" \
-    "${ROOT}/dist/eidos_${os_name}_${arch_name}_v1/eidos" \
-    "${ROOT}/dist/eidos_${os_name}_${arch_name}_v8.0/eidos" \
-    "${ROOT}/dist/eidos_${os_name}_all/eidos"; do
+    "${ROOT}/dist/aicr_${os_name}_${arch_name}/aicr" \
+    "${ROOT}/dist/aicr_${os_name}_${arch_name}_v1/aicr" \
+    "${ROOT}/dist/aicr_${os_name}_${arch_name}_v8.0/aicr" \
+    "${ROOT}/dist/aicr_${os_name}_all/aicr"; do
     if [ -x "$pattern" ]; then
-      EIDOS_BIN="$pattern"
+      AICR_BIN="$pattern"
       break
     fi
   done
 
-  if [ -z "$EIDOS_BIN" ] || [ ! -x "$EIDOS_BIN" ]; then
+  if [ -z "$AICR_BIN" ] || [ ! -x "$AICR_BIN" ]; then
     err "Built binary not found in dist/"
   fi
 
-  msg "Using binary: ${EIDOS_BIN}"
-  export EIDOS_BIN
+  msg "Using binary: ${AICR_BIN}"
+  export AICR_BIN
 }
 
 # ============================================================================

@@ -24,7 +24,7 @@ import (
 	"golang.org/x/text/language"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // titleCaser is cached to avoid per-call allocation.

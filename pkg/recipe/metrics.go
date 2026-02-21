@@ -23,7 +23,7 @@ var (
 	// Recipe generation metrics
 	recipeBuiltDuration = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "eidos_recipe_build_duration_seconds",
+			Name:    "aicr_recipe_build_duration_seconds",
 			Help:    "Duration of recipe generation in seconds",
 			Buckets: []float64{1, 5, 10, 30, 60, 120, 300},
 		},
@@ -32,13 +32,13 @@ var (
 	// Recipe metadata cache metrics
 	recipeCacheHits = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "eidos_recipe_cache_hits_total",
+			Name: "aicr_recipe_cache_hits_total",
 			Help: "Total number of recipe metadata cache hits",
 		},
 	)
 	recipeCacheMisses = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "eidos_recipe_cache_misses_total",
+			Name: "aicr_recipe_cache_misses_total",
 			Help: "Total number of recipe metadata cache misses (initial loads)",
 		},
 	)

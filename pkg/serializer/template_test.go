@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // hasErrorCode checks if an error contains a StructuredError with the given code.

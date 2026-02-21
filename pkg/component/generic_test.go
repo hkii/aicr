@@ -17,8 +17,8 @@ package component
 import (
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 func TestEnrichConfigFromRegistry(t *testing.T) {

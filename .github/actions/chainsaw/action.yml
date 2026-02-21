@@ -13,7 +13,7 @@
 # limitations under the License.
 
 name: 'Chainsaw Conformance Tests'
-description: 'Build eidos binary and run AI-conformance offline tests with Chainsaw'
+description: 'Build aicr binary and run AI-conformance offline tests with Chainsaw'
 
 inputs:
   go_version:
@@ -40,16 +40,16 @@ runs:
       shell: bash
       run: go install github.com/kyverno/chainsaw@${{ inputs.chainsaw_version }}
 
-    - name: Build eidos binary
+    - name: Build aicr binary
       shell: bash
       env:
         GOFLAGS: -mod=vendor
-      run: go build -o dist/e2e/eidos ./cmd/eidos
+      run: go build -o dist/e2e/aicr ./cmd/aicr
 
     - name: Run AI-conformance offline tests
       shell: bash
       run: |
-        EIDOS_BIN=$(pwd)/dist/e2e/eidos chainsaw test \
+        AICR_BIN=$(pwd)/dist/e2e/aicr chainsaw test \
           --no-cluster \
           --config tests/chainsaw/chainsaw-config.yaml \
           --test-dir tests/chainsaw/ai-conformance/offline/

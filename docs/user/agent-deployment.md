@@ -1,6 +1,6 @@
 # Agent Deployment
 
-Deploy Eidos as a Kubernetes Job to automatically capture cluster configuration snapshots.
+Deploy AICR as a Kubernetes Job to automatically capture cluster configuration snapshots.
 
 ## Overview
 
@@ -8,19 +8,19 @@ The agent is a Kubernetes Job that captures system configuration and writes outp
 
 **Deployment options:**
 
-1. **CLI-based deployment** (recommended): Use `eidos snapshot --deploy-agent` to deploy and manage Job programmatically
+1. **CLI-based deployment** (recommended): Use `aicr snapshot --deploy-agent` to deploy and manage Job programmatically
 2. **kubectl deployment**: Manually apply YAML manifests with `kubectl apply`
 
 **What it does:**
 
-- Runs `eidos snapshot --output cm://gpu-operator/eidos-snapshot` on a GPU node
+- Runs `aicr snapshot --output cm://gpu-operator/aicr-snapshot` on a GPU node
 - Writes snapshot to ConfigMap via Kubernetes API (no PersistentVolume required)
 - Exits after snapshot capture
 
 **What it does not do:**
 
-- Recipe generation (use `eidos recipe` CLI or API server)
-- Bundle generation (use `eidos bundle` CLI)
+- Recipe generation (use `aicr recipe` CLI or API server)
+- Bundle generation (use `aicr bundle` CLI)
 - Continuous monitoring (use CronJob for periodic snapshots)
 
 **Use cases:**
@@ -34,7 +34,7 @@ The agent is a Kubernetes Job that captures system configuration and writes outp
 
 Agent uses ConfigMap URI scheme (`cm://namespace/name`) to write snapshots:
 ```bash
-eidos snapshot --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --output cm://gpu-operator/aicr-snapshot
 ```
 
 This creates:
@@ -42,15 +42,15 @@ This creates:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: eidos-snapshot
+  name: aicr-snapshot
   namespace: gpu-operator
   labels:
-    app.kubernetes.io/name: eidos
+    app.kubernetes.io/name: aicr
     app.kubernetes.io/component: snapshot
     app.kubernetes.io/version: v0.17.0
 data:
   snapshot.yaml: |  # Complete snapshot YAML
-    apiVersion: eidos.nvidia.com/v1alpha1
+    apiVersion: aicr.nvidia.com/v1alpha1
     kind: Snapshot
     measurements: [...]
   format: yaml
@@ -60,7 +60,7 @@ data:
 ## Prerequisites
 
 - Kubernetes cluster with GPU nodes
-- `kubectl` configured with cluster access (for manual deployment) OR eidos CLI installed (for CLI-based deployment)
+- `kubectl` configured with cluster access (for manual deployment) OR aicr CLI installed (for CLI-based deployment)
 - GPU Operator installed (agent runs in `gpu-operator` namespace)
 - Cluster admin permissions (for RBAC setup)
 
@@ -71,7 +71,7 @@ data:
 ### 1. Deploy Agent with Single Command
 
 ```shell
-eidos snapshot --deploy-agent
+aicr snapshot --deploy-agent
 ```
 
 This single command:
@@ -88,16 +88,16 @@ Snapshot is written to specified output:
 
 ```shell
 # Output to stdout (default)
-eidos snapshot --deploy-agent
+aicr snapshot --deploy-agent
 
 # Save to file
-eidos snapshot --deploy-agent --output snapshot.yaml
+aicr snapshot --deploy-agent --output snapshot.yaml
 
 # Keep in ConfigMap for later use
-eidos snapshot --deploy-agent --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --deploy-agent --output cm://gpu-operator/aicr-snapshot
 
 # Retrieve from ConfigMap later
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
 ```
 
 ### 3. Customize Deployment
@@ -106,31 +106,31 @@ Target specific nodes and configure scheduling:
 
 ```shell
 # Target GPU nodes with specific label
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --node-selector accelerator=nvidia-h100
 
 # Handle tainted nodes (by default all taints are tolerated)
 # Only needed if you want to restrict which taints are tolerated
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --toleration nvidia.com/gpu=present:NoSchedule
 
 # Full customization
-eidos snapshot --deploy-agent \
+aicr snapshot --deploy-agent \
   --namespace gpu-operator \
-  --image ghcr.io/nvidia/eidos:v0.8.0 \
+  --image ghcr.io/nvidia/aicr:v0.8.0 \
   --node-selector accelerator=nvidia-h100 \
   --toleration nvidia.com/gpu:NoSchedule \
   --timeout 10m \
-  --output cm://gpu-operator/eidos-snapshot
+  --output cm://gpu-operator/aicr-snapshot
 ```
 
 **Available flags:**
 - `--deploy-agent`: Enable agent deployment mode
 - `--kubeconfig`: Custom kubeconfig path (default: `~/.kube/config` or `$KUBECONFIG`)
 - `--namespace`: Deployment namespace (default: `gpu-operator`)
-- `--image`: Container image (default: `ghcr.io/nvidia/eidos-validator:latest`)
-- `--job-name`: Job name (default: `eidos`)
-- `--service-account-name`: ServiceAccount name (default: `eidos`)
+- `--image`: Container image (default: `ghcr.io/nvidia/aicr-validator:latest`)
+- `--job-name`: Job name (default: `aicr`)
+- `--service-account-name`: ServiceAccount name (default: `aicr`)
 - `--node-selector`: Node selector (format: `key=value`, repeatable)
 - `--toleration`: Toleration (format: `key=value:effect`, repeatable). **Default: all taints are tolerated** (uses `operator: Exists` without key). Only specify this flag if you want to restrict which taints the Job can tolerate.
 - `--timeout`: Wait timeout (default: `5m`)
@@ -145,10 +145,10 @@ If something goes wrong, check Job logs:
 kubectl get jobs -n gpu-operator
 
 # View logs
-kubectl logs -n gpu-operator job/eidos
+kubectl logs -n gpu-operator job/aicr
 
 # Describe Job for events
-kubectl describe job eidos -n gpu-operator
+kubectl describe job aicr -n gpu-operator
 ```
 
 ## Manual Deployment (kubectl)
@@ -160,26 +160,26 @@ Alternative approach using kubectl with YAML manifests.
 The agent requires permissions to read Kubernetes resources and write to ConfigMaps:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nvidia/eidos/main/deployments/eidos-agent/1-deps.yaml
+kubectl apply -f https://raw.githubusercontent.com/nvidia/aicr/main/deployments/aicr-agent/1-deps.yaml
 ```
 
 **What this creates:**
 - **Namespace**: `gpu-operator` (if not exists)
-- **ServiceAccount**: `eidos` in `gpu-operator` namespace
-- **Role**: `eidos` - Permissions to create/update ConfigMaps and list pods in `gpu-operator` namespace
-- **RoleBinding**: `eidos` - Binds Role to ServiceAccount in `gpu-operator` namespace
-- **ClusterRole**: `eidos-node-reader` - Permissions to read nodes, pods, services, and ClusterPolicy (nvidia.com)
-- **ClusterRoleBinding**: `eidos-node-reader` - Binds ClusterRole to ServiceAccount
+- **ServiceAccount**: `aicr` in `gpu-operator` namespace
+- **Role**: `aicr` - Permissions to create/update ConfigMaps and list pods in `gpu-operator` namespace
+- **RoleBinding**: `aicr` - Binds Role to ServiceAccount in `gpu-operator` namespace
+- **ClusterRole**: `aicr-node-reader` - Permissions to read nodes, pods, services, and ClusterPolicy (nvidia.com)
+- **ClusterRoleBinding**: `aicr-node-reader` - Binds ClusterRole to ServiceAccount
 
 ### 2. Deploy the Agent Job
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nvidia/eidos/main/deployments/eidos-agent/2-job.yaml
+kubectl apply -f https://raw.githubusercontent.com/nvidia/aicr/main/deployments/aicr-agent/2-job.yaml
 ```
 
 **What this creates:**
-- **Job**: `eidos` in the `gpu-operator` namespace
-- Job runs `eidos snapshot --output cm://gpu-operator/eidos-snapshot`
+- **Job**: `aicr` in the `gpu-operator` namespace
+- Job runs `aicr snapshot --output cm://gpu-operator/aicr-snapshot`
 - Snapshot is written directly to ConfigMap via Kubernetes API
 
 ### 3. View Snapshot Output
@@ -191,17 +191,17 @@ kubectl get jobs -n gpu-operator
 
 Check job logs (for errors/debugging):
 ```shell
-kubectl logs -n gpu-operator job/eidos
+kubectl logs -n gpu-operator job/aicr
 ```
 
 Retrieve snapshot from ConfigMap:
 ```shell
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
 ```
 
 Save snapshot to file:
 ```shell
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
 ```
 
 ## Customization
@@ -212,7 +212,7 @@ Before deploying, you may need to customize the Job manifest for your environmen
 
 ```shell
 # Download job manifest
-curl -O https://raw.githubusercontent.com/nvidia/eidos/main/deployments/eidos-agent/2-job.yaml
+curl -O https://raw.githubusercontent.com/nvidia/aicr/main/deployments/aicr-agent/2-job.yaml
 
 # Edit with your preferred editor
 vim 2-job.yaml
@@ -281,13 +281,13 @@ spec:
   template:
     spec:
       containers:
-        - name: eidos
-          image: ghcr.io/nvidia/eidos:v0.8.0  # Pin to version
+        - name: aicr
+          image: ghcr.io/nvidia/aicr:v0.8.0  # Pin to version
 ```
 
 **Finding versions:**
-- [GitHub Releases](https://github.com/nvidia/eidos/releases)
-- Container registry: [ghcr.io/nvidia/eidos](https://github.com/nvidia/eidos/pkgs/container/eidos)
+- [GitHub Releases](https://github.com/nvidia/aicr/releases)
+- Container registry: [ghcr.io/nvidia/aicr](https://github.com/nvidia/aicr/pkgs/container/aicr)
 
 ### Resource Limits
 
@@ -298,7 +298,7 @@ spec:
   template:
     spec:
       containers:
-        - name: eidos
+        - name: aicr
           resources:
             requests:
               cpu: "1"
@@ -321,7 +321,7 @@ spec:
   template:
     spec:
       containers:
-        - name: eidos
+        - name: aicr
           args:
             - snapshot
             - --format
@@ -336,16 +336,16 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
   labels:
-    app.kubernetes.io/name: eidos
+    app.kubernetes.io/name: aicr
 spec:
   backoffLimit: 0
   ttlSecondsAfterFinished: 3600
   template:
     spec:
-      serviceAccountName: eidos
+      serviceAccountName: aicr
       restartPolicy: Never
       hostPID: true
       hostNetwork: true
@@ -361,10 +361,10 @@ spec:
         runAsGroup: 0
         fsGroup: 0
       containers:
-        - name: eidos
-          image: ghcr.io/nvidia/eidos-validator:latest
+        - name: aicr
+          image: ghcr.io/nvidia/aicr-validator:latest
           command: ["/bin/sh", "-c"]
-          args: ["eidos snapshot -o cm://gpu-operator/eidos-snapshot"]
+          args: ["aicr snapshot -o cm://gpu-operator/aicr-snapshot"]
           securityContext:
             privileged: true
           volumeMounts:
@@ -384,16 +384,16 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eidos
+  name: aicr
   namespace: gpu-operator
   labels:
-    app.kubernetes.io/name: eidos
+    app.kubernetes.io/name: aicr
 spec:
   backoffLimit: 0
   ttlSecondsAfterFinished: 3600
   template:
     spec:
-      serviceAccountName: eidos
+      serviceAccountName: aicr
       restartPolicy: Never
       hostPID: true
       hostNetwork: true
@@ -405,10 +405,10 @@ spec:
         runAsGroup: 0
         fsGroup: 0
       containers:
-        - name: eidos
-          image: ghcr.io/nvidia/eidos-validator:latest
+        - name: aicr
+          image: ghcr.io/nvidia/aicr-validator:latest
           command: ["/bin/sh", "-c"]
-          args: ["eidos snapshot -o cm://gpu-operator/eidos-snapshot"]
+          args: ["aicr snapshot -o cm://gpu-operator/aicr-snapshot"]
           securityContext:
             privileged: true
           volumeMounts:
@@ -430,20 +430,20 @@ Automatic snapshots for drift detection:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: eidos-snapshot
+  name: aicr-snapshot
   namespace: gpu-operator
 spec:
   schedule: "0 */6 * * *"  # Every 6 hours
   jobTemplate:
     metadata:
       labels:
-        app.kubernetes.io/name: eidos
+        app.kubernetes.io/name: aicr
     spec:
       backoffLimit: 0
       ttlSecondsAfterFinished: 3600
       template:
         spec:
-          serviceAccountName: eidos
+          serviceAccountName: aicr
           restartPolicy: Never
           hostPID: true
           hostNetwork: true
@@ -455,10 +455,10 @@ spec:
             runAsGroup: 0
             fsGroup: 0
           containers:
-            - name: eidos
-              image: ghcr.io/nvidia/eidos-validator:latest
+            - name: aicr
+              image: ghcr.io/nvidia/aicr-validator:latest
               command: ["/bin/sh", "-c"]
-              args: ["eidos snapshot -o cm://gpu-operator/eidos-snapshot"]
+              args: ["aicr snapshot -o cm://gpu-operator/aicr-snapshot"]
               securityContext:
                 privileged: true
               volumeMounts:
@@ -475,19 +475,19 @@ spec:
 Retrieve historical snapshots:
 ```shell
 # List completed jobs
-kubectl get jobs -n gpu-operator -l job-name=eidos-snapshot
+kubectl get jobs -n gpu-operator -l job-name=aicr-snapshot
 
 # Get latest snapshot from ConfigMap (updated by most recent job)
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > latest-snapshot.yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > latest-snapshot.yaml
 
 # Check ConfigMap update timestamp
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.metadata.creationTimestamp}'
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.metadata.creationTimestamp}'
 
 # View job logs for debugging (if needed)
-kubectl logs -n gpu-operator job/eidos-snapshot-28405680
+kubectl logs -n gpu-operator job/aicr-snapshot-28405680
 ```
 
-**Note**: The ConfigMap `eidos-snapshot` is updated by each CronJob run. For historical tracking, save snapshots to external storage (S3, Git, etc.) using a post-job step.
+**Note**: The ConfigMap `aicr-snapshot` is updated by each CronJob run. For historical tracking, save snapshots to external storage (S3, Git, etc.) using a post-job step.
 
 ## Post-Deployment
 
@@ -498,50 +498,50 @@ kubectl logs -n gpu-operator job/eidos-snapshot-28405680
 kubectl get jobs -n gpu-operator
 
 # Describe job for events
-kubectl describe job eidos -n gpu-operator
+kubectl describe job aicr -n gpu-operator
 
 # Check pod status
-kubectl get pods -n gpu-operator -l job-name=eidos
+kubectl get pods -n gpu-operator -l job-name=aicr
 ```
 
 ### Retrieve Snapshot
 
 ```shell
 # View snapshot from ConfigMap
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}'
 
 # Save to file
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot-$(date +%Y%m%d).yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot-$(date +%Y%m%d).yaml
 
 # View job logs (for debugging)
-kubectl logs -n gpu-operator job/eidos
+kubectl logs -n gpu-operator job/aicr
 
 # Check ConfigMap metadata
-kubectl get configmap eidos-snapshot -n gpu-operator -o yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o yaml
 ```
 
 ### Generate Recipe from Snapshot
 
 ```shell
 # Option 1: Use ConfigMap directly (no file needed)
-eidos recipe --snapshot cm://gpu-operator/eidos-snapshot --intent training --platform kubeflow --output recipe.yaml
+aicr recipe --snapshot cm://gpu-operator/aicr-snapshot --intent training --platform kubeflow --output recipe.yaml
 
 # Option 2: Save snapshot to file first
-kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
-eidos recipe --snapshot snapshot.yaml --intent training --platform kubeflow --output recipe.yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
+aicr recipe --snapshot snapshot.yaml --intent training --platform kubeflow --output recipe.yaml
 
 # Generate bundle
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 ```
 
 ### Clean Up
 
 ```shell
 # Delete job
-kubectl delete job eidos -n gpu-operator
+kubectl delete job aicr -n gpu-operator
 
 # Delete RBAC (if no longer needed)
-kubectl delete -f https://raw.githubusercontent.com/NVIDIA/eidos/main/deployments/eidos-agent/1-deps.yaml
+kubectl delete -f https://raw.githubusercontent.com/NVIDIA/aicr/main/deployments/aicr-agent/1-deps.yaml
 ```
 
 ## Complete Workflow Examples
@@ -550,18 +550,18 @@ kubectl delete -f https://raw.githubusercontent.com/NVIDIA/eidos/main/deployment
 
 ```shell
 # Step 1: Deploy agent and capture snapshot to ConfigMap
-eidos snapshot --deploy-agent --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --deploy-agent --output cm://gpu-operator/aicr-snapshot
 
 # Step 2: Generate recipe from ConfigMap (with kubeconfig if needed)
-eidos recipe \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --kubeconfig ~/.kube/config \
   --intent training \
   --platform kubeflow \
   --output recipe.yaml
 
 # Step 3: Create deployment bundle
-eidos bundle \
+aicr bundle \
   --recipe recipe.yaml \
   --output ./bundles
 
@@ -579,20 +579,20 @@ kubectl logs -n gpu-operator -l app=nvidia-operator-validator
 
 ```shell
 # Step 1: Deploy RBAC and Job using kubectl
-kubectl apply -f deployments/eidos-agent/1-deps.yaml
-kubectl apply -f deployments/eidos-agent/2-job.yaml
+kubectl apply -f deployments/aicr-agent/1-deps.yaml
+kubectl apply -f deployments/aicr-agent/2-job.yaml
 
 # Step 2: Wait for completion
-kubectl wait --for=condition=complete job/eidos -n gpu-operator --timeout=5m
+kubectl wait --for=condition=complete job/aicr -n gpu-operator --timeout=5m
 
 # Step 3: Generate recipe from ConfigMap
-eidos recipe \
-  --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe \
+  --snapshot cm://gpu-operator/aicr-snapshot \
   --intent training \
   --output recipe.yaml
 
 # Step 4: Create bundle
-eidos bundle \
+aicr bundle \
   --recipe recipe.yaml \
   --output ./bundles
 
@@ -609,23 +609,23 @@ kubectl get pods -n gpu-operator
 # GitHub Actions example with CLI
 - name: Capture snapshot using agent
   run: |
-    eidos snapshot --deploy-agent \
+    aicr snapshot --deploy-agent \
       --kubeconfig ${{ secrets.KUBECONFIG }} \
       --namespace gpu-operator \
-      --output cm://gpu-operator/eidos-snapshot \
+      --output cm://gpu-operator/aicr-snapshot \
       --timeout 10m
     
 - name: Generate recipe from ConfigMap
   run: |
-    eidos recipe \
-      --snapshot cm://gpu-operator/eidos-snapshot \
+    aicr recipe \
+      --snapshot cm://gpu-operator/aicr-snapshot \
       --kubeconfig ${{ secrets.KUBECONFIG }} \
       --intent training \
       --output recipe.yaml
     
 - name: Generate bundle
   run: |
-    eidos bundle -r recipe.yaml -o ./bundles
+    aicr bundle -r recipe.yaml -o ./bundles
     
 - name: Upload artifacts
   uses: actions/upload-artifact@v3
@@ -642,24 +642,24 @@ kubectl get pods -n gpu-operator
 # GitHub Actions example with kubectl
 - name: Deploy agent to capture snapshot
   run: |
-    kubectl apply -f deployments/eidos-agent/1-deps.yaml
-    kubectl apply -f deployments/eidos-agent/2-job.yaml
-    kubectl wait --for=condition=complete --timeout=300s job/eidos -n gpu-operator
+    kubectl apply -f deployments/aicr-agent/1-deps.yaml
+    kubectl apply -f deployments/aicr-agent/2-job.yaml
+    kubectl wait --for=condition=complete --timeout=300s job/aicr -n gpu-operator
     
 - name: Generate recipe from ConfigMap
   run: |
     # Option 1: Use ConfigMap directly (no file needed)
-    eidos recipe -s cm://gpu-operator/eidos-snapshot -i training -o recipe.yaml
+    aicr recipe -s cm://gpu-operator/aicr-snapshot -i training -o recipe.yaml
     
     # Option 2: Write recipe to ConfigMap as well
-    eidos recipe -s cm://gpu-operator/eidos-snapshot -i training -o cm://gpu-operator/eidos-recipe
+    aicr recipe -s cm://gpu-operator/aicr-snapshot -i training -o cm://gpu-operator/aicr-recipe
     
     # Option 3: Export snapshot to file for archival
-    kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
+    kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot.yaml
     
 - name: Generate bundle
   run: |
-    eidos bundle -r recipe.yaml -o ./bundles
+    aicr bundle -r recipe.yaml -o ./bundles
     
 - name: Upload artifacts
   uses: actions/upload-artifact@v3
@@ -686,7 +686,7 @@ for cluster in "${clusters[@]}"; do
   kubectl config use-context $cluster
   
   # Deploy agent and capture snapshot
-  eidos snapshot --deploy-agent \
+  aicr snapshot --deploy-agent \
     --namespace gpu-operator \
     --output snapshot-${cluster}.yaml \
     --timeout 10m
@@ -708,16 +708,16 @@ for cluster in "${clusters[@]}"; do
   kubectl config use-context $cluster
   
   # Deploy agent
-  kubectl apply -f deployments/eidos-agent/2-job.yaml
+  kubectl apply -f deployments/aicr-agent/2-job.yaml
   
   # Wait for completion
-  kubectl wait --for=condition=complete --timeout=300s job/eidos -n gpu-operator
+  kubectl wait --for=condition=complete --timeout=300s job/aicr -n gpu-operator
   
   # Save snapshot from ConfigMap
-  kubectl get configmap eidos-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot-${cluster}.yaml
+  kubectl get configmap aicr-snapshot -n gpu-operator -o jsonpath='{.data.snapshot\.yaml}' > snapshot-${cluster}.yaml
   
   # Clean up
-  kubectl delete job eidos -n gpu-operator
+  kubectl delete job aicr -n gpu-operator
 done
 ```
 
@@ -728,10 +728,10 @@ done
 # Compare current snapshot with baseline
 
 # Baseline (first snapshot) - using CLI
-eidos snapshot --deploy-agent --output baseline.yaml
+aicr snapshot --deploy-agent --output baseline.yaml
 
 # Current (later snapshot)
-eidos snapshot --deploy-agent --output current.yaml
+aicr snapshot --deploy-agent --output current.yaml
 
 # Compare
 diff baseline.yaml current.yaml || echo "Configuration drift detected!"
@@ -743,8 +743,8 @@ diff baseline.yaml current.yaml || echo "Configuration drift detected!"
 
 Check RBAC permissions:
 ```shell
-kubectl auth can-i get nodes --as=system:serviceaccount:gpu-operator:eidos
-kubectl auth can-i get pods --as=system:serviceaccount:gpu-operator:eidos
+kubectl auth can-i get nodes --as=system:serviceaccount:gpu-operator:aicr
+kubectl auth can-i get pods --as=system:serviceaccount:gpu-operator:aicr
 ```
 
 ### Job Pending
@@ -752,7 +752,7 @@ kubectl auth can-i get pods --as=system:serviceaccount:gpu-operator:eidos
 Check node selectors and tolerations:
 ```shell
 # View pod events
-kubectl describe pod -n gpu-operator -l job-name=eidos
+kubectl describe pod -n gpu-operator -l job-name=aicr
 
 # Check node labels
 kubectl get nodes --show-labels
@@ -766,16 +766,16 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
 Check ConfigMap and container logs:
 ```shell
 # Check if ConfigMap was created
-kubectl get configmap eidos-snapshot -n gpu-operator
+kubectl get configmap aicr-snapshot -n gpu-operator
 
 # View ConfigMap contents
-kubectl get configmap eidos-snapshot -n gpu-operator -o yaml
+kubectl get configmap aicr-snapshot -n gpu-operator -o yaml
 
 # View pod logs for errors
-kubectl logs -n gpu-operator -l job-name=eidos
+kubectl logs -n gpu-operator -l job-name=aicr
 
 # Check for previous pod errors
-kubectl logs -n gpu-operator -l job-name=eidos --previous
+kubectl logs -n gpu-operator -l job-name=aicr --previous
 ```
 
 ### Permission Denied
@@ -783,17 +783,17 @@ kubectl logs -n gpu-operator -l job-name=eidos --previous
 Ensure RBAC is correctly deployed:
 ```shell
 # Verify ClusterRole
-kubectl get clusterrole eidos-node-reader
+kubectl get clusterrole aicr-node-reader
 
 # Verify ClusterRoleBinding
-kubectl get clusterrolebinding eidos-node-reader
+kubectl get clusterrolebinding aicr-node-reader
 
 # Verify Role and RoleBinding
-kubectl get role eidos -n gpu-operator
-kubectl get rolebinding eidos -n gpu-operator
+kubectl get role aicr -n gpu-operator
+kubectl get rolebinding aicr -n gpu-operator
 
 # Verify ServiceAccount
-kubectl get serviceaccount eidos -n gpu-operator
+kubectl get serviceaccount aicr -n gpu-operator
 ```
 
 ### Image Pull Errors
@@ -801,7 +801,7 @@ kubectl get serviceaccount eidos -n gpu-operator
 Check image access:
 ```shell
 # Describe pod
-kubectl describe pod -n gpu-operator -l job-name=eidos
+kubectl describe pod -n gpu-operator -l job-name=aicr
 
 # For private registries, create image pull secret:
 kubectl create secret docker-registry regcred \
@@ -820,8 +820,8 @@ kubectl create secret docker-registry regcred \
 ### RBAC Permissions
 
 The agent requires these permissions:
-- **ClusterRole** (`eidos-node-reader`): Read access to nodes, pods, services, and ClusterPolicy CRDs (nvidia.com)
-- **Role** (`eidos`): Create/update ConfigMaps and list pods in the deployment namespace
+- **ClusterRole** (`aicr-node-reader`): Read access to nodes, pods, services, and ClusterPolicy CRDs (nvidia.com)
+- **Role** (`aicr`): Create/update ConfigMaps and list pods in the deployment namespace
 
 ### Network Policies
 
@@ -831,12 +831,12 @@ Restrict agent network access:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: eidos-agent
+  name: aicr-agent
   namespace: gpu-operator
 spec:
   podSelector:
     matchLabels:
-      job-name: eidos
+      job-name: aicr
   policyTypes:
     - Egress
   egress:
@@ -863,7 +863,7 @@ spec:
         runAsGroup: 0
         fsGroup: 0
       containers:
-        - name: eidos
+        - name: aicr
           securityContext:
             privileged: true
             runAsUser: 0
@@ -889,9 +889,9 @@ spec:
 
 ## See Also
 
-- [CLI Reference](cli-reference.md) - eidos CLI commands
+- [CLI Reference](cli-reference.md) - aicr CLI commands
 - [Installation Guide](installation.md) - Install CLI locally
 - [API Reference](api-reference.md) - REST API usage
 - [Kubernetes Deployment](../integrator/kubernetes-deployment.md) - API server deployment
-- [RBAC Manifest](../../deployments/eidos-agent/1-deps.yaml) - Full RBAC configuration
-- [Job Manifest](../../deployments/eidos-agent/2-job.yaml) - Full Job configuration
+- [RBAC Manifest](../../deployments/aicr-agent/1-deps.yaml) - Full RBAC configuration
+- [Job Manifest](../../deployments/aicr-agent/2-job.yaml) - Full Job configuration

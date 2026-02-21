@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 )
 
 // HealthResponse represents health check response

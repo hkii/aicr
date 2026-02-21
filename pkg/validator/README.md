@@ -7,9 +7,9 @@ The validator package provides a comprehensive validation framework for GPU-acce
 ```go
 import (
     "context"
-    "github.com/NVIDIA/eidos/pkg/validator"
-    "github.com/NVIDIA/eidos/pkg/recipe"
-    "github.com/NVIDIA/eidos/pkg/snapshotter"
+    "github.com/NVIDIA/aicr/pkg/validator"
+    "github.com/NVIDIA/aicr/pkg/recipe"
+    "github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 // Load recipe and snapshot
@@ -99,7 +99,7 @@ Agent Deployer
 Validation Jobs require a special image with Go toolchain to run tests in-cluster.
 
 **Why a Separate Image?**
-- Main eidos image (built with Ko): Contains only the compiled binary, no Go toolchain
+- Main aicr image (built with Ko): Contains only the compiled binary, no Go toolchain
 - Validator image: Contains Go toolchain + source code to run `go test` commands
 
 **Building the Validator Image:**
@@ -109,29 +109,29 @@ make image-validator IMAGE_REGISTRY=localhost:5001 IMAGE_TAG=latest
 
 # Production release (published to GHCR)
 # Automatically built by goreleaser on git tags
-docker pull ghcr.io/nvidia/eidos-validator:latest
-docker pull ghcr.io/nvidia/eidos-validator:v0.4.0
+docker pull ghcr.io/nvidia/aicr-validator:latest
+docker pull ghcr.io/nvidia/aicr-validator:v0.4.0
 ```
 
 **Image Configuration:**
 ```go
 // Default image (overridable)
 v := validator.New(
-    validator.WithImage("ghcr.io/nvidia/eidos-validator:latest"),
+    validator.WithImage("ghcr.io/nvidia/aicr-validator:latest"),
 )
 
 // Or via CLI
-eidos validate --image localhost:5001/eidos-validator:latest \
+aicr validate --image localhost:5001/aicr-validator:latest \
   -r recipe.yaml -s snapshot.yaml
 
 // Or via environment variable (for CI)
-export EIDOS_VALIDATOR_IMAGE=localhost:5001/eidos-validator:local
-eidos validate -r recipe.yaml -s snapshot.yaml
+export AICR_VALIDATOR_IMAGE=localhost:5001/aicr-validator:local
+aicr validate -r recipe.yaml -s snapshot.yaml
 ```
 
 **CI/CD:**
 - E2E tests build validator image from current source code
-- Release pipeline publishes to `ghcr.io/nvidia/eidos-validator`
+- Release pipeline publishes to `ghcr.io/nvidia/aicr-validator`
 - Multi-platform support (linux/amd64, linux/arm64)
 - SLSA attestation for supply chain security
 
@@ -178,9 +178,9 @@ Each validation run is assigned a unique **RunID** for resource isolation and re
 
 **Resource Naming:**
 All resources created during a validation run include the RunID:
-- Input ConfigMaps: `eidos-snapshot-{runID}`, `eidos-recipe-{runID}` (shared by all phases)
-- Output ConfigMap: `eidos-validation-result-{runID}` (progressively updated)
-- Jobs: `eidos-{runID}-readiness`, `eidos-{runID}-deployment`, etc. (one per phase)
+- Input ConfigMaps: `aicr-snapshot-{runID}`, `aicr-recipe-{runID}` (shared by all phases)
+- Output ConfigMap: `aicr-validation-result-{runID}` (progressively updated)
+- Jobs: `aicr-{runID}-readiness`, `aicr-{runID}-deployment`, etc. (one per phase)
 
 **Benefits:**
 - **Concurrent Validations**: Multiple validation runs can execute simultaneously without conflicts
@@ -190,7 +190,7 @@ All resources created during a validation run include the RunID:
 
 **CLI Output:**
 ```bash
-$ eidos validate --phase all --recipe recipe.yaml --snapshot snapshot.yaml
+$ aicr validate --phase all --recipe recipe.yaml --snapshot snapshot.yaml
 Starting validation run: 20260206-140523-a3f9b2c1e7d04a68
 ...
 ```
@@ -198,27 +198,27 @@ Starting validation run: 20260206-140523-a3f9b2c1e7d04a68
 **Querying Validation Runs:**
 ```bash
 # List all validation runs
-kubectl get configmaps -n eidos-validation \
+kubectl get configmaps -n aicr-validation \
   -l app.kubernetes.io/component=validation
 
 # List resources for specific run
-kubectl get jobs,configmaps -n eidos-validation \
-  -l eidos.nvidia.com/run-id=20260206-140523-a3f9b2c1e7d04a68
+kubectl get jobs,configmaps -n aicr-validation \
+  -l aicr.nvidia.com/run-id=20260206-140523-a3f9b2c1e7d04a68
 
 # View run details
-kubectl get configmap -n eidos-validation \
-  -l eidos.nvidia.com/run-id=20260206-140523-a3f9b2c1e7d04a68 \
+kubectl get configmap -n aicr-validation \
+  -l aicr.nvidia.com/run-id=20260206-140523-a3f9b2c1e7d04a68 \
   -o yaml
 ```
 
 **Cleanup by RunID:**
 ```bash
 # Cleanup specific validation run
-kubectl delete jobs,configmaps -n eidos-validation \
-  -l eidos.nvidia.com/run-id=20260206-140523-a3f9b2c1e7d04a68
+kubectl delete jobs,configmaps -n aicr-validation \
+  -l aicr.nvidia.com/run-id=20260206-140523-a3f9b2c1e7d04a68
 
 # Cleanup all validation runs (caution!)
-kubectl delete jobs,configmaps -n eidos-validation \
+kubectl delete jobs,configmaps -n aicr-validation \
   -l app.kubernetes.io/component=validation
 ```
 
@@ -226,7 +226,7 @@ kubectl delete jobs,configmaps -n eidos-validation \
 
 The validator creates a single ValidationResult ConfigMap per validation run that is progressively updated:
 
-**ConfigMap:** `eidos-validation-result-{runID}`
+**ConfigMap:** `aicr-validation-result-{runID}`
 
 **Lifecycle:**
 1. **Creation**: Created at validation start with empty structure
@@ -237,22 +237,22 @@ The validator creates a single ValidationResult ConfigMap per validation run tha
 **Resume Functionality:**
 ```bash
 # New validation (auto-generates RunID)
-eidos validate --phase all --recipe recipe.yaml --snapshot snapshot.yaml
+aicr validate --phase all --recipe recipe.yaml --snapshot snapshot.yaml
 # Output: Starting validation run: 20260206-140523-a3f9b2c1e7d04a68
 
 # Validation fails at deployment phase (readiness passed)
 # Resume from failed phase
-eidos validate --phase all --resume 20260206-140523-a3f9b2c1e7d04a68
+aicr validate --phase all --resume 20260206-140523-a3f9b2c1e7d04a68
 # Reads existing results, skips readiness (passed), continues from deployment
 ```
 
 **Query Validation State:**
 ```bash
 # View current validation progress
-kubectl get cm eidos-validation-result-20260206-140523-a3f9b2c1e7d04a68 -o yaml
+kubectl get cm aicr-validation-result-20260206-140523-a3f9b2c1e7d04a68 -o yaml
 
 # Check which phases passed/failed
-kubectl get cm eidos-validation-result-20260206-140523-a3f9b2c1e7d04a68 \
+kubectl get cm aicr-validation-result-20260206-140523-a3f9b2c1e7d04a68 \
   -o jsonpath='{.data.result\.yaml}' | yq '.phases'
 ```
 
@@ -268,8 +268,8 @@ The validator automatically manages ConfigMaps for snapshot and recipe data:
 
 **Lifecycle:**
 1. **Creation**: ConfigMaps are created **once per validation run** before any phases execute
-   - `eidos-snapshot-{runID}`: Contains the cluster snapshot (YAML)
-   - `eidos-recipe-{runID}`: Contains the recipe configuration (YAML)
+   - `aicr-snapshot-{runID}`: Contains the cluster snapshot (YAML)
+   - `aicr-recipe-{runID}`: Contains the recipe configuration (YAML)
 2. **Reuse**: All phases in a validation run share the same ConfigMaps
    - Readiness phase uses snapshot-{runID} and recipe-{runID}
    - Deployment phase uses snapshot-{runID} and recipe-{runID}
@@ -284,16 +284,16 @@ The validator automatically manages ConfigMaps for snapshot and recipe data:
 - ConfigMaps are created once per validation run, not per phase (efficient)
 - ConfigMaps are uniquely named per validation run using RunID
 - Each ConfigMap includes labels for querying and cleanup:
-  - `eidos.nvidia.com/run-id`: The validation run identifier
-  - `eidos.nvidia.com/created-at`: Timestamp (format: YYYYMMDD-HHMMSS)
-  - `eidos.nvidia.com/data-type`: `snapshot` or `recipe`
+  - `aicr.nvidia.com/run-id`: The validation run identifier
+  - `aicr.nvidia.com/created-at`: Timestamp (format: YYYYMMDD-HHMMSS)
+  - `aicr.nvidia.com/data-type`: `snapshot` or `recipe`
 - Cleanup happens in defer blocks to ensure removal even on errors
 - Test wrappers load data from mounted ConfigMaps using `LoadValidationContext()`
 
 **Security Considerations:**
 - ConfigMaps may contain sensitive cluster information
 - Access is restricted by Kubernetes RBAC
-- ConfigMaps are namespace-scoped (default: `eidos-validation`)
+- ConfigMaps are namespace-scoped (default: `aicr-validation`)
 - RunID-based naming prevents conflicts between concurrent validations
 
 ## Recipe Format
@@ -423,19 +423,19 @@ type CheckResult struct {
 
 ```bash
 # Validate all phases
-eidos validate --phase all \
+aicr validate --phase all \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml
 
 # Validate specific phase
-eidos validate --phase deployment \
+aicr validate --phase deployment \
   --recipe recipe.yaml \
   --snapshot snapshot.yaml
 
 # Output formats
-eidos validate --phase all -o json
-eidos validate --phase all -o yaml
-eidos validate --phase all -o table
+aicr validate --phase all -o json
+aicr validate --phase all -o yaml
+aicr validate --phase all -o table
 ```
 
 ## Documentation
@@ -556,7 +556,7 @@ Only readiness constraints can evaluate inline because they only need snapshot d
 ### Why ConfigMaps for Results?
 
 **Single ValidationResult ConfigMap per validation run:**
-- ConfigMap: `eidos-validation-result-{runID}`
+- ConfigMap: `aicr-validation-result-{runID}`
 - Progressively updated as each phase completes
 - Enables resumability (--resume flag)
 - Persists even if CLI crashes or disconnects
@@ -571,10 +571,10 @@ Only readiness constraints can evaluate inline because they only need snapshot d
 **Example:**
 ```bash
 # Check validation progress
-kubectl get cm eidos-validation-result-20260206-140523-a3f9b2c1e7d04a68 -o yaml
+kubectl get cm aicr-validation-result-20260206-140523-a3f9b2c1e7d04a68 -o yaml
 
 # Resume from failure
-eidos validate --resume 20260206-140523-a3f9b2c1e7d04a68
+aicr validate --resume 20260206-140523-a3f9b2c1e7d04a68
 ```
 
 ## Examples

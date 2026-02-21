@@ -21,8 +21,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/deployer/shared"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/deployer/shared"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 func TestNewGenerator(t *testing.T) {
@@ -665,7 +665,7 @@ func TestBuildComponentDataList_NamespaceAndChart(t *testing.T) {
 func createTestRecipeResult() *recipe.RecipeResult {
 	return &recipe.RecipeResult{
 		Kind:       "RecipeResult",
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Metadata: struct {
 			Version            string                     `json:"version,omitempty" yaml:"version,omitempty"`
 			AppliedOverlays    []string                   `json:"appliedOverlays,omitempty" yaml:"appliedOverlays,omitempty"`
@@ -702,7 +702,7 @@ func createTestRecipeResult() *recipe.RecipeResult {
 func createEmptyRecipeResult() *recipe.RecipeResult {
 	return &recipe.RecipeResult{
 		Kind:       "RecipeResult",
-		APIVersion: "eidos.nvidia.com/v1alpha1",
+		APIVersion: "aicr.nvidia.com/v1alpha1",
 		Metadata: struct {
 			Version            string                     `json:"version,omitempty" yaml:"version,omitempty"`
 			AppliedOverlays    []string                   `json:"appliedOverlays,omitempty" yaml:"appliedOverlays,omitempty"`

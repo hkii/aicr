@@ -32,9 +32,9 @@ import (
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/content/oci"
 
-	"github.com/NVIDIA/eidos/pkg/bundler"
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // testOCIResult holds common results from OCI packaging operations in tests.
@@ -230,7 +230,7 @@ func TestPushOptions_Defaults(t *testing.T) {
 	opts := PushOptions{
 		SourceDir:  "/tmp/test",
 		Registry:   "ghcr.io",
-		Repository: "nvidia/eidos",
+		Repository: "nvidia/aicr",
 		Tag:        "v1.0.0",
 	}
 
@@ -246,14 +246,14 @@ func TestPushOptions_Defaults(t *testing.T) {
 func TestPushResult_Fields(t *testing.T) {
 	result := PushResult{
 		Digest:    "sha256:abc123",
-		Reference: "ghcr.io/nvidia/eidos:v1.0.0",
+		Reference: "ghcr.io/nvidia/aicr:v1.0.0",
 	}
 
 	if result.Digest != "sha256:abc123" {
 		t.Errorf("Digest = %q, want %q", result.Digest, "sha256:abc123")
 	}
-	if result.Reference != "ghcr.io/nvidia/eidos:v1.0.0" {
-		t.Errorf("Reference = %q, want %q", result.Reference, "ghcr.io/nvidia/eidos:v1.0.0")
+	if result.Reference != "ghcr.io/nvidia/aicr:v1.0.0" {
+		t.Errorf("Reference = %q, want %q", result.Reference, "ghcr.io/nvidia/aicr:v1.0.0")
 	}
 }
 
@@ -267,7 +267,7 @@ func TestValidateRegistryReference(t *testing.T) {
 		{
 			name:       "valid ghcr.io",
 			registry:   "ghcr.io",
-			repository: "nvidia/eidos",
+			repository: "nvidia/aicr",
 			wantErr:    false,
 		},
 		{
@@ -279,7 +279,7 @@ func TestValidateRegistryReference(t *testing.T) {
 		{
 			name:       "valid with https prefix",
 			registry:   "https://ghcr.io",
-			repository: "nvidia/eidos",
+			repository: "nvidia/aicr",
 			wantErr:    false,
 		},
 		{
@@ -291,7 +291,7 @@ func TestValidateRegistryReference(t *testing.T) {
 		{
 			name:       "invalid repository with uppercase",
 			registry:   "ghcr.io",
-			repository: "NVIDIA/Eidos",
+			repository: "NVIDIA/AICR",
 			wantErr:    true,
 		},
 		{

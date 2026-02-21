@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // TestRegisterCheck tests check registration functionality

@@ -148,7 +148,7 @@ runs:
       with:
         install-only: true
 
-    - name: Build eidos binary
+    - name: Build aicr binary
       shell: bash
       env:
         GOFLAGS: -mod=vendor
@@ -160,7 +160,7 @@ runs:
       id: validate
       shell: bash
       env:
-        KWOK_CLUSTER: eidos-kwok-test
+        KWOK_CLUSTER: aicr-kwok-test
         KIND_NODE_IMAGE: ${{ inputs.kind_node_image }}
       run: |
         bash kwok/scripts/run-all-recipes.sh ${{ inputs.recipe }}
@@ -169,7 +169,7 @@ runs:
       if: failure()
       shell: bash
       env:
-        KWOK_CLUSTER: eidos-kwok-test
+        KWOK_CLUSTER: aicr-kwok-test
       run: |
         mkdir -p /tmp/kwok-debug-artifacts
         kubectl get all --all-namespaces > /tmp/kwok-debug-artifacts/all-resources.txt || true
@@ -189,7 +189,7 @@ runs:
       if: failure()
       shell: bash
       env:
-        KWOK_CLUSTER: eidos-kwok-test
+        KWOK_CLUSTER: aicr-kwok-test
       run: |
         mkdir -p /tmp/kwok-kind-logs
         kind export logs /tmp/kwok-kind-logs --name "${KWOK_CLUSTER}" || true
@@ -208,7 +208,7 @@ runs:
       if: always()
       shell: bash
       env:
-        KWOK_CLUSTER: eidos-kwok-test
+        KWOK_CLUSTER: aicr-kwok-test
       run: |
         kind delete cluster --name "${KWOK_CLUSTER}" || true
         docker system prune -f || true

@@ -70,7 +70,7 @@
 //
 // The collector uses the centralized Kubernetes client from pkg/k8s/client:
 //
-//	import "github.com/NVIDIA/eidos/pkg/k8s/client"
+//	import "github.com/NVIDIA/aicr/pkg/k8s/client"
 //
 //	// Automatically uses in-cluster config when running as pod, or kubeconfig
 //	clientset, config, err := client.GetKubeClient()
@@ -126,7 +126,7 @@
 //	apiVersion: rbac.authorization.k8s.io/v1
 //	kind: ClusterRole
 //	metadata:
-//	  name: eidos-collector
+//	  name: aicr-collector
 //	rules:
 //	- apiGroups: [""]
 //	  resources: ["nodes", "pods"]

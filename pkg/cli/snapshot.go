@@ -20,10 +20,10 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/NVIDIA/eidos/pkg/collector"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/collector"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 // snapshotTemplateOptions holds parsed template options for the snapshot command.
@@ -80,7 +80,7 @@ Note: All collection is done locally and no data is egressed out of the cluster.
 Output can be in JSON or YAML format. 
 For a more complete snapshot use --deploy-agent to deploy a Kubernetes Job that captures the snapshot on a GPU node:
 
-  eidos snapshot --deploy-agent --namespace gpu-operator --output cm://gpu-operator/eidos-snapshot
+  aicr snapshot --deploy-agent --namespace gpu-operator --output cm://gpu-operator/aicr-snapshot
 
 The agent mode will:
   1. Deploy RBAC resources (ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding)
@@ -93,25 +93,25 @@ The agent mode will:
 Examples:
 
 Basic agent deployment:
-  eidos snapshot --deploy-agent
+  aicr snapshot --deploy-agent
 
 Target specific GPU nodes with node selector:
-  eidos snapshot --deploy-agent --node-selector nodeGroup=customer-gpu
+  aicr snapshot --deploy-agent --node-selector nodeGroup=customer-gpu
 
 Override default tolerations (by default, all taints are tolerated):
-  eidos snapshot --deploy-agent \
+  aicr snapshot --deploy-agent \
     --toleration dedicated=user-workload:NoSchedule
 
 Combined node selector and custom tolerations:
-  eidos snapshot --deploy-agent \
+  aicr snapshot --deploy-agent \
     --node-selector nodeGroup=customer-gpu \
     --toleration dedicated=user-workload:NoSchedule \
-    --output cm://gpu-operator/eidos-snapshot
+    --output cm://gpu-operator/aicr-snapshot
 
 Custom output formatting with Go templates:
-  eidos snapshot --template my-template.tmpl --output report.md
+  aicr snapshot --template my-template.tmpl --output report.md
 
-  eidos snapshot --deploy-agent \
+  aicr snapshot --deploy-agent \
     --node-selector nodeGroup=customer-gpu \
     --template my-template.tmpl \
     --output report.md
@@ -129,14 +129,14 @@ See examples/templates/snapshot-template.md.tmpl for a sample template.
 			&cli.StringFlag{
 				Name:    "namespace",
 				Usage:   "Kubernetes namespace for agent deployment",
-				Sources: cli.EnvVars("EIDOS_NAMESPACE"),
+				Sources: cli.EnvVars("AICR_NAMESPACE"),
 				Value:   "gpu-operator",
 			},
 			&cli.StringFlag{
 				Name:    "image",
 				Usage:   "Container image for agent Job",
-				Sources: cli.EnvVars("EIDOS_IMAGE"),
-				Value:   "ghcr.io/nvidia/eidos-validator:latest",
+				Sources: cli.EnvVars("AICR_IMAGE"),
+				Value:   "ghcr.io/nvidia/aicr-validator:latest",
 			},
 			&cli.StringSliceFlag{
 				Name:  "image-pull-secret",
@@ -145,12 +145,12 @@ See examples/templates/snapshot-template.md.tmpl for a sample template.
 			&cli.StringFlag{
 				Name:  "job-name",
 				Usage: "Override default Job name",
-				Value: "eidos",
+				Value: "aicr",
 			},
 			&cli.StringFlag{
 				Name:  "service-account-name",
 				Usage: "Override default ServiceAccount name",
-				Value: "eidos",
+				Value: "aicr",
 			},
 			&cli.StringSliceFlag{
 				Name:  "node-selector",
@@ -177,7 +177,7 @@ See examples/templates/snapshot-template.md.tmpl for a sample template.
 			},
 			&cli.BoolFlag{
 				Name:    "require-gpu",
-				Sources: cli.EnvVars("EIDOS_REQUIRE_GPU"),
+				Sources: cli.EnvVars("AICR_REQUIRE_GPU"),
 				Usage:   "Request nvidia.com/gpu resource for the agent pod. Required in CDI environments where GPU devices are only injected when explicitly requested.",
 			},
 			&cli.StringFlag{

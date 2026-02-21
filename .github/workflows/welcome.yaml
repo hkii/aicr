@@ -52,7 +52,7 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
                 body: [
-                  `Welcome to Eidos, @${creator}! Thanks for opening your first issue.`,
+                  `Welcome to AICR, @${creator}! Thanks for opening your first issue.`,
                   '',
                   'A maintainer will triage this shortly. In the meantime:',
                   '- Check the [Contributing Guide](../blob/main/CONTRIBUTING.md) for project conventions',
@@ -82,7 +82,7 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
                 body: [
-                  `Welcome to Eidos, @${creator}! Thanks for your first pull request.`,
+                  `Welcome to AICR, @${creator}! Thanks for your first pull request.`,
                   '',
                   'Before review, please ensure:',
                   '- All commits are signed off per the [DCO](../blob/main/CONTRIBUTING.md#developer-certificate-of-origin)',

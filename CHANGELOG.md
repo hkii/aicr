@@ -54,7 +54,7 @@ All notable changes to this project will be documented in this file.
 ### Bug Fixes
 
 - Default validation-namespace to namespace when not explicitly set  by [@mchmarny](https://github.com/mchmarny)
-- Build eidos CLI in validator image and update binary path  by [@mchmarny](https://github.com/mchmarny)
+- Build aicr CLI in validator image and update binary path  by [@mchmarny](https://github.com/mchmarny)
 
 ### Refactor
 
@@ -186,7 +186,7 @@ All notable changes to this project will be documented in this file.
 - Make configmap for kernel module config a template; clean up unu…  by [@valcharry](https://github.com/valcharry)
 - Re-enable cert-manager startupapicheck  by [@yuanchen8911](https://github.com/yuanchen8911)
 - Disable skyhook LimitRange by bumping to v0.12.0  by [@yuanchen8911](https://github.com/yuanchen8911)
-- Set fullnameOverride to remove eidos-stack- prefix  by [@yuanchen8911](https://github.com/yuanchen8911)
+- Set fullnameOverride to remove aicr-stack- prefix  by [@yuanchen8911](https://github.com/yuanchen8911)
 - Open webhook container ports in NetworkPolicy workaround  by [@yuanchen8911](https://github.com/yuanchen8911)
 
 ### Tasks

@@ -8,7 +8,7 @@ Act as a Principal Distributed Systems Architect with deep expertise in Go and c
 
 ## Project Overview
 
-NVIDIA Eidos generates validated GPU-accelerated Kubernetes configurations.
+NVIDIA AI Cluster Runtime (AICR) generates validated GPU-accelerated Kubernetes configurations.
 
 **Workflow:** Snapshot → Recipe → Validate → Bundle
 
@@ -105,7 +105,7 @@ make tools-check  # Verify versions match .settings.yaml
 
 **Errors (always use pkg/errors):**
 ```go
-import "github.com/NVIDIA/eidos/pkg/errors"
+import "github.com/NVIDIA/aicr/pkg/errors"
 
 // Simple error
 return errors.New(errors.ErrCodeNotFound, "GPU not found")
@@ -169,7 +169,7 @@ builder := recipe.NewBuilder(
     recipe.WithVersion(version),
 )
 server := server.New(
-    server.WithName("eidosd"),
+    server.WithName("aicrd"),
     server.WithVersion(version),
 )
 ```
@@ -341,7 +341,7 @@ logs, err := pod.GetPodLogs(ctx, client, namespace, podName)
 err := pod.StreamLogs(ctx, client, namespace, podName, os.Stdout)
 
 // Use for ConfigMap URI parsing
-namespace, name, err := pod.ParseConfigMapURI("cm://gpu-operator/eidos-snapshot")
+namespace, name, err := pod.ParseConfigMapURI("cm://gpu-operator/aicr-snapshot")
 ```
 
 ## Test Isolation
@@ -355,10 +355,10 @@ v := validator.New(
 )
 
 // E2E tests: Use --no-cluster flag
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml --no-cluster
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml --no-cluster
 
 // Chainsaw tests: Always include --no-cluster
-${EIDOS_BIN} validate -r recipe.yaml -s snapshot.yaml --no-cluster
+${AICR_BIN} validate -r recipe.yaml -s snapshot.yaml --no-cluster
 ```
 
 **Test mode behavior:** When `NoCluster` is true:
@@ -401,7 +401,7 @@ ${EIDOS_BIN} validate -r recipe.yaml -s snapshot.yaml --no-cluster
 | `recipes/registry.yaml` | Declarative component configuration |
 | `recipes/overlays/*.yaml` | Recipe overlay definitions |
 | `recipes/components/*/values.yaml` | Component Helm values |
-| `api/eidos/v1/server.yaml` | OpenAPI spec |
+| `api/aicr/v1/server.yaml` | OpenAPI spec |
 | `.goreleaser.yaml` | Release configuration |
 
 ## Troubleshooting
@@ -441,22 +441,22 @@ When choosing between approaches, prioritize in this order:
 
 ```bash
 # Capture system state
-eidos snapshot --output snapshot.yaml
+aicr snapshot --output snapshot.yaml
 
 # Generate recipe from snapshot
-eidos recipe --snapshot snapshot.yaml --intent training --output recipe.yaml
+aicr recipe --snapshot snapshot.yaml --intent training --output recipe.yaml
 
 # Generate recipe from query parameters
-eidos recipe --service eks --accelerator h100 --intent training --os ubuntu --platform kubeflow
+aicr recipe --service eks --accelerator h100 --intent training --os ubuntu --platform kubeflow
 
 # Create deployment bundle
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 
 # Validate recipe against snapshot
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
 
 # Bundle with value overrides
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:driver.version=570.86.16 \
   --deployer argocd \
   -o ./bundles

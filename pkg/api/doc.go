@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package api provides the HTTP API layer for the Eidos Recipe Generation service.
+// Package api provides the HTTP API layer for the AICR Recipe Generation service.
 //
 // This package acts as a thin wrapper around the reusable pkg/server package,
 // configuring it with application-specific routes and handlers. It exposes the
@@ -28,7 +28,7 @@
 //
 //	import (
 //	    "log"
-//	    "github.com/NVIDIA/eidos/pkg/api"
+//	    "github.com/NVIDIA/aicr/pkg/api"
 //	)
 //
 //	func main() {
@@ -81,7 +81,7 @@
 // Example request body:
 //
 //	kind: RecipeCriteria
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	metadata:
 //	  name: my-criteria
 //	spec:
@@ -104,5 +104,5 @@
 //
 // Version information is set at build time using ldflags:
 //
-//	go build -ldflags="-X 'github.com/NVIDIA/eidos/pkg/api.version=1.0.0'"
+//	go build -ldflags="-X 'github.com/NVIDIA/aicr/pkg/api.version=1.0.0'"
 package api

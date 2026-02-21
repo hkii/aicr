@@ -17,7 +17,7 @@
 # NOTE: chainsaw assert --resource requires apiVersion/kind. The validate
 # output doesn't include these, so the test prepends them before asserting.
 kind: ValidationResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 phases:
   readiness:
     status: pass

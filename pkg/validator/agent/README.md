@@ -37,7 +37,7 @@ The validation agent follows the same pattern as the snapshot agent (`pkg/k8s/ag
 ### Job Execution
 The Job container:
 1. Mounts snapshot and recipe from ConfigMaps
-2. Sets environment variables (EIDOS_SNAPSHOT_PATH, EIDOS_RECIPE_PATH)
+2. Sets environment variables (AICR_SNAPSHOT_PATH, AICR_RECIPE_PATH)
 3. Runs `go test -v -json <package>` (runs all tests in phase package)
 4. Outputs test results to stdout (JSON format between markers)
 5. Exits with test exit code
@@ -58,12 +58,12 @@ clientset, err := k8sclient.GetKubeClient()
 
 // Configure validation agent
 config := agent.Config{
-    Namespace:          "eidos-validation",
-    JobName:            "eidos-validation-readiness",
-    Image:              "ghcr.io/nvidia/eidos-validator:latest",  // Validator image with Go toolchain
-    ServiceAccountName: "eidos-validator",
-    SnapshotConfigMap:  "eidos-snapshot",
-    RecipeConfigMap:    "eidos-recipe",
+    Namespace:          "aicr-validation",
+    JobName:            "aicr-validation-readiness",
+    Image:              "ghcr.io/nvidia/aicr-validator:latest",  // Validator image with Go toolchain
+    ServiceAccountName: "aicr-validator",
+    SnapshotConfigMap:  "aicr-snapshot",
+    RecipeConfigMap:    "aicr-recipe",
     TestPackage:        "./pkg/validator/checks/readiness",
     TestPattern:        "TestGpuHardwareDetection",
     Timeout:            5 * time.Minute,

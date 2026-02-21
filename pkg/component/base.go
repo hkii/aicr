@@ -24,11 +24,11 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/checksum"
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/bundler/types"
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/bundler/checksum"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/bundler/types"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // BaseBundler provides common functionality for bundler implementations.

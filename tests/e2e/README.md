@@ -1,15 +1,15 @@
 # E2E Tests
 
-End-to-end tests for Eidos CLI and API, including snapshot, recipe, validate, and bundle workflows.
+End-to-end tests for AICR CLI and API, including snapshot, recipe, validate, and bundle workflows.
 
 ## Quick Start
 
 ```bash
-# 1. Start the local dev environment (Kind cluster + eidosd)
+# 1. Start the local dev environment (Kind cluster + aicrd)
 make dev-env
 
 # 2. In another terminal, set up port forwarding
-kubectl port-forward -n eidos svc/eidosd 8080:8080
+kubectl port-forward -n aicr svc/aicrd 8080:8080
 
 # 3. Run tests
 make e2e-tilt
@@ -19,7 +19,7 @@ make e2e-tilt
 
 | Test | Description |
 |------|-------------|
-| `build/eidos` | Binary builds successfully |
+| `build/aicr` | Binary builds successfully |
 | `cli/help` | CLI help and version commands |
 | `api/health` | Health endpoint responds |
 | `api/ready` | Readiness endpoint responds |
@@ -61,11 +61,11 @@ for node in $(docker ps --filter "name=-worker" --format "{{.Names}}"); do
   docker exec "$node" chmod +x /usr/local/bin/nvidia-smi
 done
 
-# Build and push eidos image to local registry
-KO_DOCKER_REPO=localhost:5001/eidos ko build --bare --tags=local ./cmd/eidos
+# Build and push aicr image to local registry
+KO_DOCKER_REPO=localhost:5001/aicr ko build --bare --tags=local ./cmd/aicr
 
 # Run tests with fake GPU enabled
-FAKE_GPU_ENABLED=true EIDOS_IMAGE=localhost:5001/eidos:local ./tests/e2e/run.sh
+FAKE_GPU_ENABLED=true AICR_IMAGE=localhost:5001/aicr:local ./tests/e2e/run.sh
 ```
 
 ## Prerequisites
@@ -75,7 +75,7 @@ FAKE_GPU_ENABLED=true EIDOS_IMAGE=localhost:5001/eidos:local ./tests/e2e/run.sh
 - kubectl
 - Tilt
 - ctlptl
-- ko (for building eidos image)
+- ko (for building aicr image)
 
 Install all tools:
 ```bash
@@ -86,12 +86,12 @@ brew install kind tilt-dev/tap/tilt tilt-dev/tap/ctlptl ko
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EIDOSD_URL` | `http://localhost:8080` | API URL |
+| `AICRD_URL` | `http://localhost:8080` | API URL |
 | `OUTPUT_DIR` | temp dir | Test artifacts directory |
-| `EIDOS_IMAGE` | `localhost:5001/eidos:local` | Eidos image for snapshot agent |
+| `AICR_IMAGE` | `localhost:5001/aicr:local` | AICR image for snapshot agent |
 | `FAKE_GPU_ENABLED` | `false` | Enable fake GPU tests |
 | `SNAPSHOT_NAMESPACE` | `gpu-operator` | Namespace for snapshot tests |
-| `SNAPSHOT_CM` | `eidos-e2e-snapshot` | ConfigMap name for snapshot |
+| `SNAPSHOT_CM` | `aicr-e2e-snapshot` | ConfigMap name for snapshot |
 
 ## Manual Run
 
@@ -103,34 +103,34 @@ brew install kind tilt-dev/tap/tilt tilt-dev/tap/ctlptl ko
 
 ```
 [INFO] Setting up fake GPU environment
-  $ docker cp fake-nvidia-smi eidos-worker:/usr/local/bin/nvidia-smi
+  $ docker cp fake-nvidia-smi aicr-worker:/usr/local/bin/nvidia-smi
      → Simulated: GPU 0: NVIDIA B200 (UUID: GPU-fake-0000-0000-0000-000000000000)
      → Driver: NVIDIA-SMI 560.35.03    Driver Version: 560.35.03    CUDA Version: 12.6
 [PASS] setup/fake-nvidia-smi
 
 [INFO] --- Test: Recipe with query parameters ---
-  $ eidos recipe --service eks --accelerator h100 --os ubuntu --intent training -o basic.yaml
+  $ aicr recipe --service eks --accelerator h100 --os ubuntu --intent training -o basic.yaml
      → Generated recipe with 11 components
 [PASS] cli/recipe/query-params
 
 [INFO] --- Test: Recipe with external data ---
-  $ eidos recipe --service eks --accelerator h100 --os ubuntu --intent training --data ./examples/data
+  $ aicr recipe --service eks --accelerator h100 --os ubuntu --intent training --data ./examples/data
      → External component 'dgxc-teleport' included in recipe
 [PASS] cli/external-data/recipe
 
 [INFO] --- Test: Recipe with --format json ---
-  $ eidos recipe --service eks --accelerator h100 --intent inference --format json
+  $ aicr recipe --service eks --accelerator h100 --intent inference --format json
      → Valid JSON with 6 components
 [PASS] cli/format/json
 
 [INFO] --- Test: GET /metrics ---
   $ curl http://localhost:8080/metrics
      → HTTP 200 OK - Prometheus format (50 metrics)
-     → Eidos-specific metrics present
+     → AICR-specific metrics present
 [PASS] api/metrics
 
 [INFO] --- Test: Validate recipe ---
-  $ eidos validate --recipe recipe.yaml --snapshot cm://gpu-operator/eidos-e2e-snapshot
+  $ aicr validate --recipe recipe.yaml --snapshot cm://gpu-operator/aicr-e2e-snapshot
      → Validation: PASS (1 constraints checked)
 [PASS] validate/recipe
 ```

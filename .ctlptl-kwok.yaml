@@ -34,7 +34,7 @@ port: 5001
 apiVersion: ctlptl.dev/v1alpha1
 kind: Cluster
 product: kind
-name: kind-eidos-kwok
+name: kind-aicr-kwok
 registry: ctlptl-registry
 kindV1Alpha4Cluster:
   # Control-plane only - KWOK provides simulated worker nodes

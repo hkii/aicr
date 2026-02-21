@@ -1,6 +1,6 @@
-# Eidos Roadmap
+# AICR Roadmap
 
-This roadmap tracks remaining work for Eidos v2 launch and future enhancements.
+This roadmap tracks remaining work for AICR v2 launch and future enhancements.
 
 ## Structure
 
@@ -61,7 +61,7 @@ Expand recipe coverage for MVP platforms and accelerators.
 | CNCF AI conformance | Generate conformance report | P1 |
 | Remediation guidance | Actionable fixes for common failures | P1 |
 
-**Acceptance:** `eidos validate --deployment` and `eidos validate --conformance ai` produce valid output.
+**Acceptance:** `aicr validate --deployment` and `aicr validate --conformance ai` produce valid output.
 
 ---
 
@@ -98,7 +98,7 @@ Extend beyond MVP platforms and accelerators.
 
 #### New Bundlers
 
-Migrate capabilities from Eidos v1 playbooks.
+Migrate capabilities from AICR v1 playbooks.
 
 | Bundler | Description |
 |---------|-------------|
@@ -119,7 +119,7 @@ Three validation levels:
 - **Semantic validation** — Helm/Kustomize sources reachable, constraint expressions parsable, dependency cycles detected
 
 Implementation options:
-- `eidos recipe validate` CLI command
+- `aicr recipe validate` CLI command
 - Pre-commit git hook (automatic gating)
 - CI/CD integration (GitHub Actions validation step)
 
@@ -128,7 +128,7 @@ Implementation options:
 - Generate overlay YAML from platform/accelerator/intent parameters
 - Pre-populate common components for recipe type
 - Inline documentation and validation
-- Usage: `eidos recipe scaffold --platform gke --accelerator a100 --intent training`
+- Usage: `aicr recipe scaffold --platform gke --accelerator a100 --intent training`
 
 **Component Reference Checker** — Static analysis for recipe integrity
 
@@ -153,7 +153,7 @@ Implementation options:
 
 Detect when clusters diverge from recipe-defined state.
 
-- `eidos diff` command for snapshot comparison
+- `aicr diff` command for snapshot comparison
 - Scheduled drift detection via CronJob
 - Alerting integration for drift events
 

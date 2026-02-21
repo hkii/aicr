@@ -10,20 +10,20 @@ ROOT=$(dirname "${DIR}")
 has_tools kubectl
 
 # Prompt user to confirm cleanup
-read -p "Are you sure you want to clean up eidos resources? (y/N): " confirm
+read -p "Are you sure you want to clean up aicr resources? (y/N): " confirm
 if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     echo "Cleanup aborted."
     exit 0
 fi
 
-msg "Cleaning up eidos resources..."
+msg "Cleaning up aicr resources..."
 
-# Delete eidos Kubernetes resources, don't fail if they don't exist
-kubectl -n gpu-operator delete job eidos || true
-kubectl -n gpu-operator delete sa eidos || true
-kubectl -n gpu-operator delete role eidos || true
-kubectl -n gpu-operator delete rolebinding eidos || true
-kubectl delete clusterrole eidos || true
-kubectl delete clusterrolebinding eidos || true
+# Delete aicr Kubernetes resources, don't fail if they don't exist
+kubectl -n gpu-operator delete job aicr || true
+kubectl -n gpu-operator delete sa aicr || true
+kubectl -n gpu-operator delete role aicr || true
+kubectl -n gpu-operator delete rolebinding aicr || true
+kubectl delete clusterrole aicr || true
+kubectl delete clusterrolebinding aicr || true
 
-msg "Eidos resources cleanup complete."
+msg "AICR resources cleanup complete."

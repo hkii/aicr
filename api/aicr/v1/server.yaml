@@ -14,7 +14,7 @@
 
 openapi: 3.1.0
 info:
-  title: Eidos API Server - Eidos Recipe API
+  title: AICR API Server - AICR Recipe API
   version: 1.0.0
   description: >
     Returns optimized system configuration recipes (component references and deployment constraints)
@@ -53,7 +53,7 @@ paths:
                 properties:
                   service:
                     type: string
-                    example: eidosd
+                    example: aicrd
                   version:
                     type: string
                     example: v1.0.0
@@ -158,7 +158,7 @@ paths:
                 basic:
                   summary: Basic recipe request
                   value:
-                    apiVersion: eidos.nvidia.com/v1alpha1
+                    apiVersion: aicr.nvidia.com/v1alpha1
                     kind: Recipe
                     metadata:
                       version: v1.0.0
@@ -286,7 +286,7 @@ paths:
                 summary: Minimal criteria (single field)
                 value:
                   kind: RecipeCriteria
-                  apiVersion: eidos.nvidia.com/v1alpha1
+                  apiVersion: aicr.nvidia.com/v1alpha1
                   metadata:
                     name: eks-minimal
                   spec:
@@ -295,7 +295,7 @@ paths:
                 summary: Full criteria specification
                 value:
                   kind: RecipeCriteria
-                  apiVersion: eidos.nvidia.com/v1alpha1
+                  apiVersion: aicr.nvidia.com/v1alpha1
                   metadata:
                     name: gb200-eks-ubuntu-training
                   spec:
@@ -312,7 +312,7 @@ paths:
                 summary: Minimal criteria (single field)
                 value: |
                   kind: RecipeCriteria
-                  apiVersion: eidos.nvidia.com/v1alpha1
+                  apiVersion: aicr.nvidia.com/v1alpha1
                   metadata:
                     name: eks-minimal
                   spec:
@@ -321,7 +321,7 @@ paths:
                 summary: Full criteria specification
                 value: |
                   kind: RecipeCriteria
-                  apiVersion: eidos.nvidia.com/v1alpha1
+                  apiVersion: aicr.nvidia.com/v1alpha1
                   metadata:
                     name: gb200-eks-ubuntu-training
                   spec:
@@ -557,7 +557,7 @@ paths:
               simpleRecipe:
                 summary: Simple recipe with GPU operator
                 value:
-                  apiVersion: eidos.nvidia.com/v1alpha1
+                  apiVersion: aicr.nvidia.com/v1alpha1
                   kind: Recipe
                   componentRefs:
                     - name: gpu-operator
@@ -567,7 +567,7 @@ paths:
               fullRecipe:
                 summary: Full recipe with metadata
                 value:
-                  apiVersion: eidos.nvidia.com/v1alpha1
+                  apiVersion: aicr.nvidia.com/v1alpha1
                   kind: Recipe
                   metadata:
                     version: v1.0.0
@@ -771,9 +771,9 @@ paths:
               schema:
                 type: string
                 example: |
-                  # HELP eidos_http_requests_total Total number of HTTP requests
-                  # TYPE eidos_http_requests_total counter
-                  eidos_http_requests_total{method="GET",path="/v1/recipe",status="200"} 42
+                  # HELP aicr_http_requests_total Total number of HTTP requests
+                  # TYPE aicr_http_requests_total counter
+                  aicr_http_requests_total{method="GET",path="/v1/recipe",status="200"} 42
 components:
   headers:
     RequestIdResponse:
@@ -850,8 +850,8 @@ components:
         apiVersion:
           type: string
           description: API version
-          enum: [eidos.nvidia.com/v1alpha1]
-          example: eidos.nvidia.com/v1alpha1
+          enum: [aicr.nvidia.com/v1alpha1]
+          example: aicr.nvidia.com/v1alpha1
         metadata:
           type: object
           description: Resource metadata
@@ -953,7 +953,7 @@ components:
         apiVersion:
           type: string
           description: API version of the recipe format
-          example: eidos.nvidia.com/v1alpha1
+          example: aicr.nvidia.com/v1alpha1
         kind:
           type: string
           description: Resource type

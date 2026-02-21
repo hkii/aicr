@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 func TestParseNvidiaSMILog(t *testing.T) {

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Define the code of conduct followed and enforced for __Eidos (Eidos)__.
+Define the code of conduct followed and enforced for __AICR (AICR)__.
 
 ### Intended audience
 

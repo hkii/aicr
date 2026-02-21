@@ -118,8 +118,8 @@
 //
 // # Artifact Type
 //
-// Artifacts are pushed with the media type "application/vnd.nvidia.eidos.artifact".
-// This custom media type identifies Eidos bundles and distinguishes them from
+// Artifacts are pushed with the media type "application/vnd.nvidia.aicr.artifact".
+// This custom media type identifies AICR bundles and distinguishes them from
 // runnable container images. Consumers that don't understand this type should
 // treat the artifact as a non-executable blob.
 package oci

@@ -18,11 +18,11 @@ import (
 	"time"
 )
 
-// Kind represents the type of Eidos resource.
-// All Eidos resources should use these constants for consistency.
+// Kind represents the type of AICR resource.
+// All AICR resources should use these constants for consistency.
 type Kind string
 
-// Valid Kind constants for all Eidos resource types.
+// Valid Kind constants for all AICR resource types.
 const (
 	KindSnapshot         Kind = "Snapshot"
 	KindRecipe           Kind = "Recipe"
@@ -105,7 +105,7 @@ func New(opts ...Option) *Header {
 	return s
 }
 
-// Header contains metadata and versioning information for Eidos resources.
+// Header contains metadata and versioning information for AICR resources.
 // It follows Kubernetes-style resource conventions with Kind, APIVersion, and Metadata fields.
 type Header struct {
 	// Kind is the type of the snapshot object.

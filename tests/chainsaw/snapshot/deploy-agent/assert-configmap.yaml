@@ -20,10 +20,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: eidos-e2e-snapshot
+  name: aicr-e2e-snapshot
   namespace: gpu-operator
   labels:
     app.kubernetes.io/component: Snapshot
-    app.kubernetes.io/name: eidos
+    app.kubernetes.io/name: aicr
 data:
   format: yaml

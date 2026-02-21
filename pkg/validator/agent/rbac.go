@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -103,8 +103,8 @@ func (d *Deployer) ensureClusterRole(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterRoleName,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":       "eidos-validator",
-				"app.kubernetes.io/managed-by": "eidos",
+				"app.kubernetes.io/name":       "aicr-validator",
+				"app.kubernetes.io/managed-by": "aicr",
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -151,8 +151,8 @@ func (d *Deployer) ensureClusterRoleBinding(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterRoleBindingName,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":       "eidos-validator",
-				"app.kubernetes.io/managed-by": "eidos",
+				"app.kubernetes.io/name":       "aicr-validator",
+				"app.kubernetes.io/managed-by": "aicr",
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -232,7 +232,7 @@ func (d *Deployer) ensureInputConfigMaps(ctx context.Context) error {
 	if d.config.SnapshotConfigMap != "" {
 		_, err := d.clientset.CoreV1().ConfigMaps(d.config.Namespace).Get(ctx, d.config.SnapshotConfigMap, metav1.GetOptions{})
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeNotFound, fmt.Sprintf("snapshot ConfigMap %q not found", d.config.SnapshotConfigMap), err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeNotFound, fmt.Sprintf("snapshot ConfigMap %q not found", d.config.SnapshotConfigMap), err)
 		}
 	}
 
@@ -240,7 +240,7 @@ func (d *Deployer) ensureInputConfigMaps(ctx context.Context) error {
 	if d.config.RecipeConfigMap != "" {
 		_, err := d.clientset.CoreV1().ConfigMaps(d.config.Namespace).Get(ctx, d.config.RecipeConfigMap, metav1.GetOptions{})
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeNotFound, fmt.Sprintf("recipe ConfigMap %q not found", d.config.RecipeConfigMap), err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeNotFound, fmt.Sprintf("recipe ConfigMap %q not found", d.config.RecipeConfigMap), err)
 		}
 	}
 

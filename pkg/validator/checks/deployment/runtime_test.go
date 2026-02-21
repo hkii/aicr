@@ -18,11 +18,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/k8s/client"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/serializer"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // TestDeploymentConstraints is an integration test that runs inside the validator Job.
@@ -36,8 +36,8 @@ func TestDeploymentConstraints(t *testing.T) {
 
 	// This test runs inside the validator Job with mounted volumes
 	// Get file paths from environment variables (set by the Job)
-	recipePath := os.Getenv("EIDOS_RECIPE_PATH")
-	snapshotPath := os.Getenv("EIDOS_SNAPSHOT_PATH")
+	recipePath := os.Getenv("AICR_RECIPE_PATH")
+	snapshotPath := os.Getenv("AICR_SNAPSHOT_PATH")
 
 	if recipePath == "" || snapshotPath == "" {
 		t.Skip("Skipping: not running in validator Job environment")

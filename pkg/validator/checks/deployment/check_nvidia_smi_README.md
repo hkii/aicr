@@ -34,16 +34,16 @@ Use a unique image tag (timestamp) to avoid caching issues:
 ```bash
 # Generate unique tag
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 
 # Build and push
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 
 # Run validation
-eidos validate \
+aicr validate \
   --recipe pkg/validator/checks/deployment/check_nvidia_smi_recipe.yaml \
-  --snapshot cm://gpu-operator/eidos-e2e-snapshot \
+  --snapshot cm://gpu-operator/aicr-e2e-snapshot \
   --phase deployment \
   --image ${IMAGE}
 ```
@@ -60,7 +60,7 @@ docker run --rm ${IMAGE} \
 Keep resources for debugging:
 
 ```bash
-eidos validate \
+aicr validate \
   --recipe pkg/validator/checks/deployment/check_nvidia_smi_recipe.yaml \
   --snapshot snapshot.yaml \
   --phase deployment \
@@ -68,10 +68,10 @@ eidos validate \
   --cleanup=false --debug
 
 # Inspect Job logs
-kubectl logs -l eidos.nvidia.com/job -n eidos-validation
+kubectl logs -l aicr.nvidia.com/job -n aicr-validation
 
 # List Jobs
-kubectl get jobs -n eidos-validation
+kubectl get jobs -n aicr-validation
 ```
 
 ## Troubleshooting
@@ -82,7 +82,7 @@ This means the check is not found in the validator image. Use a new tag:
 
 ```bash
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 ```
@@ -98,7 +98,7 @@ docker run --rm ${IMAGE} \
 
 # If not found, rebuild with new tag
 export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-export IMAGE=localhost:5001/eidos-validator:${IMAGE_TAG}
+export IMAGE=localhost:5001/aicr-validator:${IMAGE_TAG}
 docker build -f Dockerfile.validator -t ${IMAGE} .
 docker push ${IMAGE}
 ```

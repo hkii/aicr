@@ -18,7 +18,7 @@
 # - Cert-manager, Prometheus, GPU Operator controller
 # - No GPU resources
 
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: KWOKNodeProfile
 metadata:
   name: system-m7i

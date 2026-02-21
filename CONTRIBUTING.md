@@ -1,6 +1,6 @@
-# Contributing to NVIDIA Eidos
+# Contributing to NVIDIA AI Cluster Runtime (AICR)
 
-Thank you for your interest in contributing to NVIDIA Eidos! We welcome contributions from developers of all backgrounds and experience levels.
+Thank you for your interest in contributing to NVIDIA AICR! We welcome contributions from developers of all backgrounds and experience levels.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This project follows NVIDIA's commitment to fostering an open and welcoming envi
 Before contributing:
 
 1. Read the [README.md](README.md) to understand the project
-2. Check existing [issues](https://github.com/NVIDIA/eidos/issues) to avoid duplicates
+2. Check existing [issues](https://github.com/NVIDIA/aicr/issues) to avoid duplicates
 3. Review the [security policy](SECURITY.md) for security-related contributions
 4. Set up your development environment following [DEVELOPMENT.md](DEVELOPMENT.md)
 
@@ -29,7 +29,7 @@ Before contributing:
 
 ### Reporting Bugs
 
-- Use the [bug report template](https://github.com/NVIDIA/eidos/issues/new?template=bug_report.yml)
+- Use the [bug report template](https://github.com/NVIDIA/aicr/issues/new?template=bug_report.yml)
 - Describe the issue clearly with steps to reproduce
 - Include system information (OS, Go version, Kubernetes version)
 - Attach logs or screenshots if applicable
@@ -37,7 +37,7 @@ Before contributing:
 
 ### Suggesting Enhancements
 
-- Use the [feature request template](https://github.com/NVIDIA/eidos/issues/new?template=feature_request.yml)
+- Use the [feature request template](https://github.com/NVIDIA/aicr/issues/new?template=feature_request.yml)
 - Clearly describe the proposed feature and its use case
 - Explain how it benefits the project and users
 - Provide examples or mockups if applicable
@@ -62,7 +62,7 @@ This project vendors Go dependencies. After changing `go.mod` or `go.sum`, run `
 
 #### Adding Validation Constraints
 
-Eidos uses a validator framework to check cluster state against requirements. To add new validation constraints:
+AICR uses a validator framework to check cluster state against requirements. To add new validation constraints:
 
 **Quick Start:**
 ```bash
@@ -85,7 +85,7 @@ This creates three files with TODOs guiding implementation:
 
 ## Design Principles
 
-These principles guide all design decisions in Eidos. When faced with trade-offs, these principles take precedence.
+These principles guide all design decisions in AICR. When faced with trade-offs, these principles take precedence.
 
 ### Local Development Equals CI
 
@@ -99,7 +99,7 @@ The same tools, same versions, and same validation run locally and in CI.
 
 The system integrates into how users already work. We provide validated configuration, not a new operational model.
 
-**What:** Eidos outputs standard formats (Helm values, Kubernetes manifests) that work with existing tools (kubectl, ArgoCD, Flux). Users don't need to learn "the Eidos way" of deploying.
+**What:** AICR outputs standard formats (Helm values, Kubernetes manifests) that work with existing tools (kubectl, ArgoCD, Flux). Users don't need to learn "the AICR way" of deploying.
 
 **Why:** If adoption requires retraining users on a new workflow, our design has failed. Value comes from correctness, not from lock-in.
 
@@ -107,7 +107,7 @@ The system integrates into how users already work. We provide validated configur
 
 Given the same inputs, the same system version must always produce the same result (e.g. recipe, bundle artifacts).
 
-**What:** No hidden state, no implicit defaults, no non-deterministic behavior. A recipe/bundle/image digest generated using the same version of eidos today must be identical to one generated tomorrow.
+**What:** No hidden state, no implicit defaults, no non-deterministic behavior. A recipe/bundle/image digest generated using the same version of aicr today must be identical to one generated tomorrow.
 
 **Why:** Reproducibility is a prerequisite for debugging, validation, and trust. If users can't reproduce a result, they can't trust it.
 
@@ -315,7 +315,7 @@ Signed-off-by: Your Name <your@email.com>
 
 ### Getting Help
 
-- **GitHub Issues**: [Create an issue](https://github.com/NVIDIA/eidos/issues/new) with the "question" label
+- **GitHub Issues**: [Create an issue](https://github.com/NVIDIA/aicr/issues/new) with the "question" label
 - **Existing Issues**: Search for similar questions first
 - **Recent PRs**: Look at merged PRs for examples
 
@@ -326,4 +326,4 @@ Signed-off-by: Your Name <your@email.com>
 - [docs/README.md](docs/README.md) - System overview and glossary
 - [docs/contributor/README.md](docs/contributor/README.md) - Architecture documentation
 
-Thank you for contributing to NVIDIA Eidos! Your efforts help improve GPU-accelerated infrastructure for everyone.
+Thank you for contributing to NVIDIA AICR! Your efforts help improve GPU-accelerated infrastructure for everyone.

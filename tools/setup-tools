@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Eidos Development Environment Setup
+# AICR Development Environment Setup
 #
 # This script installs all required dependencies for development
 # on Linux (x86_64/arm64) and macOS (amd64/arm64).
@@ -131,7 +131,7 @@ prompt_continue() {
 
 show_help() {
     cat << EOF
-Eidos Development Environment Setup
+AICR Development Environment Setup
 
 Usage: $0 [OPTIONS]
 
@@ -204,7 +204,7 @@ done
 # Banner
 echo ""
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║   Eidos Development Environment Setup                  ║"
+echo "║   AICR Development Environment Setup                  ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 log_info "Platform: ${OS}-${GO_ARCH}"

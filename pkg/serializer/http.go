@@ -27,8 +27,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // RespondJSON writes a JSON response with the given status code and data.
@@ -52,7 +52,7 @@ func RespondJSON(w http.ResponseWriter, statusCode int, data any) {
 }
 
 const (
-	HTTPReaderUserAgent = "Eidos-Serializer/1.0"
+	HTTPReaderUserAgent = "AICR-Serializer/1.0"
 )
 
 var (

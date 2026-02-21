@@ -48,7 +48,7 @@ ctlptl.pkg-path = "ctlptl"
 
 [vars]
 # Project-specific environment variables
-EIDOS_DEV = "true"
+AICR_DEV = "true"
 
 [hook]
 on-activate = '''
@@ -57,7 +57,7 @@ on-activate = '''
 # =============================================================================
 
 echo ""
-echo "Eidos Development Environment (Flox)"
+echo "AICR Development Environment (Flox)"
 echo "====================================="
 echo ""
 

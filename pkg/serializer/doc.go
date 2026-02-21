@@ -189,7 +189,7 @@
 //
 // # Integration
 //
-// Used throughout Eidos for data I/O:
+// Used throughout AICR for data I/O:
 //   - pkg/cli - Command output formatting
 //   - pkg/snapshotter - Snapshot serialization
 //   - pkg/api - HTTP response encoding

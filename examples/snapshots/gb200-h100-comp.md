@@ -7,7 +7,7 @@
 | H100   | AWS EKS | `ip-10-0-158-18.ec2.internal` | v0.7.10 |
 | GB200  | AWS EKS | `ip-10-0-160-248.ec2.internal` | v0.7.10 |
 
-Both snapshots use `eidos.nvidia.com/v1alpha1` API version with v0.7.10 format.
+Both snapshots use `aicr.nvidia.com/v1alpha1` API version with v0.7.10 format.
 
 > Meaningful config and capability diffs only. Ignores order, timestamps, and other expected runtime noise.
 

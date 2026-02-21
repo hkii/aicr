@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cli implements the command-line interface for the Eidos eidos tool.
+// Package cli implements the command-line interface for the AICR aicr tool.
 //
 // # Overview
 //
-// The eidos CLI provides commands for the four-stage workflow: capturing system snapshots,
+// The aicr CLI provides commands for the four-stage workflow: capturing system snapshots,
 // generating configuration recipes, validating constraints, and creating deployment bundles.
 // It is designed for cluster administrators and SREs managing NVIDIA GPU infrastructure.
 //
@@ -24,9 +24,9 @@
 //
 // snapshot - Capture system configuration (Step 1):
 //
-//	eidos snapshot [--output FILE] [--format yaml|json|table]
-//	eidos snapshot --output cm://namespace/configmap-name  # ConfigMap output
-//	eidos snapshot --deploy-agent --namespace gpu-operator  # Agent deployment
+//	aicr snapshot [--output FILE] [--format yaml|json|table]
+//	aicr snapshot --output cm://namespace/configmap-name  # ConfigMap output
+//	aicr snapshot --deploy-agent --namespace gpu-operator  # Agent deployment
 //
 // Captures a comprehensive snapshot of the current system including CPU/GPU settings,
 // kernel parameters, systemd services, and Kubernetes configuration. Supports file,
@@ -34,10 +34,10 @@
 //
 // recipe - Generate configuration recipes (Step 2):
 //
-//	eidos recipe --os ubuntu --osv 24.04 --service eks --gpu h100 --intent training
-//	eidos recipe --snapshot system.yaml --intent inference --output recipe.yaml
-//	eidos recipe -s cm://namespace/snapshot -o cm://namespace/recipe  # ConfigMap I/O
-//	eidos recipe --criteria criteria.yaml --output recipe.yaml  # Criteria file mode
+//	aicr recipe --os ubuntu --osv 24.04 --service eks --gpu h100 --intent training
+//	aicr recipe --snapshot system.yaml --intent inference --output recipe.yaml
+//	aicr recipe -s cm://namespace/snapshot -o cm://namespace/recipe  # ConfigMap I/O
+//	aicr recipe --criteria criteria.yaml --output recipe.yaml  # Criteria file mode
 //
 // Generates optimized configuration recipes based on either:
 //   - Specified environment parameters (OS, service, GPU, intent)
@@ -49,12 +49,12 @@
 // The --criteria/-c flag allows defining criteria in a Kubernetes-style
 // resource file instead of individual CLI flags:
 //
-//	eidos recipe --criteria /path/to/criteria.yaml
+//	aicr recipe --criteria /path/to/criteria.yaml
 //
 // Criteria file format (YAML or JSON):
 //
 //	kind: RecipeCriteria
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	metadata:
 //	  name: my-deployment-criteria
 //	spec:
@@ -66,13 +66,13 @@
 //
 // Individual CLI flags override criteria file values:
 //
-//	eidos recipe --criteria criteria.yaml --service gke  # service=gke overrides file
+//	aicr recipe --criteria criteria.yaml --service gke  # service=gke overrides file
 //
 // validate - Validate recipe constraints (Step 3):
 //
-//	eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
-//	eidos validate -r recipe.yaml -s cm://gpu-operator/eidos-snapshot
-//	eidos validate -r recipe.yaml -s cm://ns/snapshot --fail-on-error
+//	aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
+//	aicr validate -r recipe.yaml -s cm://gpu-operator/aicr-snapshot
+//	aicr validate -r recipe.yaml -s cm://ns/snapshot --fail-on-error
 //
 // Validates recipe constraints against actual measurements from a snapshot.
 // Supports version comparisons (>=, <=, >, <), equality (==, !=), and exact match.
@@ -80,9 +80,9 @@
 //
 // bundle - Create deployment bundles (Step 4):
 //
-//	eidos bundle --recipe recipe.yaml --output ./bundles
-//	eidos bundle -r recipe.yaml --deployer argocd -o ./bundles
-//	eidos bundle -r recipe.yaml --set gpuoperator:driver.version=580.86.16
+//	aicr bundle --recipe recipe.yaml --output ./bundles
+//	aicr bundle -r recipe.yaml --deployer argocd -o ./bundles
+//	aicr bundle -r recipe.yaml --set gpuoperator:driver.version=580.86.16
 //
 // Generates deployment artifacts from recipes. By default creates a Helm
 // per-component bundle with individual values.yaml per component. Use
@@ -115,25 +115,25 @@
 //
 // Complete workflow:
 //
-//	eidos snapshot --output snapshot.yaml
-//	eidos recipe --snapshot snapshot.yaml --intent training --output recipe.yaml
-//	eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
-//	eidos bundle --recipe recipe.yaml --output ./bundles
+//	aicr snapshot --output snapshot.yaml
+//	aicr recipe --snapshot snapshot.yaml --intent training --output recipe.yaml
+//	aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
+//	aicr bundle --recipe recipe.yaml --output ./bundles
 //
 // ConfigMap-based workflow:
 //
-//	eidos snapshot -o cm://gpu-operator/eidos-snapshot
-//	eidos recipe -s cm://gpu-operator/eidos-snapshot -o cm://gpu-operator/eidos-recipe
-//	eidos validate -r cm://gpu-operator/eidos-recipe -s cm://gpu-operator/eidos-snapshot
-//	eidos bundle -r cm://gpu-operator/eidos-recipe -o ./bundles
+//	aicr snapshot -o cm://gpu-operator/aicr-snapshot
+//	aicr recipe -s cm://gpu-operator/aicr-snapshot -o cm://gpu-operator/aicr-recipe
+//	aicr validate -r cm://gpu-operator/aicr-recipe -s cm://gpu-operator/aicr-snapshot
+//	aicr bundle -r cm://gpu-operator/aicr-recipe -o ./bundles
 //
 // Generate recipe for Ubuntu 24.04 on EKS with H100 GPUs:
 //
-//	eidos recipe --os ubuntu --osv 24.04 --service eks --gpu h100 --intent training
+//	aicr recipe --os ubuntu --osv 24.04 --service eks --gpu h100 --intent training
 //
 // Override bundle values at generation time:
 //
-//	eidos bundle -r recipe.yaml --set gpuoperator:gds.enabled=true -o ./bundles
+//	aicr bundle -r recipe.yaml --set gpuoperator:gds.enabled=true -o ./bundles
 //
 // # Environment Variables
 //
@@ -161,5 +161,5 @@
 //
 // Version information is embedded at build time using ldflags:
 //
-//	go build -ldflags="-X 'github.com/NVIDIA/eidos/pkg/cli.version=1.0.0'"
+//	go build -ldflags="-X 'github.com/NVIDIA/aicr/pkg/cli.version=1.0.0'"
 package cli

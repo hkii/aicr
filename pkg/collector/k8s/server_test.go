@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 	"github.com/stretchr/testify/assert"
 )
 

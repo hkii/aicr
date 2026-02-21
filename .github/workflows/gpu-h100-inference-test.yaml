@@ -24,7 +24,7 @@ on:
       - '.github/workflows/gpu-h100-inference-test.yaml'
       - '.github/actions/gpu-cluster-setup/**'
       - '.github/actions/gpu-operator-install/**'
-      - '.github/actions/eidos-build/**'
+      - '.github/actions/aicr-build/**'
       - '.github/actions/gpu-test-cleanup/**'
       - '.github/actions/load-versions/**'
       - 'tests/manifests/**'
@@ -65,8 +65,8 @@ jobs:
       - name: Set up GPU cluster
         uses: ./.github/actions/gpu-cluster-setup
 
-      - name: Build eidos
-        uses: ./.github/actions/eidos-build
+      - name: Build aicr
+        uses: ./.github/actions/aicr-build
 
       - name: Install GPU operator (bundle)
         uses: ./.github/actions/gpu-operator-install
@@ -77,9 +77,9 @@ jobs:
 
       # --- Snapshot and validation ---
 
-      - name: Run eidos snapshot
+      - name: Run aicr snapshot
         run: |
-          ./eidos snapshot --deploy-agent \
+          ./aicr snapshot --deploy-agent \
             --kubeconfig="${HOME}/.kube/config" \
             --namespace=default \
             --image=ko.local:smoke-test \
@@ -106,7 +106,7 @@ jobs:
 
       - name: Validate cluster
         run: |
-          ./eidos validate \
+          ./aicr validate \
             --recipe recipe.yaml \
             --phase readiness \
             --phase deployment \

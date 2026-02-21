@@ -48,7 +48,7 @@ Each stage transforms input data into a different format:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ Snapshot (eidos.nvidia.com/v1alpha1)                      │
+│ Snapshot (aicr.nvidia.com/v1alpha1)                      │
 ├─────────────────────────────────────────────────────────┤
 │ metadata:                                               │
 │   created: timestamp                                    │
@@ -74,21 +74,21 @@ Each stage transforms input data into a different format:
 ```
 
 **Output Destinations:**
-- **File**: `eidos snapshot --output system.yaml`
-- **Stdout**: `eidos snapshot` (default, pipe to other commands)
-- **ConfigMap**: `eidos snapshot --output cm://namespace/name` (Kubernetes-native)
+- **File**: `aicr snapshot --output system.yaml`
+- **Stdout**: `aicr snapshot` (default, pipe to other commands)
+- **ConfigMap**: `aicr snapshot --output cm://namespace/name` (Kubernetes-native)
 
 **ConfigMap Storage Pattern:**
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: eidos-snapshot
+  name: aicr-snapshot
   namespace: gpu-operator
 data:
   snapshot.yaml: |
     # Complete snapshot YAML stored as ConfigMap data
-    apiVersion: eidos.nvidia.com/v1alpha1
+    apiVersion: aicr.nvidia.com/v1alpha1
     kind: Snapshot
     measurements: [...]
 ```
@@ -96,7 +96,7 @@ data:
 **Agent Deployment:**  
 Kubernetes Job writes snapshots directly to ConfigMap without volumes:
 ```bash
-eidos snapshot --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --output cm://gpu-operator/aicr-snapshot
 ```
 
 **Reading Interface:**
@@ -142,28 +142,28 @@ type Reading interface {
 
 **Query Mode** - Direct generation from parameters:
 ```bash
-eidos recipe --os ubuntu --gpu h100 --service eks --intent training --platform kubeflow
+aicr recipe --os ubuntu --gpu h100 --service eks --intent training --platform kubeflow
 ```
 
 **Snapshot Mode (File)** - Analyze captured snapshot:
 ```bash
-eidos snapshot --output system.yaml
-eidos recipe --snapshot system.yaml --intent training --platform kubeflow
+aicr snapshot --output system.yaml
+aicr recipe --snapshot system.yaml --intent training --platform kubeflow
 ```
 
 **Snapshot Mode (ConfigMap)** - Read from Kubernetes:
 ```bash
 # Agent or CLI writes snapshot to ConfigMap
-eidos snapshot --output cm://gpu-operator/eidos-snapshot
+aicr snapshot --output cm://gpu-operator/aicr-snapshot
 
 # CLI reads from ConfigMap to generate recipe
-eidos recipe --snapshot cm://gpu-operator/eidos-snapshot --intent training --platform kubeflow
+aicr recipe --snapshot cm://gpu-operator/aicr-snapshot --intent training --platform kubeflow
 
 # Recipe can also be written to ConfigMap
-eidos recipe --snapshot cm://gpu-operator/eidos-snapshot \
+aicr recipe --snapshot cm://gpu-operator/aicr-snapshot \
             --intent training \
             --platform kubeflow \
-            --output cm://gpu-operator/eidos-recipe
+            --output cm://gpu-operator/aicr-recipe
 ```
 
 ### Query Extraction (Snapshot Mode)
@@ -279,7 +279,7 @@ Result: MATCH (os wildcarded)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ Recipe (eidos.nvidia.com/v1alpha1)                        │
+│ Recipe (aicr.nvidia.com/v1alpha1)                        │
 ├─────────────────────────────────────────────────────────┤
 │ metadata:                                               │
 │   version: recipe format version                        │
@@ -378,19 +378,19 @@ Constraints use fully qualified paths: `{Type}.{Subtype}.{Key}`
 
 **File-based:**
 ```bash
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
 ```
 
 **ConfigMap-based:**
 ```bash
-eidos validate \
+aicr validate \
     --recipe recipe.yaml \
-    --snapshot cm://gpu-operator/eidos-snapshot
+    --snapshot cm://gpu-operator/aicr-snapshot
 ```
 
 **HTTP/HTTPS:**
 ```bash
-eidos validate \
+aicr validate \
     --recipe https://example.com/recipe.yaml \
     --snapshot https://example.com/snapshot.yaml
 ```
@@ -398,7 +398,7 @@ eidos validate \
 ### Validation Output
 
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ValidationResult
 metadata:
   created: "2025-01-15T10:30:00Z"
@@ -428,9 +428,9 @@ results:
 By default, the command exits with non-zero status on validation failures (ideal for CI/CD):
 
 ```bash
-eidos validate \
+aicr validate \
     --recipe recipe.yaml \
-    --snapshot cm://gpu-operator/eidos-snapshot
+    --snapshot cm://gpu-operator/aicr-snapshot
 
 # Exit code: 0 = all passed, 1 = failures detected
 # Use --fail-on-error=false for informational mode without failing
@@ -686,7 +686,7 @@ spec:
 │ Complete Bundle + Deploy Flow                                │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
-│  eidos bundle -r recipe.yaml --deployer argocd \            │
+│  aicr bundle -r recipe.yaml --deployer argocd \            │
 │    --repo https://github.com/my-org/my-repo.git -o ./out     │
 │                                                              │
 │  1. Parse recipe                                             │

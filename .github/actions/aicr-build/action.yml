@@ -12,25 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 'Eidos Build'
-description: 'Builds the eidos container image (via ko) and CLI binary, and loads the image into kind.'
+name: 'AICR Build'
+description: 'Builds the aicr container image (via ko) and CLI binary, and loads the image into kind.'
 
 runs:
   using: 'composite'
   steps:
 
-    - name: Build eidos image and load into kind
+    - name: Build aicr image and load into kind
       shell: bash
       env:
         GOFLAGS: -mod=vendor
       run: |
         KO_VERSION=$(yq eval '.build_tools.ko' .settings.yaml)
         GOFLAGS= go install "github.com/google/ko@${KO_VERSION}"
-        KO_DOCKER_REPO=ko.local ko build --bare --sbom=none --tags=smoke-test ./cmd/eidos
+        KO_DOCKER_REPO=ko.local ko build --bare --sbom=none --tags=smoke-test ./cmd/aicr
         kind load docker-image ko.local:smoke-test --name "${KIND_CLUSTER_NAME}"
 
-    - name: Build eidos binary
+    - name: Build aicr binary
       shell: bash
       env:
         GOFLAGS: -mod=vendor
-      run: go build -o ./eidos ./cmd/eidos
+      run: go build -o ./aicr ./cmd/aicr

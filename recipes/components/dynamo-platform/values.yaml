@@ -31,7 +31,7 @@ dynamo-operator:
     metrics:
       prometheusEndpoint: "http://kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
 
-# Disable kai-scheduler sub-chart — managed as a separate eidos component
+# Disable kai-scheduler sub-chart — managed as a separate aicr component
 kai-scheduler:
   enabled: false
 

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 const sysctlSubtypeName = "sysctl"

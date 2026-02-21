@@ -102,7 +102,7 @@
 //
 // Snapshots contain a header and measurements:
 //
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	kind: Snapshot
 //	metadata:
 //	  version: v1.0.0
@@ -180,7 +180,7 @@
 //
 // The snapshotter is invoked by:
 //   - pkg/cli - snapshot command
-//   - Kubernetes Job - eidos-agent deployment
+//   - Kubernetes Job - aicr-agent deployment
 //
 // It depends on:
 //   - pkg/collector - Data collection implementations

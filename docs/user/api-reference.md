@@ -1,10 +1,10 @@
 # API Reference
 
-Complete reference for using the Eidos API Server.
+Complete reference for using the AICR API Server.
 
 ## Overview
 
-The Eidos API Server provides HTTP REST access to recipe generation and bundle creation for GPU-accelerated infrastructure. Use the API for programmatic access to configuration recommendations and deployment artifacts.
+The AICR API Server provides HTTP REST access to recipe generation and bundle creation for GPU-accelerated infrastructure. Use the API for programmatic access to configuration recommendations and deployment artifacts.
 
 ```
 ┌──────────────┐      ┌──────────────┐
@@ -23,9 +23,9 @@ The Eidos API Server provides HTTP REST access to recipe generation and bundle c
 
 | Feature | API | CLI |
 |---------|-----|-----|
-| Recipe generation | ✅ GET /v1/recipe | ✅ `eidos recipe` |
-| Bundle creation | ✅ POST /v1/bundle | ✅ `eidos bundle` |
-| Snapshot capture | ❌ Use CLI | ✅ `eidos snapshot` |
+| Recipe generation | ✅ GET /v1/recipe | ✅ `aicr recipe` |
+| Bundle creation | ✅ POST /v1/bundle | ✅ `aicr bundle` |
+| Snapshot capture | ❌ Use CLI | ✅ `aicr snapshot` |
 | ConfigMap I/O | ❌ Use CLI | ✅ `cm://` URIs |
 | Agent deployment | ❌ Use CLI | ✅ `--deploy-agent` |
 
@@ -38,8 +38,8 @@ http://localhost:8080
 
 Start the local server:
 ```shell
-docker pull ghcr.io/nvidia/eidosd:latest
-docker run -p 8080:8080 ghcr.io/nvidia/eidosd:latest
+docker pull ghcr.io/nvidia/aicrd:latest
+docker run -p 8080:8080 ghcr.io/nvidia/aicrd:latest
 ```
 
 ## Quick Start
@@ -59,7 +59,7 @@ curl "http://localhost:8080/v1/recipe?accelerator=h100&service=eks&intent=traini
 curl -X POST "http://localhost:8080/v1/recipe" \
   -H "Content-Type: application/x-yaml" \
   -d 'kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: my-config
 spec:
@@ -98,7 +98,7 @@ curl "http://localhost:8080/"
 **Response:**
 ```json
 {
-  "service": "eidosd",
+  "service": "aicrd",
   "version": "v0.7.6",
   "routes": ["/v1/recipe", "/v1/bundle"]
 }
@@ -157,7 +157,7 @@ The request body must be a `RecipeCriteria` resource:
 
 ```yaml
 kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: my-criteria
 spec:
@@ -176,7 +176,7 @@ spec:
 curl -X POST "http://localhost:8080/v1/recipe" \
   -H "Content-Type: application/x-yaml" \
   -d 'kind: RecipeCriteria
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: training-config
 spec:
@@ -189,7 +189,7 @@ curl -X POST "http://localhost:8080/v1/recipe" \
   -H "Content-Type: application/json" \
   -d '{
     "kind": "RecipeCriteria",
-    "apiVersion": "eidos.nvidia.com/v1alpha1",
+    "apiVersion": "aicr.nvidia.com/v1alpha1",
     "metadata": {"name": "training-config"},
     "spec": {
       "service": "eks",
@@ -206,7 +206,7 @@ curl -X POST "http://localhost:8080/v1/recipe" \
 # Pretty print response
 curl -s -X POST "http://localhost:8080/v1/recipe" \
   -H "Content-Type: application/json" \
-  -d '{"kind":"RecipeCriteria","apiVersion":"eidos.nvidia.com/v1alpha1","spec":{"service":"eks","accelerator":"h100"}}' \
+  -d '{"kind":"RecipeCriteria","apiVersion":"aicr.nvidia.com/v1alpha1","spec":{"service":"eks","accelerator":"h100"}}' \
   | jq '.'
 ```
 
@@ -222,7 +222,7 @@ Same as GET /v1/recipe - returns a recipe JSON response.
 
 ```json
 {
-  "apiVersion": "eidos.nvidia.com/v1alpha1",
+  "apiVersion": "aicr.nvidia.com/v1alpha1",
   "kind": "Recipe",
   "metadata": {
     "version": "v1.0.0",
@@ -326,7 +326,7 @@ curl -X POST "http://localhost:8080/v1/bundle?bundlers=gpu-operator" \
 curl -X POST "http://localhost:8080/v1/bundle" \
   -H "Content-Type: application/json" \
   -d '{
-    "apiVersion": "eidos.nvidia.com/v1alpha1",
+    "apiVersion": "aicr.nvidia.com/v1alpha1",
     "kind": "Recipe",
     "componentRefs": [
       {"name": "gpu-operator", "version": "v25.3.3", "type": "helm"},
@@ -339,7 +339,7 @@ curl -X POST "http://localhost:8080/v1/bundle" \
 curl -X POST "http://localhost:8080/v1/bundle?bundlers=gpu-operator,network-operator" \
   -H "Content-Type: application/json" \
   -d '{
-    "apiVersion": "eidos.nvidia.com/v1alpha1",
+    "apiVersion": "aicr.nvidia.com/v1alpha1",
     "kind": "Recipe",
     "componentRefs": [
       {"name": "gpu-operator", "version": "v25.3.3", "type": "helm"},
@@ -427,10 +427,10 @@ curl "http://localhost:8080/metrics"
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `eidos_http_requests_total` | counter | Total HTTP requests by method, path, status |
-| `eidos_http_request_duration_seconds` | histogram | Request latency distribution |
-| `eidos_http_requests_in_flight` | gauge | Current concurrent requests |
-| `eidos_rate_limit_rejects_total` | counter | Rate limit rejections |
+| `aicr_http_requests_total` | counter | Total HTTP requests by method, path, status |
+| `aicr_http_request_duration_seconds` | histogram | Request latency distribution |
+| `aicr_http_requests_in_flight` | gauge | Current concurrent requests |
+| `aicr_rate_limit_rejects_total` | counter | Rate limit rejections |
 
 ## Complete Workflow Example
 
@@ -540,10 +540,10 @@ Allowlists are configured via environment variables when starting the server:
 
 | Environment Variable | Description | Example |
 |---------------------|-------------|---------|
-| `Eidos_ALLOWED_ACCELERATORS` | Comma-separated list of allowed GPU types | `h100,l40` |
-| `Eidos_ALLOWED_SERVICES` | Comma-separated list of allowed K8s services | `eks,gke` |
-| `Eidos_ALLOWED_INTENTS` | Comma-separated list of allowed workload intents | `training` |
-| `Eidos_ALLOWED_OS` | Comma-separated list of allowed OS types | `ubuntu,rhel` |
+| `AICR_ALLOWED_ACCELERATORS` | Comma-separated list of allowed GPU types | `h100,l40` |
+| `AICR_ALLOWED_SERVICES` | Comma-separated list of allowed K8s services | `eks,gke` |
+| `AICR_ALLOWED_INTENTS` | Comma-separated list of allowed workload intents | `training` |
+| `AICR_ALLOWED_OS` | Comma-separated list of allowed OS types | `ubuntu,rhel` |
 
 **Behavior:**
 - If an environment variable is **not set**, all values for that criteria are allowed
@@ -556,9 +556,9 @@ Allowlists are configured via environment variables when starting the server:
 ```shell
 # Start server allowing only H100 and L40 GPUs on EKS
 docker run -p 8080:8080 \
-  -e Eidos_ALLOWED_ACCELERATORS=h100,l40 \
-  -e Eidos_ALLOWED_SERVICES=eks \
-  ghcr.io/nvidia/eidosd:latest
+  -e AICR_ALLOWED_ACCELERATORS=h100,l40 \
+  -e AICR_ALLOWED_SERVICES=eks \
+  ghcr.io/nvidia/aicrd:latest
 ```
 
 ### Error Response
@@ -586,7 +586,7 @@ curl "http://localhost:8080/v1/recipe?accelerator=gb200&service=eks"
 
 ### CLI Behavior
 
-The CLI (`eidos`) is **not affected** by allowlists. Allowlists only apply to the API server, allowing operators to restrict API access while maintaining full CLI functionality for administrative tasks.
+The CLI (`aicr`) is **not affected** by allowlists. Allowlists only apply to the API server, allowing operators to restrict API access while maintaining full CLI functionality for administrative tasks.
 
 ## Programming Language Examples
 
@@ -726,13 +726,13 @@ done
 ## OpenAPI Specification
 
 The full OpenAPI 3.1 specification is available at:
-[api/eidos/v1/server.yaml](../../api/eidos/v1/server.yaml)
+[api/aicr/v1/server.yaml](../../api/aicr/v1/server.yaml)
 
 Generate client SDKs:
 
 ```shell
 # Download spec
-curl https://raw.githubusercontent.com/NVIDIA/eidos/main/api/eidos/v1/server.yaml \
+curl https://raw.githubusercontent.com/NVIDIA/aicr/main/api/aicr/v1/server.yaml \
   -o openapi.yaml
 
 # Generate Python client

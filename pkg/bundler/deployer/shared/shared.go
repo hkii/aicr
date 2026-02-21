@@ -24,8 +24,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // IsSafePathComponent returns true if name is a single path component without

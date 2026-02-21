@@ -15,26 +15,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: eidosd
-  namespace: eidos
+  name: aicrd
+  namespace: aicr
   labels:
-    app.kubernetes.io/name: eidosd
+    app.kubernetes.io/name: aicrd
     app.kubernetes.io/component: api-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: eidosd
+      app.kubernetes.io/name: aicrd
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: eidosd
+        app.kubernetes.io/name: aicrd
         app.kubernetes.io/component: api-server
     spec:
-      serviceAccountName: eidosd
+      serviceAccountName: aicrd
       containers:
-        - name: eidosd
-          image: localhost:5001/eidosd:tilt
+        - name: aicrd
+          image: localhost:5001/aicrd:tilt
           imagePullPolicy: Always
           ports:
             - name: http

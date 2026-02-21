@@ -23,7 +23,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 func TestLoadSpec(t *testing.T) {
@@ -122,8 +122,8 @@ func TestLoadSpec_Fields(t *testing.T) {
 	if spec.Spec.Registry.Host != "https://registry.example.com" {
 		t.Errorf("Registry.Host = %q, want %q", spec.Spec.Registry.Host, "https://registry.example.com")
 	}
-	if spec.Spec.Registry.Repository != "eidos-runtime" {
-		t.Errorf("Registry.Repository = %q, want %q", spec.Spec.Registry.Repository, "eidos-runtime")
+	if spec.Spec.Registry.Repository != "aicr-runtime" {
+		t.Errorf("Registry.Repository = %q, want %q", spec.Spec.Registry.Repository, "aicr-runtime")
 	}
 	if spec.APIVersion != ExpectedAPIVersion {
 		t.Errorf("APIVersion = %q, want %q", spec.APIVersion, ExpectedAPIVersion)

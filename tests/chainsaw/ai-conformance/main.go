@@ -35,8 +35,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/k8s/client"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -380,7 +380,7 @@ func extractContainerImages(obj *unstructured.Unstructured) string {
 		return ""
 	}
 
-	var images []string
+	images := make([]string, 0, len(containers))
 	for _, c := range containers {
 		container, ok := c.(map[string]interface{})
 		if !ok {
@@ -415,7 +415,7 @@ func extractCRDVersions(obj *unstructured.Unstructured) string {
 		return ""
 	}
 
-	var names []string
+	names := make([]string, 0, len(versions))
 	for _, v := range versions {
 		ver, ok := v.(map[string]interface{})
 		if !ok {

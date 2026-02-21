@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/types"
+	"github.com/NVIDIA/aicr/pkg/bundler/types"
 )
 
 // TestOutput_New tests Output initialization

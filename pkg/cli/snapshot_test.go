@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 )
 
 // TestSnapshotTemplateFlagCombinations tests all combinations of --template, --format, and --output flags.
@@ -237,7 +237,7 @@ func TestOutputDestinationParsing(t *testing.T) {
 		},
 		{
 			name:        "configmap URI",
-			output:      "cm://gpu-operator/eidos-snapshot",
+			output:      "cm://gpu-operator/aicr-snapshot",
 			isConfigMap: true,
 		},
 		{

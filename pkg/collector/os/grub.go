@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/NVIDIA/eidos/pkg/collector/file"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/collector/file"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 var (

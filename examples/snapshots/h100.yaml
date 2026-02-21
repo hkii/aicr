@@ -13,7 +13,7 @@
 # limitations under the License.
 
 kind: Snapshot
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
     timestamp: "2026-01-02T18:01:13Z"
     version: 0.8.12
@@ -1630,7 +1630,7 @@ measurements:
             dcgm-exporter: 4.1.1-4.0.4-ubuntu22.04
             dgxc-admission-controller: 1.865.0
             driver: 570.133.20-ubuntu22.04
-            eidos: latest
+            aicr: latest
             engine-admission: v3.36.8
             engine-operator: v3.36.8
             envoy-for-knative-kourier: v1.15.0-2

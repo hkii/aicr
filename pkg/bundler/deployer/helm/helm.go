@@ -25,11 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/checksum"
-	"github.com/NVIDIA/eidos/pkg/bundler/deployer/shared"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/manifest"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/checksum"
+	"github.com/NVIDIA/aicr/pkg/bundler/deployer/shared"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/manifest"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 //go:embed templates/README.md.tmpl

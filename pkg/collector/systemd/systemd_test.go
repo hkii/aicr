@@ -20,7 +20,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 func TestSystemDCollector_Collect_ContextCancellation(t *testing.T) {

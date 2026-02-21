@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // Options for configuring the Parser.

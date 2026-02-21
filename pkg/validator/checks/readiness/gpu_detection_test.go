@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 func TestCheckGPUHardwareDetection(t *testing.T) {

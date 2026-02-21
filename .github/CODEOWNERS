@@ -16,22 +16,22 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default owners for everything
-* @nvidia/eidos-write
+* @nvidia/aicr-write
 
 # Data
-recipes/** @nvidia/eidos-maintainer
+recipes/** @nvidia/aicr-maintainer
 
 # CI/CD and automation
-/Makefile @nvidia/eidos-maintainer
-/.goreleaser.yaml @nvidia/eidos-maintainer
+/Makefile @nvidia/aicr-maintainer
+/.goreleaser.yaml @nvidia/aicr-maintainer
 
 # Configuration files
-/.settings.yaml @nvidia/eidos-maintainer
-/.golangci.yaml @nvidia/eidos-maintainer
-/.yamllint.yaml @nvidia/eidos-maintainer
+/.settings.yaml @nvidia/aicr-maintainer
+/.golangci.yaml @nvidia/aicr-maintainer
+/.yamllint.yaml @nvidia/aicr-maintainer
 
 # Release configuration
-/cliff.toml @nvidia/eidos-maintainer
+/cliff.toml @nvidia/aicr-maintainer
 
 # GitHub workflows and actions
-/.github/** @nvidia/eidos-maintainer
+/.github/** @nvidia/aicr-maintainer

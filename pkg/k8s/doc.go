@@ -53,19 +53,19 @@
 //
 // For most use cases, import and use the client sub-package:
 //
-//	import "github.com/NVIDIA/eidos/pkg/k8s/client"
+//	import "github.com/NVIDIA/aicr/pkg/k8s/client"
 //
 //	// Get shared client instance
 //	clientset, _, err := client.GetKubeClient()
 //
 // For agent deployment, import the agent sub-package:
 //
-//	import "github.com/NVIDIA/eidos/pkg/k8s/agent"
+//	import "github.com/NVIDIA/aicr/pkg/k8s/agent"
 //
 //	// Deploy snapshot agent
 //	config := agent.Config{
 //	    Namespace: "gpu-operator",
-//	    Image:     "ghcr.io/nvidia/eidos-validator:latest",
+//	    Image:     "ghcr.io/nvidia/aicr-validator:latest",
 //	}
 //	deployer := agent.NewDeployer(clientset, config)
 //

@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers project setup, architecture, development workflows, and tooling for contributors working on Eidos.
+This guide covers project setup, architecture, development workflows, and tooling for contributors working on AI Cluster Runtime (AICR).
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ Set environment variable `AUTO_MODE=true` to avoid having to approve each tool i
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/NVIDIA/eidos.git && cd eidos
+git clone https://github.com/NVIDIA/aicr.git && cd aicr
 make tools-setup    # Install all required tools
 make tools-check    # Verify versions match .settings.yaml
 
@@ -154,10 +154,10 @@ make qualify
 ### Directory Structure
 
 ```
-eidos/
+aicr/
 ├── cmd/
-│   ├── eidos/          # CLI binary
-│   └── eidosd/         # API server binary
+│   ├── aicr/          # CLI binary
+│   └── aicrd/         # API server binary
 ├── pkg/
 │   ├── api/            # REST API handlers
 │   ├── bundler/        # Bundle generation framework
@@ -180,15 +180,15 @@ eidos/
 
 ### Key Components
 
-#### CLI (`eidos`)
-- **Location**: `cmd/eidos/main.go` → `pkg/cli/`
+#### CLI (`aicr`)
+- **Location**: `cmd/aicr/main.go` → `pkg/cli/`
 - **Framework**: [urfave/cli v3](https://github.com/urfave/cli)
 - **Commands**: `snapshot`, `recipe`, `bundle`, `validate`
 - **Purpose**: User-facing tool for system snapshots and recipe generation (supports both query and snapshot modes)
 - **Output**: Supports JSON, YAML, and table formats
 
 #### API Server
-- **Location**: `cmd/eidosd/main.go` → `pkg/server/`, `pkg/api/`
+- **Location**: `cmd/aicrd/main.go` → `pkg/server/`, `pkg/api/`
 - **Endpoints**:
   - `GET /v1/recipe` - Generate configuration recipes
   - `GET /health` - Liveness probe
@@ -224,7 +224,7 @@ eidos/
 - **Purpose**: Orchestrate parallel collection of system measurements
 - **Output**: Complete snapshot with metadata and all collector measurements
 - **Usage**: CLI command, Kubernetes Job agent
-- **Format**: Structured snapshot (eidos.nvidia.com/v1alpha1)
+- **Format**: Structured snapshot (aicr.nvidia.com/v1alpha1)
 
 #### Bundler Framework
 - **Location**: `pkg/bundler/`
@@ -256,7 +256,7 @@ eidos/
   - Constraint evaluation against snapshots using version comparison operators
   - Check execution framework (skeleton implementation)
   - Structured validation results with per-phase status
-- **CLI**: `eidos validate --phase <phase>` (default: readiness)
+- **CLI**: `aicr validate --phase <phase>` (default: readiness)
 - **Implementation**: `pkg/validator/phases.go` contains phase validation logic
 
 ### Architecture Principle
@@ -347,7 +347,7 @@ This runs: `test` → `lint` → `e2e` → `scan`
 
 ## Local Kubernetes Development
 
-Eidos includes a full local development environment using Kind and Tilt for rapid iteration with hot reload.
+AICR includes a full local development environment using Kind and Tilt for rapid iteration with hot reload.
 
 ### Prerequisites
 
@@ -382,7 +382,7 @@ kubectl get nodes
 ```
 
 This creates:
-- A Kind cluster named `kind-eidos`
+- A Kind cluster named `kind-aicr`
 - A local container registry at `localhost:5001`
 
 #### 2. Start Tilt
@@ -393,13 +393,13 @@ make tilt-up
 ```
 
 The Tilt UI at http://localhost:10350 shows:
-- Build status for `eidosd`
+- Build status for `aicrd`
 - Pod logs and status
 - Port forwards (API: 8080, Metrics: 9090)
 
 #### 3. Develop with Hot Reload
 
-Tilt watches for changes in `cmd/eidosd/` and `pkg/`. When you save a file:
+Tilt watches for changes in `cmd/aicrd/` and `pkg/`. When you save a file:
 1. Tilt rebuilds the container using `ko` (fast Go builds)
 2. Pushes to the local registry
 3. Kubernetes rolls out the new pod
@@ -425,7 +425,7 @@ curl http://localhost:9090/metrics
 
 ```bash
 # Stream logs from Tilt UI, or use kubectl
-kubectl logs -f -n eidos deployment/eidosd
+kubectl logs -f -n aicr deployment/aicrd
 
 # Or view in Tilt UI at http://localhost:10350
 ```
@@ -475,9 +475,9 @@ make e2e-tilt
 The automated script (`run-e2e-local.sh`) replicates the exact CI workflow:
 - Creates Kind cluster with local registry
 - Starts Tilt in CI mode
-- Builds and pushes both images (`eidos:local`, `eidos-validator:local`)
+- Builds and pushes both images (`aicr:local`, `aicr-validator:local`)
 - Injects fake nvidia-smi into worker nodes
-- Sets up port forwarding to eidosd
+- Sets up port forwarding to aicrd
 - Runs E2E tests with proper environment variables
 - Collects debug artifacts on failure
 - Cleans up cluster and resources
@@ -510,11 +510,11 @@ curl "http://localhost:8080/v1/recipe?os=ubuntu&service=eks"
 │       │         ┌─────────────────────────┘             │
 │       ▼         ▼                                       │
 │  ┌─────────────────────────────────────────────────┐    │
-│  │              Kind Cluster (kind-eidos)          │    │
+│  │              Kind Cluster (kind-aicr)          │    │
 │  │  ┌─────────────────────────────────────────┐    │    │
-│  │  │           Namespace: eidos              │    │    │
+│  │  │           Namespace: aicr              │    │    │
 │  │  │  ┌─────────────┐  ┌─────────────────┐   │    │    │
-│  │  │  │   eidosd    │  │    Service      │   │    │    │
+│  │  │  │   aicrd    │  │    Service      │   │    │    │
 │  │  │  │ Deployment  │◀─│  (ClusterIP)    │   │    │    │
 │  │  │  └─────────────┘  └─────────────────┘   │    │    │
 │  │  └─────────────────────────────────────────┘    │    │
@@ -576,7 +576,7 @@ See [kwok/README.md](kwok/README.md) for adding recipes, profiles, and troublesh
 | Target | Description |
 |--------|-------------|
 | `make build` | Build binaries for current OS/arch |
-| `make image` | Build and push eidos container image (Ko) |
+| `make image` | Build and push aicr container image (Ko) |
 | `make image-validator` | Build and push validator image with Go toolchain (Docker) |
 | `make release` | Full release with goreleaser (includes all images) |
 | `make bump-major` | Bump major version (1.2.3 → 2.0.0) |
@@ -623,7 +623,7 @@ See [kwok/README.md](kwok/README.md) for adding recipes, profiles, and troublesh
 | `make demos` | Create demo GIFs (requires vhs) |
 | `make clean` | Clean build artifacts |
 | `make clean-all` | Deep clean including module cache |
-| `make cleanup` | Clean up Eidos Kubernetes resources |
+| `make cleanup` | Clean up AICR Kubernetes resources |
 | `make help` | Show all available targets |
 
 ## Debugging
@@ -656,7 +656,7 @@ go tool cover -html=coverage.out
 
 ```bash
 # Start with debug logging
-LOG_LEVEL=debug go run cmd/eidosd/main.go
+LOG_LEVEL=debug go run cmd/aicrd/main.go
 
 # Or use make target
 make server

@@ -1,6 +1,6 @@
-# Eidos Architecture
+# AICR Architecture
 
-This directory contains architecture documentation for the Eidos (Eidos) tooling.
+This directory contains architecture documentation for the AI Cluster Runtime (AICR) tooling.
 
 ## First Principles
 
@@ -42,7 +42,7 @@ This directory contains architecture documentation for the Eidos (Eidos) tooling
 
 ## Components
 
-- **[CLI Architecture](cli.md)**: Command-line tool (`eidos`) implementing all four workflow stages
+- **[CLI Architecture](cli.md)**: Command-line tool (`aicr`) implementing all four workflow stages
   - Commands: `snapshot`, `recipe`, `validate`, `bundle`
   - Recipe generation modes: Query mode (direct parameters) and snapshot mode (analyze captured state)
   - Validation: Check recipe constraints against cluster snapshots
@@ -70,7 +70,7 @@ This directory contains architecture documentation for the Eidos (Eidos) tooling
 
 ## Overview
 
-Eidos provides a four-step workflow for optimizing GPU infrastructure deployments:
+AICR provides a four-step workflow for optimizing GPU infrastructure deployments:
 
 ```
 ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
@@ -82,14 +82,14 @@ configuration         recommendations       compatibility         artifacts
 
 ### Step 1: Snapshot – Capture System Configuration
 Captures comprehensive system state including OS, kernel, GPU, Kubernetes, and SystemD configurations.
-- **CLI**: `eidos snapshot` command
+- **CLI**: `aicr snapshot` command
 - **Agent**: Kubernetes Job for automated cluster snapshots (writes to ConfigMap)
 - **Output**: YAML/JSON snapshot with all system measurements
 - **Storage**: File, stdout, or **Kubernetes ConfigMap** (`cm://namespace/name` URI)
 
 ### Step 2: Recipe – Generate Configuration Recommendations
 Produces optimized configuration recipes based on environment criteria or captured snapshots.
-- **CLI**: `eidos recipe` command (supports query mode and snapshot mode)
+- **CLI**: `aicr recipe` command (supports query mode and snapshot mode)
   - **Query Mode**: Direct recipe generation from criteria (service, accelerator, intent, OS, nodes)
   - **Snapshot Mode**: Analyzes captured snapshots and generates tailored recipes based on workload intent
   - **ConfigMap Input**: Can read snapshots from ConfigMap URIs (`cm://namespace/name`)
@@ -103,7 +103,7 @@ Produces optimized configuration recipes based on environment criteria or captur
 
 ### Step 3: Validate – Check Cluster Compatibility
 Validates recipe constraints against actual system measurements from a snapshot.
-- **CLI**: `eidos validate` command
+- **CLI**: `aicr validate` command
 - **Input Sources**: File paths, HTTP/HTTPS URLs, or ConfigMap URIs for both recipe and snapshot
 - **Constraint Format**: Fully qualified paths (`K8s.server.version`, `OS.release.ID`)
 - **Operators**: Version comparisons (`>=`, `<=`, `>`, `<`), equality (`==`, `!=`), exact match
@@ -112,7 +112,7 @@ Validates recipe constraints against actual system measurements from a snapshot.
 
 ### Step 4: Bundle – Create Deployment Artifacts
 Generates deployment-ready bundles (Helm values, Kubernetes manifests, installation scripts) from recipes.
-- **CLI**: `eidos bundle` command
+- **CLI**: `aicr bundle` command
 - **API Server**: `POST /v1/bundle` endpoint (returns zip archive)
 - **ConfigMap Input**: Can read recipes from ConfigMap URIs (CLI only)
 - **Parallel execution** of multiple bundlers by default
@@ -239,7 +239,7 @@ if err := g.Wait(); err != nil {
 
 **Implementation**:
 ```go
-import "github.com/NVIDIA/eidos/pkg/k8s/client"
+import "github.com/NVIDIA/aicr/pkg/k8s/client"
 
 // First call creates client; subsequent calls return cached instance
 clientset, config, err := client.GetKubeClient()
@@ -260,7 +260,7 @@ clientset, config, err := client.GetKubeClient()
 
 ```mermaid
 flowchart TD
-    A["Developer"] --> B["eidos CLI"]
+    A["Developer"] --> B["aicr CLI"]
     B --> C["Local Node<br/>(K8s/GPU)"]
 ```
 
@@ -298,17 +298,17 @@ flowchart TD
         direction LR
         
         subgraph NODE["GPU Node"]
-            JOB["Eidos Agent Job"] 
+            JOB["AICR Agent Job"] 
         end
         
-        JOB -->|"Write snapshot"| CM["ConfigMap<br/>eidos-snapshot<br/>(Kubernetes API)"]
+        JOB -->|"Write snapshot"| CM["ConfigMap<br/>aicr-snapshot<br/>(Kubernetes API)"]
         
-        CLI["eidos CLI<br/>(External)"] -->|"Read cm://ns/name"| CM
-        CLI -->|"Generate recipe"| RECIPE["ConfigMap<br/>eidos-recipe"]
+        CLI["aicr CLI<br/>(External)"] -->|"Read cm://ns/name"| CM
+        CLI -->|"Generate recipe"| RECIPE["ConfigMap<br/>aicr-recipe"]
         CLI -->|"Create bundle"| BUNDLE["Bundle Files"]
         
         subgraph RBAC["RBAC"]
-            SA["ServiceAccount: eidos"]
+            SA["ServiceAccount: aicr"]
             ROLE["Role: ConfigMap RW"]
             BIND["RoleBinding"]
         end
@@ -325,8 +325,8 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph MESH["Kubernetes Cluster (Service Mesh)"]
-        subgraph POD["eidosd Pod"]
-            PROXY["Envoy Proxy<br/>(mTLS/L7)"] <--> API["eidos<br/>API Server"]
+        subgraph POD["aicrd Pod"]
+            PROXY["Envoy Proxy<br/>(mTLS/L7)"] <--> API["aicr<br/>API Server"]
         end
         
         OBS["Observability:<br/>Grafana, Jaeger"]
@@ -388,9 +388,9 @@ flowchart LR
 ```mermaid
 flowchart LR
     A[User/Agent] --> B[Step 1: Snapshot]
-    B --> C["ConfigMap<br/>eidos-snapshot<br/>cm://ns/name"]
+    B --> C["ConfigMap<br/>aicr-snapshot<br/>cm://ns/name"]
     C --> D[Step 2: Recipe]
-    D --> E["ConfigMap<br/>eidos-recipe<br/>cm://ns/name"]
+    D --> E["ConfigMap<br/>aicr-recipe<br/>cm://ns/name"]
     E --> F[Step 3: Validate]
     F --> G[Step 4: Bundle]
     G --> H["Local Bundle<br/>deployment/"]
@@ -506,10 +506,10 @@ retry.OnError(retry.DefaultBackoff, func(err error) bool {
 ```bash
 # Verify RBAC configuration
 kubectl get role,rolebinding -n gpu-operator
-kubectl auth can-i create configmaps --as=system:serviceaccount:gpu-operator:eidos -n gpu-operator
+kubectl auth can-i create configmaps --as=system:serviceaccount:gpu-operator:aicr -n gpu-operator
 
 # Check agent logs
-kubectl logs job/eidos -n gpu-operator
+kubectl logs job/aicr -n gpu-operator
 ```
 
 ### Rate Limit Exceeded (API Server)
@@ -911,8 +911,8 @@ package main
 import (
     "context"
     "fmt"
-    "github.com/NVIDIA/eidos/pkg/bundler"
-    "github.com/NVIDIA/eidos/pkg/recipe"
+    "github.com/NVIDIA/aicr/pkg/bundler"
+    "github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 func main() {
@@ -1060,7 +1060,7 @@ func TestBundler_MakeWithRecipeResult(t *testing.T) {
 
 ## CI/CD Architecture
 
-Eidos uses GitHub Actions with a three-layer composite actions architecture for continuous integration, release automation, and supply chain security.
+AICR uses GitHub Actions with a three-layer composite actions architecture for continuous integration, release automation, and supply chain security.
 
 ### Continuous Integration (on-push.yaml)
 
@@ -1109,7 +1109,7 @@ flowchart TD
 - Install tools: ko (container images), syft (SBOMs), crane (digest resolution), goreleaser (binaries)
 - Execute `make release`:
   - Build multi-platform binaries (darwin/linux, amd64/arm64)
-  - Build container images (eidos, eidosd) with ko
+  - Build container images (aicr, aicrd) with ko
   - Generate binary SBOMs (SPDX v2.3 format)
   - Generate container SBOMs (SPDX JSON format)
 - Publish to GitHub Releases and ghcr.io
@@ -1125,7 +1125,7 @@ flowchart TD
 - Demonstrates deployment to Google Cloud Run (users should self-host for production)
 - Authenticate with Workload Identity Federation (keyless)
 - Copy image from GHCR to Artifact Registry (us-docker.pkg.dev/eidosx/demo)
-- Deploy eidosd to Cloud Run as example deployment
+- Deploy aicrd to Cloud Run as example deployment
 
 **Permissions**: `attestations: write`, `contents: write`, `id-token: write`, `packages: write`
 
@@ -1199,17 +1199,17 @@ flowchart TD
 **Verification**:
 ```bash
 # Get latest release tag
-export TAG=$(curl -s https://api.github.com/repos/NVIDIA/eidos/releases/latest | jq -r '.tag_name')
+export TAG=$(curl -s https://api.github.com/repos/NVIDIA/aicr/releases/latest | jq -r '.tag_name')
 
 # Verify image attestations
-gh attestation verify oci://ghcr.io/nvidia/eidos:${TAG} --owner nvidia
+gh attestation verify oci://ghcr.io/nvidia/aicr:${TAG} --owner nvidia
 
 # Verify with Cosign
 cosign verify-attestation \
   --type spdxjson \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp 'https://github.com/NVIDIA/eidos/.github/workflows/.*' \
-  ghcr.io/nvidia/eidos:${TAG}
+  --certificate-identity-regexp 'https://github.com/NVIDIA/aicr/.github/workflows/.*' \
+  ghcr.io/nvidia/aicr:${TAG}
 ```
 
 **Transparency**:
@@ -1224,7 +1224,7 @@ For supply chain security verification, see [../SECURITY.md](../SECURITY.md).
 
 ## E2E Testing Architecture
 
-Eidos includes an end-to-end testing framework that validates the complete workflow from snapshot capture through bundle generation.
+AICR includes an end-to-end testing framework that validates the complete workflow from snapshot capture through bundle generation.
 
 ### E2E Testing Workflow
 
@@ -1264,8 +1264,8 @@ flowchart TD
 **Validation Steps**:
 1. **Agent Deployment**: Apply RBAC manifests and Job
 2. **Job Completion**: Wait for Job success with timeout
-3. **ConfigMap Verification**: Check `eidos-snapshot` exists with data
-4. **Recipe Generation**: Use ConfigMap URI input (`cm://gpu-operator/eidos-snapshot`)
+3. **ConfigMap Verification**: Check `aicr-snapshot` exists with data
+4. **Recipe Generation**: Use ConfigMap URI input (`cm://gpu-operator/aicr-snapshot`)
 5. **Bundle Generation**: Create deployment artifacts from recipe
 6. **Artifact Verification**: Validate file creation and structure
 
@@ -1280,8 +1280,8 @@ flowchart TD
 # Run all CLI integration tests (no cluster needed)
 make e2e
 
-# Run a single chainsaw test (using eidos from PATH)
-EIDOS_BIN=$(command -v eidos) \
+# Run a single chainsaw test (using aicr from PATH)
+AICR_BIN=$(command -v aicr) \
   chainsaw test --no-cluster --test-dir tests/chainsaw/cli/recipe-generation
 
 # Run cluster-based E2E tests (requires Kind cluster)

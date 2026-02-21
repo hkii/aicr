@@ -18,8 +18,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 )
 
 // Collect retrieves Kubernetes cluster version information from the API server.

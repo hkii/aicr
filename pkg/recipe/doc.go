@@ -131,7 +131,7 @@
 //
 //	type RecipeCriteria struct {
 //	    Kind       string    // Must be "RecipeCriteria"
-//	    APIVersion string    // Must be "eidos.nvidia.com/v1alpha1"
+//	    APIVersion string    // Must be "aicr.nvidia.com/v1alpha1"
 //	    Metadata   struct {
 //	        Name string       // Optional descriptive name
 //	    }
@@ -141,7 +141,7 @@
 // Example criteria file (criteria.yaml):
 //
 //	kind: RecipeCriteria
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	metadata:
 //	  name: gb200-eks-ubuntu-training
 //	spec:
@@ -168,11 +168,11 @@
 //
 // CLI usage with criteria file:
 //
-//	eidos recipe --criteria /path/to/criteria.yaml --output recipe.yaml
+//	aicr recipe --criteria /path/to/criteria.yaml --output recipe.yaml
 //
 // CLI flags can override criteria file values:
 //
-//	eidos recipe --criteria criteria.yaml --service gke --output recipe.yaml
+//	aicr recipe --criteria criteria.yaml --service gke --output recipe.yaml
 //
 // HTTP API POST request:
 //
@@ -212,7 +212,7 @@
 //
 // Base structure (recipes/overlays/base.yaml):
 //
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	kind: Base
 //	metadata:
 //	  name: base
@@ -224,7 +224,7 @@
 //
 // Overlay structure (recipes/overlays/*.yaml):
 //
-//	apiVersion: eidos.nvidia.com/v1alpha1
+//	apiVersion: aicr.nvidia.com/v1alpha1
 //	kind: Overlay
 //	metadata:
 //	  name: h100-training

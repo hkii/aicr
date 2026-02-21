@@ -20,9 +20,9 @@
 # and Chainsaw verifies they exist with the expected values. For arrays,
 # Chainsaw requires exact length so we list all items.
 kind: Snapshot
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
-  source-node: eidos-worker
+  source-node: aicr-worker
   version: dev
 measurements:
   - type: OS

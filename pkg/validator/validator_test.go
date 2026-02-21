@@ -22,9 +22,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 func TestValidator_Validate(t *testing.T) {
@@ -608,7 +608,7 @@ func TestGenerateRunID_Uniqueness(t *testing.T) {
 }
 
 func TestNew_CustomImageFromEnv(t *testing.T) {
-	t.Setenv("EIDOS_VALIDATOR_IMAGE", "custom-image:latest")
+	t.Setenv("AICR_VALIDATOR_IMAGE", "custom-image:latest")
 	v := New()
 	if v.Image != "custom-image:latest" {
 		t.Errorf("Image = %q, want custom-image:latest", v.Image)
@@ -653,7 +653,7 @@ func TestNew_UniqueRunIDs(t *testing.T) {
 func TestNew_DefaultNamespace(t *testing.T) {
 	v := New()
 
-	expectedNamespace := "eidos-validation"
+	expectedNamespace := "aicr-validation"
 	if v.Namespace != expectedNamespace {
 		t.Errorf("Expected default namespace %s, got %s", expectedNamespace, v.Namespace)
 	}
@@ -700,7 +700,7 @@ func TestNew_MultipleOptions(t *testing.T) {
 }
 
 func TestNew_WithImage(t *testing.T) {
-	customImage := "localhost:5001/eidos-validator:test"
+	customImage := "localhost:5001/aicr-validator:test"
 	v := New(WithImage(customImage))
 
 	if v.Image != customImage {
@@ -710,7 +710,7 @@ func TestNew_WithImage(t *testing.T) {
 
 func TestNew_WithImage_MultipleOptions(t *testing.T) {
 	version := "v1.0.0"
-	image := "ghcr.io/nvidia/eidos-validator:v1.0.0"
+	image := "ghcr.io/nvidia/aicr-validator:v1.0.0"
 
 	v := New(
 		WithVersion(version),

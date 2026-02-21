@@ -32,7 +32,7 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
               WORK="/tmp/chainsaw-recipe-overlays"
               rm -rf "${WORK}" && mkdir -p "${WORK}"
@@ -69,11 +69,11 @@ spec:
                 [ -n "$platform" ] && flags="${flags} --platform ${platform}"
 
                 echo "=== ${basename}: recipe (service=${service:-default} accel=${accelerator} os=${os_val} intent=${intent} platform=${platform:-none}) ==="
-                ${EIDOS_BIN} recipe ${flags} -o "${test_dir}/recipe.yaml" || { echo "FAIL: recipe generation for ${basename}" >&2; exit 1; }
+                ${AICR_BIN} recipe ${flags} -o "${test_dir}/recipe.yaml" || { echo "FAIL: recipe generation for ${basename}" >&2; exit 1; }
 
                 # Generate bundle
                 echo "=== ${basename}: bundle ==="
-                ${EIDOS_BIN} bundle -r "${test_dir}/recipe.yaml" -o "${test_dir}/bundle" || \
+                ${AICR_BIN} bundle -r "${test_dir}/recipe.yaml" -o "${test_dir}/bundle" || \
                   { echo "FAIL: bundle generation for ${basename}" >&2; exit 1; }
 
                 # Verify bundle structure

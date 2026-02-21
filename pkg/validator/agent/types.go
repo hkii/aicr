@@ -29,7 +29,7 @@ type Config struct {
 	// JobName is the name of the Kubernetes Job
 	JobName string
 
-	// Image is the container image to use (should contain eidos CLI)
+	// Image is the container image to use (should contain aicr CLI)
 	Image string
 
 	// ImagePullSecrets for pulling the image from private registries

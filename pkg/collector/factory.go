@@ -15,10 +15,10 @@
 package collector
 
 import (
-	"github.com/NVIDIA/eidos/pkg/collector/gpu"
-	"github.com/NVIDIA/eidos/pkg/collector/k8s"
-	"github.com/NVIDIA/eidos/pkg/collector/os"
-	"github.com/NVIDIA/eidos/pkg/collector/systemd"
+	"github.com/NVIDIA/aicr/pkg/collector/gpu"
+	"github.com/NVIDIA/aicr/pkg/collector/k8s"
+	"github.com/NVIDIA/aicr/pkg/collector/os"
+	"github.com/NVIDIA/aicr/pkg/collector/systemd"
 )
 
 // Factory defines the interface for creating collector instances.

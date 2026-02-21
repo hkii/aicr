@@ -17,8 +17,8 @@ package recipe
 import (
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/measurement"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 func TestExtractCriteriaFromSnapshot(t *testing.T) {

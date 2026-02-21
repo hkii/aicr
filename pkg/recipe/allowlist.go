@@ -20,15 +20,15 @@ import (
 	"slices"
 	"strings"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // Environment variable names for allowlist configuration.
 const (
-	EnvAllowedAccelerators = "Eidos_ALLOWED_ACCELERATORS"
-	EnvAllowedServices     = "Eidos_ALLOWED_SERVICES"
-	EnvAllowedIntents      = "Eidos_ALLOWED_INTENTS"
-	EnvAllowedOSTypes      = "Eidos_ALLOWED_OS"
+	EnvAllowedAccelerators = "AICR_ALLOWED_ACCELERATORS"
+	EnvAllowedServices     = "AICR_ALLOWED_SERVICES"
+	EnvAllowedIntents      = "AICR_ALLOWED_INTENTS"
+	EnvAllowedOSTypes      = "AICR_ALLOWED_OS"
 )
 
 // AllowLists defines which criteria values are permitted for API requests.
@@ -118,8 +118,8 @@ func (a *AllowLists) ValidateCriteria(c *Criteria) error {
 	// Check accelerator
 	if len(a.Accelerators) > 0 && c.Accelerator != CriteriaAcceleratorAny {
 		if !slices.Contains(a.Accelerators, c.Accelerator) {
-			return eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"accelerator type not allowed",
 				nil,
 				map[string]any{
@@ -133,8 +133,8 @@ func (a *AllowLists) ValidateCriteria(c *Criteria) error {
 	// Check service
 	if len(a.Services) > 0 && c.Service != CriteriaServiceAny {
 		if !slices.Contains(a.Services, c.Service) {
-			return eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"service type not allowed",
 				nil,
 				map[string]any{
@@ -148,8 +148,8 @@ func (a *AllowLists) ValidateCriteria(c *Criteria) error {
 	// Check intent
 	if len(a.Intents) > 0 && c.Intent != CriteriaIntentAny {
 		if !slices.Contains(a.Intents, c.Intent) {
-			return eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"intent type not allowed",
 				nil,
 				map[string]any{
@@ -163,8 +163,8 @@ func (a *AllowLists) ValidateCriteria(c *Criteria) error {
 	// Check OS
 	if len(a.OSTypes) > 0 && c.OS != CriteriaOSAny {
 		if !slices.Contains(a.OSTypes, c.OS) {
-			return eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"OS type not allowed",
 				nil,
 				map[string]any{
@@ -181,10 +181,10 @@ func (a *AllowLists) ValidateCriteria(c *Criteria) error {
 // ParseAllowListsFromEnv parses allowlist configuration from environment variables.
 // Returns nil if no allowlist environment variables are set.
 // Environment variables:
-//   - Eidos_ALLOWED_ACCELERATORS: comma-separated list of accelerator types (e.g., "h100,l40")
-//   - Eidos_ALLOWED_SERVICES: comma-separated list of service types (e.g., "eks,gke")
-//   - Eidos_ALLOWED_INTENTS: comma-separated list of intent types (e.g., "training,inference")
-//   - Eidos_ALLOWED_OS: comma-separated list of OS types (e.g., "ubuntu,rhel")
+//   - AICR_ALLOWED_ACCELERATORS: comma-separated list of accelerator types (e.g., "h100,l40")
+//   - AICR_ALLOWED_SERVICES: comma-separated list of service types (e.g., "eks,gke")
+//   - AICR_ALLOWED_INTENTS: comma-separated list of intent types (e.g., "training,inference")
+//   - AICR_ALLOWED_OS: comma-separated list of OS types (e.g., "ubuntu,rhel")
 //
 // Invalid values in the environment variables are skipped with a warning logged.
 func ParseAllowListsFromEnv() (*AllowLists, error) {
@@ -194,8 +194,8 @@ func ParseAllowListsFromEnv() (*AllowLists, error) {
 	if v := os.Getenv(EnvAllowedAccelerators); v != "" {
 		accelerators, err := parseTypeList(v, ParseCriteriaAcceleratorType, CriteriaAcceleratorAny)
 		if err != nil {
-			return nil, eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return nil, aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"invalid "+EnvAllowedAccelerators,
 				err,
 				map[string]any{"value": v},
@@ -208,8 +208,8 @@ func ParseAllowListsFromEnv() (*AllowLists, error) {
 	if v := os.Getenv(EnvAllowedServices); v != "" {
 		services, err := parseTypeList(v, ParseCriteriaServiceType, CriteriaServiceAny)
 		if err != nil {
-			return nil, eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return nil, aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"invalid "+EnvAllowedServices,
 				err,
 				map[string]any{"value": v},
@@ -222,8 +222,8 @@ func ParseAllowListsFromEnv() (*AllowLists, error) {
 	if v := os.Getenv(EnvAllowedIntents); v != "" {
 		intents, err := parseTypeList(v, ParseCriteriaIntentType, CriteriaIntentAny)
 		if err != nil {
-			return nil, eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return nil, aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"invalid "+EnvAllowedIntents,
 				err,
 				map[string]any{"value": v},
@@ -236,8 +236,8 @@ func ParseAllowListsFromEnv() (*AllowLists, error) {
 	if v := os.Getenv(EnvAllowedOSTypes); v != "" {
 		osTypes, err := parseTypeList(v, ParseCriteriaOSType, CriteriaOSAny)
 		if err != nil {
-			return nil, eidoserrors.WrapWithContext(
-				eidoserrors.ErrCodeInvalidRequest,
+			return nil, aicrerrors.WrapWithContext(
+				aicrerrors.ErrCodeInvalidRequest,
 				"invalid "+EnvAllowedOSTypes,
 				err,
 				map[string]any{"value": v},

@@ -13,11 +13,11 @@
 # limitations under the License.
 
 name: 'GPU Operator Install'
-description: 'Installs the GPU operator via standalone Helm chart or eidos bundle.'
+description: 'Installs the GPU operator via standalone Helm chart or aicr bundle.'
 
 inputs:
   method:
-    description: 'Installation method: helm (standalone chart) or bundle (eidos recipe+bundle)'
+    description: 'Installation method: helm (standalone chart) or bundle (aicr recipe+bundle)'
     required: true
   accelerator:
     description: 'Accelerator type for recipe generation (bundle mode only, e.g. h100)'
@@ -65,7 +65,7 @@ runs:
         echo "GPU Operator pods:"
         kubectl --context="kind-${KIND_CLUSTER_NAME}" -n gpu-operator get pods
 
-    # --- Bundle mode: eidos recipe → bundle → deploy ---
+    # --- Bundle mode: aicr recipe → bundle → deploy ---
 
     - name: Generate recipe
       if: inputs.method == 'bundle'
@@ -75,7 +75,7 @@ runs:
         if [[ -n "${{ inputs.platform }}" ]]; then
           PLATFORM_FLAG="--platform ${{ inputs.platform }}"
         fi
-        ./eidos recipe \
+        ./aicr recipe \
           --service kind \
           --accelerator ${{ inputs.accelerator }} \
           --os ubuntu \
@@ -89,7 +89,7 @@ runs:
       if: inputs.method == 'bundle'
       shell: bash
       run: |
-        ./eidos bundle \
+        ./aicr bundle \
           --recipe recipe.yaml \
           --accelerated-node-toleration nvidia.com/gpu:NoSchedule \
           --output bundle

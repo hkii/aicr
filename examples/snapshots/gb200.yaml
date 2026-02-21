@@ -13,7 +13,7 @@
 # limitations under the License.
 
 kind: Snapshot
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
     source-node: ip-10-0-209-64.ec2.internal
     timestamp: "2026-02-05T20:32:23Z"
@@ -1766,7 +1766,7 @@ measurements:
             dcgm-exporter: 4.3.1-4.4.0-ubuntu22.04
             dgxc-janitor: 1.17.3
             driver: 580.82.07-ubuntu24.04
-            eidos: latest
+            aicr: latest
             external-attacher: v4.6.1-eks-1-30-10
             external-provisioner: v4.0.0-eks-1-29-5
             external-resizer: v1.10.0-eks-1-29-5

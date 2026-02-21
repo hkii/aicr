@@ -60,7 +60,7 @@ Deploy a test pod that requests 1 GPU via ResourceClaim and verifies device acce
 
 **Apply test manifest**
 ```
-$ kubectl apply -f /Users/yuanc/projects/eidos/tests/ai-conformance/manifests/dra-gpu-test.yaml
+$ kubectl apply -f /Users/yuanc/projects/aicr/tests/ai-conformance/manifests/dra-gpu-test.yaml
 namespace/dra-test created
 resourceclaim.resource.k8s.io/gpu-claim created
 pod/dra-gpu-test created

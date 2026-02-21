@@ -114,7 +114,7 @@ func TestBundleEndpointMissingRecipe(t *testing.T) {
 	}
 
 	// Request with empty componentRefs (simulates empty recipe)
-	body := `{"apiVersion": "eidos.nvidia.com/v1alpha1", "kind": "Recipe", "componentRefs": []}`
+	body := `{"apiVersion": "aicr.nvidia.com/v1alpha1", "kind": "Recipe", "componentRefs": []}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/bundle", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -144,7 +144,7 @@ func TestBundleEndpointEmptyComponentRefs(t *testing.T) {
 	}
 
 	// Recipe with no component references (direct RecipeResult in body)
-	body := `{"apiVersion": "eidos.nvidia.com/v1alpha1", "kind": "Recipe", "componentRefs": []}`
+	body := `{"apiVersion": "aicr.nvidia.com/v1alpha1", "kind": "Recipe", "componentRefs": []}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/bundle", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -176,7 +176,7 @@ func TestBundleEndpointIgnoresBundlersParam(t *testing.T) {
 
 	// Recipe with valid components, bundlers param should be ignored
 	body := `{
-		"apiVersion": "eidos.nvidia.com/v1alpha1",
+		"apiVersion": "aicr.nvidia.com/v1alpha1",
 		"kind": "Recipe",
 		"componentRefs": [
 			{"name": "gpu-operator", "version": "v25.3.3"}
@@ -211,7 +211,7 @@ func TestBundleEndpointValidRequest(t *testing.T) {
 
 	// Create a valid recipe (direct RecipeResult in body)
 	body := `{
-		"apiVersion": "eidos.nvidia.com/v1alpha1",
+		"apiVersion": "aicr.nvidia.com/v1alpha1",
 		"kind": "Recipe",
 		"metadata": {
 			"version": "v1.0.0",
@@ -316,7 +316,7 @@ func TestBundleEndpointAllBundlers(t *testing.T) {
 
 	// Create a recipe with multiple components (no bundlers query param = all bundlers)
 	body := `{
-		"apiVersion": "eidos.nvidia.com/v1alpha1",
+		"apiVersion": "aicr.nvidia.com/v1alpha1",
 		"kind": "Recipe",
 		"componentRefs": [
 			{"name": "gpu-operator", "version": "v25.3.3", "type": "helm", "valuesFile": "components/gpu-operator/values.yaml"},
@@ -406,7 +406,7 @@ func TestZipResponseContainsExpectedFiles(t *testing.T) {
 
 	// Recipe direct in body
 	body := `{
-		"apiVersion": "eidos.nvidia.com/v1alpha1",
+		"apiVersion": "aicr.nvidia.com/v1alpha1",
 		"kind": "Recipe",
 		"componentRefs": [
 			{
@@ -541,7 +541,7 @@ func TestZipCanBeExtracted(t *testing.T) {
 
 	// Recipe direct in body
 	body := `{
-		"apiVersion": "eidos.nvidia.com/v1alpha1",
+		"apiVersion": "aicr.nvidia.com/v1alpha1",
 		"kind": "Recipe",
 		"componentRefs": [
 			{

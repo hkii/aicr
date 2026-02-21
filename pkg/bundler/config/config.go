@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 )
 

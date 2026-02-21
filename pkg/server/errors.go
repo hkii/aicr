@@ -19,8 +19,8 @@ import (
 	"net/http"
 	"time"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/serializer"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/serializer"
 	"github.com/google/uuid"
 )
 
@@ -36,7 +36,7 @@ type ErrorResponse struct {
 
 // writeError writes error response
 func WriteError(w http.ResponseWriter, r *http.Request, statusCode int,
-	code eidoserrors.ErrorCode, message string, retryable bool, details map[string]any) {
+	code aicrerrors.ErrorCode, message string, retryable bool, details map[string]any) {
 
 	requestID, _ := r.Context().Value(contextKeyRequestID).(string)
 	if requestID == "" {
@@ -57,41 +57,41 @@ func WriteError(w http.ResponseWriter, r *http.Request, statusCode int,
 
 // HTTPStatusFromCode maps a canonical error code to an HTTP status.
 // This keeps transport-layer semantics centralized.
-func HTTPStatusFromCode(code eidoserrors.ErrorCode) int {
+func HTTPStatusFromCode(code aicrerrors.ErrorCode) int {
 	switch code {
-	case eidoserrors.ErrCodeInvalidRequest:
+	case aicrerrors.ErrCodeInvalidRequest:
 		return http.StatusBadRequest
-	case eidoserrors.ErrCodeUnauthorized:
+	case aicrerrors.ErrCodeUnauthorized:
 		return http.StatusUnauthorized
-	case eidoserrors.ErrCodeNotFound:
+	case aicrerrors.ErrCodeNotFound:
 		return http.StatusNotFound
-	case eidoserrors.ErrCodeMethodNotAllowed:
+	case aicrerrors.ErrCodeMethodNotAllowed:
 		return http.StatusMethodNotAllowed
-	case eidoserrors.ErrCodeRateLimitExceeded:
+	case aicrerrors.ErrCodeRateLimitExceeded:
 		return http.StatusTooManyRequests
-	case eidoserrors.ErrCodeUnavailable:
+	case aicrerrors.ErrCodeUnavailable:
 		return http.StatusServiceUnavailable
-	case eidoserrors.ErrCodeTimeout:
+	case aicrerrors.ErrCodeTimeout:
 		// Prefer 504 for upstream timeouts and internal deadline exceeded.
 		return http.StatusGatewayTimeout
-	case eidoserrors.ErrCodeInternal:
+	case aicrerrors.ErrCodeInternal:
 		fallthrough
 	default:
 		return http.StatusInternalServerError
 	}
 }
 
-func retryableFromCode(code eidoserrors.ErrorCode) bool {
+func retryableFromCode(code aicrerrors.ErrorCode) bool {
 	switch code {
-	case eidoserrors.ErrCodeInvalidRequest,
-		eidoserrors.ErrCodeUnauthorized,
-		eidoserrors.ErrCodeNotFound,
-		eidoserrors.ErrCodeMethodNotAllowed:
+	case aicrerrors.ErrCodeInvalidRequest,
+		aicrerrors.ErrCodeUnauthorized,
+		aicrerrors.ErrCodeNotFound,
+		aicrerrors.ErrCodeMethodNotAllowed:
 		return false
-	case eidoserrors.ErrCodeTimeout,
-		eidoserrors.ErrCodeUnavailable,
-		eidoserrors.ErrCodeRateLimitExceeded,
-		eidoserrors.ErrCodeInternal:
+	case aicrerrors.ErrCodeTimeout,
+		aicrerrors.ErrCodeUnavailable,
+		aicrerrors.ErrCodeRateLimitExceeded,
+		aicrerrors.ErrCodeInternal:
 		return true
 	}
 
@@ -117,12 +117,12 @@ func mergeDetails(a, b map[string]any) map[string]any {
 // If err is not a *errors.StructuredError, it falls back to INTERNAL.
 func WriteErrorFromErr(w http.ResponseWriter, r *http.Request, err error, fallbackMessage string, extraDetails map[string]any) {
 	if err == nil {
-		WriteError(w, r, http.StatusInternalServerError, eidoserrors.ErrCodeInternal,
+		WriteError(w, r, http.StatusInternalServerError, aicrerrors.ErrCodeInternal,
 			fallbackMessage, true, extraDetails)
 		return
 	}
 
-	var se *eidoserrors.StructuredError
+	var se *aicrerrors.StructuredError
 	if errors.As(err, &se) {
 		msg := se.Message
 		if msg == "" {
@@ -138,6 +138,6 @@ func WriteErrorFromErr(w http.ResponseWriter, r *http.Request, err error, fallba
 		return
 	}
 
-	WriteError(w, r, http.StatusInternalServerError, eidoserrors.ErrCodeInternal,
+	WriteError(w, r, http.StatusInternalServerError, aicrerrors.ErrCodeInternal,
 		fallbackMessage, true, mergeDetails(extraDetails, map[string]any{"error": err.Error()}))
 }

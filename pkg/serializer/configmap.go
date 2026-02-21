@@ -20,10 +20,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/k8s/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	accorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 )
@@ -147,7 +147,7 @@ func (w *ConfigMapWriter) Serialize(ctx context.Context, snapshot any) error {
 	// Build ConfigMap apply configuration for Server-Side Apply
 	configMap := accorev1.ConfigMap(w.name, w.namespace).
 		WithLabels(map[string]string{
-			"app.kubernetes.io/name":      "eidos",
+			"app.kubernetes.io/name":      "aicr",
 			"app.kubernetes.io/component": snapshotKind,
 			"app.kubernetes.io/version":   snapshotVersion,
 		}).
@@ -155,7 +155,7 @@ func (w *ConfigMapWriter) Serialize(ctx context.Context, snapshot any) error {
 
 	// Use Server-Side Apply for atomic create-or-update operation
 	// This eliminates race conditions from the previous Get-then-Update pattern
-	// Force allows taking ownership from previous field managers (eidos CLI vs agent)
+	// Force allows taking ownership from previous field managers (aicr CLI vs agent)
 	slog.Info("applying ConfigMap",
 		"namespace", w.namespace,
 		"name", w.name,
@@ -165,7 +165,7 @@ func (w *ConfigMapWriter) Serialize(ctx context.Context, snapshot any) error {
 		writeCtx,
 		configMap,
 		metav1.ApplyOptions{
-			FieldManager: "eidos",
+			FieldManager: "aicr",
 			Force:        true,
 		},
 	)

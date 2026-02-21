@@ -19,8 +19,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/measurement"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/measurement"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

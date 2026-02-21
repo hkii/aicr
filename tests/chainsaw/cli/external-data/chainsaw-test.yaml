@@ -32,12 +32,12 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-external-data"
               rm -rf "${WORK}" && mkdir -p "${WORK}/empty" "${WORK}/valid" "${WORK}/with-overlay/overlays"
 
               cat > "${WORK}/valid/registry.yaml" << 'EOF'
-              apiVersion: eidos.nvidia.com/v1alpha1
+              apiVersion: aicr.nvidia.com/v1alpha1
               kind: ComponentRegistry
               components:
                 - name: custom-operator
@@ -48,12 +48,12 @@ spec:
                     defaultVersion: v1.0.0
               EOF
 
-              echo 'apiVersion: eidos.nvidia.com/v1alpha1
+              echo 'apiVersion: aicr.nvidia.com/v1alpha1
               kind: ComponentRegistry
               components: []' > "${WORK}/with-overlay/registry.yaml"
 
               cat > "${WORK}/with-overlay/overlays/custom.yaml" << 'EOF'
-              apiVersion: eidos.nvidia.com/v1alpha1
+              apiVersion: aicr.nvidia.com/v1alpha1
               kind: RecipeMetadata
               metadata:
                 name: custom-overlay
@@ -70,7 +70,7 @@ spec:
               EOF
 
               # Generate a recipe for bundle test
-              ${EIDOS_BIN} recipe --service eks --accelerator h100 --intent training \
+              ${AICR_BIN} recipe --service eks --accelerator h100 --intent training \
                 -o "${WORK}/recipe.yaml"
 
     - name: non-existent-dir
@@ -78,8 +78,8 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
-              ${EIDOS_BIN} recipe --service eks --accelerator h100 --intent training \
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
+              ${AICR_BIN} recipe --service eks --accelerator h100 --intent training \
                 --data "/non/existent" -o /dev/null 2>&1
             check:
               ($error != null): true
@@ -89,9 +89,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-external-data"
-              ${EIDOS_BIN} recipe --service eks --accelerator h100 --intent training \
+              ${AICR_BIN} recipe --service eks --accelerator h100 --intent training \
                 --data "${WORK}/empty" -o /dev/null 2>&1
             check:
               ($error != null): true
@@ -101,9 +101,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-external-data"
-              ${EIDOS_BIN} recipe --service eks --accelerator h100 --intent training \
+              ${AICR_BIN} recipe --service eks --accelerator h100 --intent training \
                 --data "${WORK}/valid" -o "${WORK}/data-recipe.yaml"
               test -f "${WORK}/data-recipe.yaml"
             check:
@@ -114,9 +114,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-external-data"
-              ${EIDOS_BIN} recipe --service eks --accelerator h100 --intent training \
+              ${AICR_BIN} recipe --service eks --accelerator h100 --intent training \
                 --data "${WORK}/with-overlay" -o "${WORK}/overlay-recipe.yaml"
               test -f "${WORK}/overlay-recipe.yaml"
             check:
@@ -127,9 +127,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-external-data"
-              ${EIDOS_BIN} bundle -r "${WORK}/recipe.yaml" -o "${WORK}/bundle" \
+              ${AICR_BIN} bundle -r "${WORK}/recipe.yaml" -o "${WORK}/bundle" \
                 --data "${WORK}/valid"
               test -f "${WORK}/bundle/deploy.sh"
               ls "${WORK}"/bundle/*/values.yaml >/dev/null 2>&1

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package server implements the Eidos System Configuration Recommendation API
-// as defined in api/eidos/eidos-v1.yaml
+// Package server implements the AICR System Configuration Recommendation API
+// as defined in api/aicr/aicr-v1.yaml
 //
 // This implementation follows production-grade distributed systems best practices:
 //
@@ -35,7 +35,7 @@
 //	package main
 //
 //	import (
-//	    "github.com/NVIDIA/eidos/pkg/server"
+//	    "github.com/NVIDIA/aicr/pkg/server"
 //	)
 //
 //	func main() {
@@ -131,20 +131,20 @@
 //	apiVersion: apps/v1
 //	kind: Deployment
 //	metadata:
-//	  name: eidos-recommendation-api
+//	  name: aicr-recommendation-api
 //	spec:
 //	  replicas: 3
 //	  selector:
 //	    matchLabels:
-//	      app: eidos-recommendation-api
+//	      app: aicr-recommendation-api
 //	  template:
 //	    metadata:
 //	      labels:
-//	        app: eidos-recommendation-api
+//	        app: aicr-recommendation-api
 //	    spec:
 //	      containers:
 //	      - name: api
-//	        image: eidos-recommendation-api:latest
+//	        image: aicr-recommendation-api:latest
 //	        ports:
 //	        - containerPort: 8080
 //	        env:
@@ -182,7 +182,7 @@
 //
 // # References
 //
-//   - OpenAPI spec: api/eidos/eidos-v1.yaml
+//   - OpenAPI spec: api/aicr/aicr-v1.yaml
 //   - Rate limiting: https://pkg.go.dev/golang.org/x/time/rate
 //   - UUID generation: https://pkg.go.dev/github.com/google/uuid
 //   - Error groups: https://pkg.go.dev/golang.org/x/sync/errgroup

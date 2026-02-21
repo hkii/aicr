@@ -40,7 +40,7 @@ jobs:
       PROJECT_ID: 'eidosx'
       RUN_REGION: 'us-west1'
       RUN_SERVICE: 'api'
-      SOURCE_IMAGE: 'ghcr.io/nvidia/eidosd'
+      SOURCE_IMAGE: 'ghcr.io/nvidia/aicrd'
       TARGET_REGISTRY: 'us-docker.pkg.dev/eidosx/demo'
     steps:
       - name: Checkout Code
@@ -58,5 +58,5 @@ jobs:
           service: ${{ env.RUN_SERVICE }}
           source_image: "${{ env.SOURCE_IMAGE }}:${{ inputs.image_tag }}"
           target_registry: ${{ env.TARGET_REGISTRY }}
-          image_name: 'eidosd'
+          image_name: 'aicrd'
           ghcr_token: ${{ github.token }}

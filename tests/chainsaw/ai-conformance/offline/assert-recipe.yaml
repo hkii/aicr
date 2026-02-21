@@ -14,12 +14,12 @@
 
 # Assert the AI-conformance inference recipe has the expected structure.
 #
-# Validates that `eidos recipe --service eks --accelerator h100 --intent inference
+# Validates that `aicr recipe --service eks --accelerator h100 --intent inference
 # --os ubuntu --platform dynamo` produces a valid recipe with correct criteria,
 # inference-specific components (kgateway, DRA driver, KAI scheduler, Dynamo),
 # and standard GPU stack components.
 kind: RecipeResult
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 criteria:
   service: eks
   accelerator: h100

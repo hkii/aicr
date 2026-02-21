@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -150,11 +150,11 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 	slog.Debug("validating external directory")
 	info, err := os.Stat(config.ExternalDir)
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeNotFound,
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeNotFound,
 			fmt.Sprintf("external data directory not found: %s", config.ExternalDir), err)
 	}
 	if !info.IsDir() {
-		return nil, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+		return nil, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 			fmt.Sprintf("external data path is not a directory: %s", config.ExternalDir))
 	}
 
@@ -162,7 +162,7 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 	registryPath := filepath.Join(config.ExternalDir, registryFileName)
 	slog.Debug("checking for required registry file", "path", registryPath)
 	if _, statErr := os.Stat(registryPath); statErr != nil {
-		return nil, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+		return nil, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 			fmt.Sprintf("%s is required in external data directory: %s", registryFileName, config.ExternalDir))
 	}
 	slog.Debug("registry file found", "path", registryPath)
@@ -172,7 +172,7 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 	externalFiles := make(map[string]bool)
 	err = filepath.WalkDir(config.ExternalDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk external directory", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to walk external directory", err)
 		}
 		if d.IsDir() {
 			return nil
@@ -181,12 +181,12 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 		// Get relative path
 		relPath, relErr := filepath.Rel(config.ExternalDir, path)
 		if relErr != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to get relative path", relErr)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to get relative path", relErr)
 		}
 
 		// Check for path traversal
 		if strings.Contains(relPath, "..") {
-			return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+			return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 				fmt.Sprintf("path traversal detected: %s", relPath))
 		}
 
@@ -194,10 +194,10 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 		if !config.AllowSymlinks {
 			info, lstatErr := os.Lstat(path)
 			if lstatErr != nil {
-				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to stat file", lstatErr)
+				return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to stat file", lstatErr)
 			}
 			if info.Mode()&os.ModeSymlink != 0 {
-				return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+				return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 					fmt.Sprintf("symlinks not allowed: %s", relPath))
 			}
 		}
@@ -205,10 +205,10 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 		// Check file size
 		info, statErr := d.Info()
 		if statErr != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to get file info", statErr)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to get file info", statErr)
 		}
 		if info.Size() > config.MaxFileSize {
-			return eidoserrors.New(eidoserrors.ErrCodeInvalidRequest,
+			return aicrerrors.New(aicrerrors.ErrCodeInvalidRequest,
 				fmt.Sprintf("file too large (%d bytes, max %d): %s", info.Size(), config.MaxFileSize, relPath))
 		}
 
@@ -219,7 +219,7 @@ func NewLayeredDataProvider(embedded *EmbeddedDataProvider, config LayeredProvid
 		return nil
 	})
 	if err != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "external directory validation failed", err)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "external directory validation failed", err)
 	}
 
 	slog.Info("layered data provider initialized",
@@ -255,7 +255,7 @@ func (p *LayeredDataProvider) ReadFile(path string) ([]byte, error) {
 		externalPath := filepath.Join(p.externalDir, path)
 		data, err := os.ReadFile(externalPath)
 		if err != nil {
-			return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInternal, fmt.Sprintf("failed to read external file %s", path), err)
+			return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInternal, fmt.Sprintf("failed to read external file %s", path), err)
 		}
 		slog.Debug("read from external data directory", "path", path)
 		return data, nil
@@ -280,12 +280,12 @@ func (p *LayeredDataProvider) WalkDir(root string, fn fs.WalkDirFunc) error {
 		slog.Debug("walking external directory", "path", externalRoot)
 		err := filepath.WalkDir(externalRoot, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk external directory", err)
+				return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to walk external directory", err)
 			}
 
 			relPath, relErr := filepath.Rel(p.externalDir, path)
 			if relErr != nil {
-				return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to compute relative path", relErr)
+				return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to compute relative path", relErr)
 			}
 
 			// Strip root prefix if present
@@ -301,7 +301,7 @@ func (p *LayeredDataProvider) WalkDir(root string, fn fs.WalkDirFunc) error {
 			return fn(relPath, d, nil)
 		})
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk external directory tree", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to walk external directory tree", err)
 		}
 	}
 
@@ -310,7 +310,7 @@ func (p *LayeredDataProvider) WalkDir(root string, fn fs.WalkDirFunc) error {
 	// Walk embedded, skipping already-visited paths
 	return p.embedded.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to walk embedded directory", err)
+			return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to walk embedded directory", err)
 		}
 		if visited[path] {
 			slog.Debug("skipping embedded file (external takes precedence)", "path", path)
@@ -350,13 +350,13 @@ func (p *LayeredDataProvider) getMergedRegistry() ([]byte, error) {
 	// Load embedded registry
 	embeddedData, err := p.embedded.ReadFile(registryFileName)
 	if err != nil {
-		p.mergedRegistryErr = eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to read embedded registry", err)
+		p.mergedRegistryErr = aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to read embedded registry", err)
 		return nil, p.mergedRegistryErr
 	}
 
 	var embeddedReg ComponentRegistry
 	if unmarshalErr := yaml.Unmarshal(embeddedData, &embeddedReg); unmarshalErr != nil {
-		p.mergedRegistryErr = eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to parse embedded registry", unmarshalErr)
+		p.mergedRegistryErr = aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to parse embedded registry", unmarshalErr)
 		return nil, p.mergedRegistryErr
 	}
 
@@ -364,13 +364,13 @@ func (p *LayeredDataProvider) getMergedRegistry() ([]byte, error) {
 	externalPath := filepath.Join(p.externalDir, registryFileName)
 	externalData, err := os.ReadFile(externalPath)
 	if err != nil {
-		p.mergedRegistryErr = eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to read external registry", err)
+		p.mergedRegistryErr = aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to read external registry", err)
 		return nil, p.mergedRegistryErr
 	}
 
 	var externalReg ComponentRegistry
 	if unmarshalErr := yaml.Unmarshal(externalData, &externalReg); unmarshalErr != nil {
-		p.mergedRegistryErr = eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to parse external registry", unmarshalErr)
+		p.mergedRegistryErr = aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to parse external registry", unmarshalErr)
 		return nil, p.mergedRegistryErr
 	}
 
@@ -387,7 +387,7 @@ func (p *LayeredDataProvider) getMergedRegistry() ([]byte, error) {
 	// Serialize merged registry
 	p.mergedRegistry, p.mergedRegistryErr = yaml.Marshal(merged)
 	if p.mergedRegistryErr != nil {
-		return nil, eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to serialize merged registry", p.mergedRegistryErr)
+		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to serialize merged registry", p.mergedRegistryErr)
 	}
 
 	slog.Info("merged component registries",

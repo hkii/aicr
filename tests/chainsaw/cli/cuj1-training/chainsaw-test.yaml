@@ -20,14 +20,14 @@ metadata:
 spec:
   description: |
     CUJ1: Critical User Journey - Training Workload.
-    Tests the complete eidos workflow from demos/cuj1.md:
+    Tests the complete aicr workflow from demos/cuj1.md:
       Step 1: recipe (with --platform kubeflow)
       Step 2: validate (readiness phase)
       Step 3: bundle (with node scheduling)
       Step 4: deploy script validation
       Step 5: multi-phase validate
     No cluster needed. Run with:
-      EIDOS_BIN=$(pwd)/dist/e2e/eidos chainsaw test --no-cluster --test-dir tests/chainsaw/cli/cuj1-training
+      AICR_BIN=$(pwd)/dist/e2e/aicr chainsaw test --no-cluster --test-dir tests/chainsaw/cli/cuj1-training
   timeouts:
     exec: 30s
   steps:
@@ -38,10 +38,10 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-cuj1-training"
               rm -rf "${WORK}" && mkdir -p "${WORK}"
-              ${EIDOS_BIN} recipe \
+              ${AICR_BIN} recipe \
                 --service eks \
                 --accelerator h100 \
                 --intent training \
@@ -65,15 +65,15 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-cuj1-training"
-              ${EIDOS_BIN} validate \
+              ${AICR_BIN} validate \
                 --recipe "${WORK}/recipe.yaml" \
                 --snapshot ./mock-snapshot.yaml \
                 --phase readiness \
                 --no-cluster \
                 --output "${WORK}/validate-readiness-raw.yaml"
-              printf 'apiVersion: eidos.nvidia.com/v1alpha1\nkind: ValidationResult\n' > "${WORK}/validate-readiness.yaml"
+              printf 'apiVersion: aicr.nvidia.com/v1alpha1\nkind: ValidationResult\n' > "${WORK}/validate-readiness.yaml"
               sed '/^---$/d' "${WORK}/validate-readiness-raw.yaml" >> "${WORK}/validate-readiness.yaml"
 
     - name: assert-validate-readiness
@@ -92,9 +92,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-cuj1-training"
-              ${EIDOS_BIN} bundle \
+              ${AICR_BIN} bundle \
                 --recipe "${WORK}/recipe.yaml" \
                 --output "${WORK}/bundle" \
                 --system-node-selector nodeGroup=system-pool \
@@ -146,9 +146,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-cuj1-training"
-              ${EIDOS_BIN} validate \
+              ${AICR_BIN} validate \
                 --recipe "${WORK}/recipe.yaml" \
                 --snapshot ./mock-snapshot.yaml \
                 --phase readiness \
@@ -156,7 +156,7 @@ spec:
                 --phase conformance \
                 --no-cluster \
                 --output "${WORK}/validate-multiphase-raw.yaml"
-              printf 'apiVersion: eidos.nvidia.com/v1alpha1\nkind: ValidationResult\n' > "${WORK}/validate-multiphase.yaml"
+              printf 'apiVersion: aicr.nvidia.com/v1alpha1\nkind: ValidationResult\n' > "${WORK}/validate-multiphase.yaml"
               sed '/^---$/d' "${WORK}/validate-multiphase-raw.yaml" >> "${WORK}/validate-multiphase.yaml"
 
     - name: assert-validate-multiphase

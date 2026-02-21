@@ -1,8 +1,8 @@
 # Installation Guide
 
-This guide describes how to install Eidos (Eidos) CLI tool (`eidos`) on Linux, macOS, or Windows.
+This guide describes how to install the AI Cluster Runtime (AICR) CLI tool (`aicr`) on Linux, macOS, or Windows.
 
-**What is Eidos**: Eidos generates validated configurations for GPU-accelerated Kubernetes deployments. See [README](../../README.md) for project overview.
+**What is AICR**: AICR generates validated configurations for GPU-accelerated Kubernetes deployments. See [README](../../README.md) for project overview.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ This guide describes how to install Eidos (Eidos) CLI tool (`eidos`) on Linux, m
 - **GPU Hardware** (optional): NVIDIA GPUs for full system snapshot capabilities
 - **kubectl** (optional): For Kubernetes agent deployment
 
-## Install eidos CLI
+## Install aicr CLI
 
 ### Option 1: Automated Installation (Recommended)
 
@@ -21,7 +21,7 @@ Install the latest version using the installation script:
 
 ```shell
 curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
+  https://raw.githubusercontent.com/NVIDIA/aicr/main/install | bash -s --
 ```
 
 You can generate a personal access token at [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens). The token needs `repo` scope for private repository access.
@@ -29,36 +29,36 @@ You can generate a personal access token at [GitHub Settings > Developer setting
 This script:
 - Detects your OS and architecture automatically
 - Downloads the appropriate binary from GitHub releases
-- Installs to `/usr/local/bin/eidos` (requires sudo)
+- Installs to `/usr/local/bin/aicr` (requires sudo)
 - Verifies the installation
 - Uses `GITHUB_TOKEN` environment variable for authenticated API calls (avoids rate limits)
 
-> **Supply Chain Security**: Eidos includes SLSA Build Level 3 compliance with signed SBOMs and verifiable attestations. See [SECURITY](../SECURITY.md#supply-chain-security) for verification instructions.
+> **Supply Chain Security**: AICR includes SLSA Build Level 3 compliance with signed SBOMs and verifiable attestations. See [SECURITY](../SECURITY.md#supply-chain-security) for verification instructions.
 
 ### Option 2: Manual Installation
 
 1. **Download the latest release**
 
-Visit the [releases page](https://github.com/nvidia/eidos/releases/latest) and download the appropriate binary for your platform:
+Visit the [releases page](https://github.com/nvidia/aicr/releases/latest) and download the appropriate binary for your platform:
 
-- **macOS ARM64** (M1/M2/M3): `eidos_v0.22.0_darwin_arm64`
-- **macOS Intel**: `eidos_v0.22.0_darwin_amd64`
-- **Linux ARM64**: `eidos_v0.22.0_linux_arm64`
-- **Linux x86_64**: `eidos_v0.22.0_linux_amd64`
+- **macOS ARM64** (M1/M2/M3): `aicr_v0.22.0_darwin_arm64`
+- **macOS Intel**: `aicr_v0.22.0_darwin_amd64`
+- **Linux ARM64**: `aicr_v0.22.0_linux_arm64`
+- **Linux x86_64**: `aicr_v0.22.0_linux_amd64`
 
 1. **Extract and install**
 
 ```shell
 # Example for Linux x86_64
-tar -xzf eidos_linux_amd64.tar.gz
-sudo mv eidos /usr/local/bin/
-sudo chmod +x /usr/local/bin/eidos
+tar -xzf aicr_linux_amd64.tar.gz
+sudo mv aicr /usr/local/bin/
+sudo chmod +x /usr/local/bin/aicr
 ```
 
 3. **Verify installation**
 
 ```shell
-eidos --version
+aicr --version
 ```
 
 ### Option 3: Build from Source
@@ -67,22 +67,22 @@ eidos --version
 - Go 1.25 or higher
 
 ```shell
-go install github.com/NVIDIA/eidos/cmd/eidos@latest
+go install github.com/NVIDIA/aicr/cmd/aicr@latest
 ```
 
 ## Verify Installation
 
-Check that eidos is correctly installed:
+Check that aicr is correctly installed:
 
 ```shell
 # Check version
-eidos --version
+aicr --version
 
 # View available commands
-eidos --help
+aicr --help
 
 # Test snapshot (requires GPU)
-eidos snapshot --format json | jq '.measurements | length'
+aicr snapshot --format json | jq '.measurements | length'
 ```
 
 Expected output shows version information and available commands.
@@ -96,35 +96,35 @@ Enable shell auto-completion for command and flag names:
 **Bash:**
 ```shell
 # Add to ~/.bashrc
-source <(eidos completion bash)
+source <(aicr completion bash)
 ```
 
 **Zsh:**
 ```shell
 # Add to ~/.zshrc
-source <(eidos completion zsh)
+source <(aicr completion zsh)
 ```
 
 **Fish:**
 ```shell
 # Add to ~/.config/fish/config.fish
-eidos completion fish | source
+aicr completion fish | source
 ```
 
 ## Container Images
 
-Eidos is also available as container images for integration into automated pipelines:
+AICR is also available as container images for integration into automated pipelines:
 
 ### CLI Image
 ```shell
-docker pull ghcr.io/nvidia/eidos:latest
-docker run ghcr.io/nvidia/eidos:latest --version
+docker pull ghcr.io/nvidia/aicr:latest
+docker run ghcr.io/nvidia/aicr:latest --version
 ```
 
 ### API Server Image (Self-hosting)
 ```shell
-docker pull ghcr.io/nvidia/eidosd:latest
-docker run -p 8080:8080 ghcr.io/nvidia/eidosd:latest
+docker pull ghcr.io/nvidia/aicrd:latest
+docker run -p 8080:8080 ghcr.io/nvidia/aicrd:latest
 ```
 
 ## Next Steps
@@ -135,7 +135,7 @@ See [CLI Reference](cli-reference.md) for command usage
 
 ### Command Not Found
 
-If `eidos` is not found after installation:
+If `aicr` is not found after installation:
 
 ```shell
 # Check if binary is in PATH
@@ -150,7 +150,7 @@ source ~/.bashrc
 
 ```shell
 # Make binary executable
-sudo chmod +x /usr/local/bin/eidos
+sudo chmod +x /usr/local/bin/aicr
 ```
 
 ### GPU Detection Issues
@@ -168,7 +168,7 @@ nvidia-smi
 
 ```shell
 # Remove binary
-sudo rm /usr/local/bin/eidos
+sudo rm /usr/local/bin/aicr
 
 # Remove shell completion (if configured)
 # Remove the source line from your shell RC file
@@ -177,5 +177,5 @@ sudo rm /usr/local/bin/eidos
 ## Getting Help
 
 - **Documentation**: [User Documentation](README.md)
-- **Issues**: [GitHub Issues](https://github.com/NVIDIA/eidos/issues)
+- **Issues**: [GitHub Issues](https://github.com/NVIDIA/aicr/issues)
 - **API Server**: See [Kubernetes Deployment](../integrator/kubernetes-deployment.md)

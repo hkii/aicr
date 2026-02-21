@@ -18,8 +18,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // ConstraintEvalResult represents the result of evaluating a single constraint.
@@ -108,15 +108,15 @@ func (b *Builder) BuildFromCriteriaWithEvaluator(ctx context.Context, c *Criteri
 
 func (b *Builder) buildWithStore(ctx context.Context, c *Criteria, buildFn func(*MetadataStore, context.Context) (*RecipeResult, error)) (*RecipeResult, error) {
 	if c == nil {
-		return nil, eidoserrors.New(eidoserrors.ErrCodeInvalidRequest, "criteria cannot be nil")
+		return nil, aicrerrors.New(aicrerrors.ErrCodeInvalidRequest, "criteria cannot be nil")
 	}
 
 	buildCtx, cancel := context.WithTimeout(ctx, defaults.RecipeBuildTimeout)
 	defer cancel()
 
 	if err := buildCtx.Err(); err != nil {
-		return nil, eidoserrors.WrapWithContext(
-			eidoserrors.ErrCodeTimeout,
+		return nil, aicrerrors.WrapWithContext(
+			aicrerrors.ErrCodeTimeout,
 			"recipe build context cancelled during initialization",
 			err,
 			map[string]any{
@@ -132,8 +132,8 @@ func (b *Builder) buildWithStore(ctx context.Context, c *Criteria, buildFn func(
 
 	store, err := loadMetadataStore(buildCtx)
 	if err != nil {
-		return nil, eidoserrors.WrapWithContext(
-			eidoserrors.ErrCodeInternal,
+		return nil, aicrerrors.WrapWithContext(
+			aicrerrors.ErrCodeInternal,
 			"failed to load metadata store",
 			err,
 			map[string]any{

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Mock snapshot for CUJ1 testing.
-# Provides minimal K8s and OS measurements so eidos validate can run
+# Provides minimal K8s and OS measurements so aicr validate can run
 # without a real cluster or GPU hardware.
 measurements:
   - type: K8s

@@ -22,9 +22,9 @@ body:
     attributes:
       value: |
         **Before asking, please check:**
-        - [Documentation](https://github.com/NVIDIA/eidos/tree/main/docs)
-        - [Existing issues](https://github.com/NVIDIA/eidos/issues?q=is%3Aissue)
-        - [Discussions](https://github.com/NVIDIA/eidos/discussions)
+        - [Documentation](https://github.com/NVIDIA/aicr/tree/main/docs)
+        - [Existing issues](https://github.com/NVIDIA/aicr/issues?q=is%3Aissue)
+        - [Discussions](https://github.com/NVIDIA/aicr/discussions)
 
   - type: checkboxes
     id: prerequisites
@@ -50,8 +50,8 @@ body:
       label: Category
       options:
         - Installation / Deployment
-        - CLI usage (eidos)
-        - API usage (eidosd)
+        - CLI usage (aicr)
+        - API usage (aicrd)
         - Recipe configuration
         - Bundler output / Helm values
         - Troubleshooting errors
@@ -69,7 +69,7 @@ body:
       description: Relevant details about your setup. Redact any credentials or secrets.
       placeholder: |
         - What you're trying to accomplish:
-        - Eidos version (`eidos version`):
+        - AICR version (`aicr version`):
         - Platform (eks/gke/aks/self-managed):
         - Kubernetes version:
         - GPU type (if applicable):

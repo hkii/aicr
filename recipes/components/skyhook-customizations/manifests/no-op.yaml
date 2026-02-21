@@ -32,7 +32,7 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation
   labels:
     app.kubernetes.io/part-of: skyhook-operator
-    app.kubernetes.io/created-by: eidos
+    app.kubernetes.io/created-by: aicr
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
   name: no-op

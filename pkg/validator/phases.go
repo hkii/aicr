@@ -30,14 +30,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/header"
-	k8sclient "github.com/NVIDIA/eidos/pkg/k8s/client"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
-	"github.com/NVIDIA/eidos/pkg/validator/agent"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/header"
+	k8sclient "github.com/NVIDIA/aicr/pkg/k8s/client"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/validator/agent"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
 )
 
 // ValidationPhaseName represents the name of a validation phase.
@@ -111,8 +111,8 @@ func (v *Validator) ValidatePhase(
 		// Create RBAC resources for validation Jobs
 		sharedConfig := agent.Config{
 			Namespace:          v.Namespace,
-			JobName:            "eidos-validator", // Shared ServiceAccount name
-			ServiceAccountName: "eidos-validator",
+			JobName:            "aicr-validator", // Shared ServiceAccount name
+			ServiceAccountName: "aicr-validator",
 		}
 		deployer := agent.NewDeployer(clientset, sharedConfig)
 
@@ -322,16 +322,16 @@ func (v *Validator) validateReadiness(
 				}
 			} else {
 				// ConfigMap names (created once per validation run by validateAll)
-				snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-				recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+				snapshotCMName := fmt.Sprintf("aicr-snapshot-%s", v.RunID)
+				recipeCMName := fmt.Sprintf("aicr-recipe-%s", v.RunID)
 
 				// Deploy ONE Job for ALL readiness checks in this phase
 				jobConfig := agent.Config{
 					Namespace:          v.Namespace,
-					JobName:            fmt.Sprintf("eidos-%s-readiness", v.RunID),
+					JobName:            fmt.Sprintf("aicr-%s-readiness", v.RunID),
 					Image:              v.Image,
 					ImagePullSecrets:   v.ImagePullSecrets,
-					ServiceAccountName: "eidos-validator",
+					ServiceAccountName: "aicr-validator",
 					SnapshotConfigMap:  snapshotCMName,
 					RecipeConfigMap:    recipeCMName,
 					TestPackage:        "./pkg/validator/checks/readiness",
@@ -450,8 +450,8 @@ func (v *Validator) validateDeployment(
 					})
 				} else {
 					// ConfigMap names (created once per validation run by validateAll)
-					snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-					recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+					snapshotCMName := fmt.Sprintf("aicr-snapshot-%s", v.RunID)
+					recipeCMName := fmt.Sprintf("aicr-recipe-%s", v.RunID)
 
 					// Validate that all recipe constraints/checks are registered (logs warnings for missing)
 					v.validateRecipeRegistrations(recipeResult, "deployment")
@@ -462,10 +462,10 @@ func (v *Validator) validateDeployment(
 					// Deploy ONE Job for ALL deployment checks and constraints in this phase
 					jobConfig := agent.Config{
 						Namespace:          v.Namespace,
-						JobName:            fmt.Sprintf("eidos-%s-deployment", v.RunID),
+						JobName:            fmt.Sprintf("aicr-%s-deployment", v.RunID),
 						Image:              v.Image,
 						ImagePullSecrets:   v.ImagePullSecrets,
-						ServiceAccountName: "eidos-validator",
+						ServiceAccountName: "aicr-validator",
 						SnapshotConfigMap:  snapshotCMName,
 						RecipeConfigMap:    recipeCMName,
 						TestPackage:        "./pkg/validator/checks/deployment",
@@ -592,8 +592,8 @@ func (v *Validator) validatePerformance(
 					})
 				} else {
 					// ConfigMap names (created once per validation run by validateAll)
-					snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-					recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+					snapshotCMName := fmt.Sprintf("aicr-snapshot-%s", v.RunID)
+					recipeCMName := fmt.Sprintf("aicr-recipe-%s", v.RunID)
 
 					// Validate that all recipe constraints/checks are registered (logs warnings for missing)
 					v.validateRecipeRegistrations(recipeResult, "performance")
@@ -602,10 +602,10 @@ func (v *Validator) validatePerformance(
 					// Performance tests may need GPU nodes
 					jobConfig := agent.Config{
 						Namespace:          v.Namespace,
-						JobName:            fmt.Sprintf("eidos-%s-performance", v.RunID),
+						JobName:            fmt.Sprintf("aicr-%s-performance", v.RunID),
 						Image:              v.Image,
 						ImagePullSecrets:   v.ImagePullSecrets,
-						ServiceAccountName: "eidos-validator",
+						ServiceAccountName: "aicr-validator",
 						SnapshotConfigMap:  snapshotCMName,
 						RecipeConfigMap:    recipeCMName,
 						TestPackage:        "./pkg/validator/checks/performance",
@@ -736,8 +736,8 @@ func (v *Validator) validateConformance(
 					})
 				} else {
 					// ConfigMap names (created once per validation run by validateAll)
-					snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-					recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+					snapshotCMName := fmt.Sprintf("aicr-snapshot-%s", v.RunID)
+					recipeCMName := fmt.Sprintf("aicr-recipe-%s", v.RunID)
 
 					// Validate that all recipe constraints/checks are registered (logs warnings for missing)
 					v.validateRecipeRegistrations(recipeResult, "conformance")
@@ -745,10 +745,10 @@ func (v *Validator) validateConformance(
 					// Deploy ONE Job for ALL conformance checks and constraints in this phase
 					jobConfig := agent.Config{
 						Namespace:          v.Namespace,
-						JobName:            fmt.Sprintf("eidos-%s-conformance", v.RunID),
+						JobName:            fmt.Sprintf("aicr-%s-conformance", v.RunID),
 						Image:              v.Image,
 						ImagePullSecrets:   v.ImagePullSecrets,
-						ServiceAccountName: "eidos-validator",
+						ServiceAccountName: "aicr-validator",
 						SnapshotConfigMap:  snapshotCMName,
 						RecipeConfigMap:    recipeCMName,
 						TestPackage:        "./pkg/validator/checks/conformance",
@@ -1265,7 +1265,7 @@ func (v *Validator) validateAll(
 		// RBAC is created once and reused across all phases for efficiency
 		sharedConfig := agent.Config{
 			Namespace:          v.Namespace,
-			ServiceAccountName: "eidos-validator",
+			ServiceAccountName: "aicr-validator",
 			Image:              v.Image,
 			ImagePullSecrets:   v.ImagePullSecrets,
 		}
@@ -1436,8 +1436,8 @@ func (v *Validator) ensureDataConfigMaps(
 ) error {
 
 	// Use RunID to create unique ConfigMap names per validation run
-	snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-	recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+	snapshotCMName := fmt.Sprintf("aicr-snapshot-%s", v.RunID)
+	recipeCMName := fmt.Sprintf("aicr-recipe-%s", v.RunID)
 
 	// Serialize snapshot to YAML
 	snapshotYAML, err := yaml.Marshal(snap)
@@ -1465,11 +1465,11 @@ func (v *Validator) ensureDataConfigMaps(
 			Name:      snapshotCMName,
 			Namespace: v.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":      "eidos",
+				"app.kubernetes.io/name":      "aicr",
 				"app.kubernetes.io/component": "validation",
-				"eidos.nvidia.com/data-type":  "snapshot",
-				"eidos.nvidia.com/run-id":     v.RunID,
-				"eidos.nvidia.com/created-at": time.Now().Format("20060102-150405"),
+				"aicr.nvidia.com/data-type":   "snapshot",
+				"aicr.nvidia.com/run-id":      v.RunID,
+				"aicr.nvidia.com/created-at":  time.Now().Format("20060102-150405"),
 			},
 		},
 		Data: map[string]string{
@@ -1495,11 +1495,11 @@ func (v *Validator) ensureDataConfigMaps(
 			Name:      recipeCMName,
 			Namespace: v.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":      "eidos",
+				"app.kubernetes.io/name":      "aicr",
 				"app.kubernetes.io/component": "validation",
-				"eidos.nvidia.com/data-type":  "recipe",
-				"eidos.nvidia.com/run-id":     v.RunID,
-				"eidos.nvidia.com/created-at": time.Now().Format("20060102-150405"),
+				"aicr.nvidia.com/data-type":   "recipe",
+				"aicr.nvidia.com/run-id":      v.RunID,
+				"aicr.nvidia.com/created-at":  time.Now().Format("20060102-150405"),
 			},
 		},
 		Data: map[string]string{
@@ -1571,7 +1571,7 @@ func determineStartPhase(existingResult *ValidationResult) ValidationPhaseName {
 
 // createValidationResultConfigMap creates an empty ValidationResult ConfigMap for this validation run.
 func (v *Validator) createValidationResultConfigMap(ctx context.Context, clientset kubernetes.Interface) error {
-	resultCMName := fmt.Sprintf("eidos-validation-result-%s", v.RunID)
+	resultCMName := fmt.Sprintf("aicr-validation-result-%s", v.RunID)
 
 	// Initialize empty ValidationResult structure
 	result := NewValidationResult()
@@ -1590,11 +1590,11 @@ func (v *Validator) createValidationResultConfigMap(ctx context.Context, clients
 			Name:      resultCMName,
 			Namespace: v.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":      "eidos",
+				"app.kubernetes.io/name":      "aicr",
 				"app.kubernetes.io/component": "validation",
-				"eidos.nvidia.com/data-type":  "validation-result",
-				"eidos.nvidia.com/run-id":     v.RunID,
-				"eidos.nvidia.com/created-at": time.Now().Format("20060102-150405"),
+				"aicr.nvidia.com/data-type":   "validation-result",
+				"aicr.nvidia.com/run-id":      v.RunID,
+				"aicr.nvidia.com/created-at":  time.Now().Format("20060102-150405"),
 			},
 		},
 		Data: map[string]string{
@@ -1616,7 +1616,7 @@ func (v *Validator) createValidationResultConfigMap(ctx context.Context, clients
 
 // updateValidationResultConfigMap updates the ValidationResult ConfigMap with results from a completed phase.
 func (v *Validator) updateValidationResultConfigMap(ctx context.Context, clientset kubernetes.Interface, result *ValidationResult) error {
-	resultCMName := fmt.Sprintf("eidos-validation-result-%s", v.RunID)
+	resultCMName := fmt.Sprintf("aicr-validation-result-%s", v.RunID)
 
 	// Serialize updated result to YAML
 	resultYAML, err := yaml.Marshal(result)
@@ -1648,7 +1648,7 @@ func (v *Validator) updateValidationResultConfigMap(ctx context.Context, clients
 
 // readValidationResultConfigMap reads the existing ValidationResult ConfigMap for resume.
 func (v *Validator) readValidationResultConfigMap(ctx context.Context, clientset kubernetes.Interface) (*ValidationResult, error) {
-	resultCMName := fmt.Sprintf("eidos-validation-result-%s", v.RunID)
+	resultCMName := fmt.Sprintf("aicr-validation-result-%s", v.RunID)
 
 	// Get ConfigMap
 	cm, err := clientset.CoreV1().ConfigMaps(v.Namespace).Get(ctx, resultCMName, metav1.GetOptions{})
@@ -1679,7 +1679,7 @@ func (v *Validator) readValidationResultConfigMap(ctx context.Context, clientset
 
 // cleanupValidationResultConfigMap removes the ValidationResult ConfigMap for this validation run.
 func (v *Validator) cleanupValidationResultConfigMap(ctx context.Context, clientset kubernetes.Interface) {
-	resultCMName := fmt.Sprintf("eidos-validation-result-%s", v.RunID)
+	resultCMName := fmt.Sprintf("aicr-validation-result-%s", v.RunID)
 
 	err := clientset.CoreV1().ConfigMaps(v.Namespace).Delete(ctx, resultCMName, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -1692,8 +1692,8 @@ func (v *Validator) cleanupValidationResultConfigMap(ctx context.Context, client
 // cleanupDataConfigMaps removes the snapshot and recipe ConfigMaps for this validation run.
 func (v *Validator) cleanupDataConfigMaps(ctx context.Context, clientset kubernetes.Interface) {
 	// Use RunID to identify ConfigMaps for this validation run
-	snapshotCMName := fmt.Sprintf("eidos-snapshot-%s", v.RunID)
-	recipeCMName := fmt.Sprintf("eidos-recipe-%s", v.RunID)
+	snapshotCMName := fmt.Sprintf("aicr-snapshot-%s", v.RunID)
+	recipeCMName := fmt.Sprintf("aicr-recipe-%s", v.RunID)
 
 	// Delete snapshot ConfigMap
 	err := clientset.CoreV1().ConfigMaps(v.Namespace).Delete(ctx, snapshotCMName, metav1.DeleteOptions{})

@@ -17,7 +17,7 @@ package result
 import (
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/types"
+	"github.com/NVIDIA/aicr/pkg/bundler/types"
 )
 
 // DeploymentInfo contains structured deployment instructions.

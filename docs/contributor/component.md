@@ -1,6 +1,6 @@
 # Bundler Development Guide
 
-Learn how to add new components to Eidos.
+Learn how to add new components to AICR.
 
 ## Overview
 
@@ -180,12 +180,12 @@ The component registry (`recipes/registry.yaml`) supports these fields:
 - Create overlay values (`values-<context>.yaml`) for specific scenarios
 - Document non-obvious settings with comments
 - Use consistent formatting (2-space indent for YAML)
-- **Override release name prefix**: Use `fullnameOverride` to avoid the `eidos-stack-` prefix in resource names. This makes resource names cleaner and more predictable. For example, in `kube-prometheus-stack/values.yaml`:
+- **Override release name prefix**: Use `fullnameOverride` to avoid the `aicr-stack-` prefix in resource names. This makes resource names cleaner and more predictable. For example, in `kube-prometheus-stack/values.yaml`:
   ```yaml
-  # Override release name prefix to avoid eidos-stack- prefix in resource names
+  # Override release name prefix to avoid aicr-stack- prefix in resource names
   fullnameOverride: kube-prometheus
   ```
-  Without this override, resources would be named `eidos-stack-kube-prometheus-*` instead of `kube-prometheus-*`.
+  Without this override, resources would be named `aicr-stack-kube-prometheus-*` instead of `kube-prometheus-*`.
 
 ### Custom Manifests
 
@@ -197,8 +197,8 @@ The component registry (`recipes/registry.yaml`) supports these fields:
 ### Testing
 
 - Run `make test` to validate all recipe data
-- Test recipe generation: `eidos recipe --service eks --accelerator gb200`
-- Test bundle generation: `eidos bundle -r recipe.yaml -o ./test-bundle`
+- Test recipe generation: `aicr recipe --service eks --accelerator gb200`
+- Test bundle generation: `aicr bundle -r recipe.yaml -o ./test-bundle`
 - Verify generated `values.yaml` contains expected settings
 
 #### Testing in a Local Kind Cluster
@@ -213,12 +213,12 @@ make dev-env
 
 This creates a kind cluster with two nodes and starts Tilt.
 
-**Step 1: Build the eidos binary**
+**Step 1: Build the aicr binary**
 
 Build the CLI with embedded recipe data and install it:
 
 ```bash
-make build && cp dist/eidos_darwin_all/eidos /usr/local/bin/
+make build && cp dist/aicr_darwin_all/aicr /usr/local/bin/
 ```
 
 This compiles the Go code and embeds all files from `recipes/` into the binary. The binary is copied to `/usr/local/bin/` for global access.
@@ -228,7 +228,7 @@ This compiles the Go code and embeds all files from `recipes/` into the binary. 
 Generate a recipe optimized for Kind clusters:
 
 ```bash
-eidos recipe --service kind -o recipe.yaml
+aicr recipe --service kind -o recipe.yaml
 ```
 
 This creates a `recipe.yaml` file with:
@@ -242,7 +242,7 @@ This creates a `recipe.yaml` file with:
 Convert the recipe into a Helm per-component bundle:
 
 ```bash
-eidos bundle --recipe recipe.yaml --output bundle
+aicr bundle --recipe recipe.yaml --output bundle
 ```
 
 This generates a `bundle/` directory containing:
@@ -267,12 +267,12 @@ chmod +x deploy.sh && ./deploy.sh
 Check that all pods are running:
 
 ```bash
-kubectl get pods -n eidos-stack
+kubectl get pods -n aicr-stack
 ```
 
 All pods should show `Running` or `Completed` status. Common issues:
-- **Pending pods**: Check for resource constraints with `kubectl describe pod <name> -n eidos-stack`
-- **CrashLoopBackOff**: Check logs with `kubectl logs <pod-name> -n eidos-stack`
+- **Pending pods**: Check for resource constraints with `kubectl describe pod <name> -n aicr-stack`
+- **CrashLoopBackOff**: Check logs with `kubectl logs <pod-name> -n aicr-stack`
 - **ImagePullBackOff**: Verify network connectivity and image registry access
 
 **Cleanup:**
@@ -280,18 +280,18 @@ All pods should show `Running` or `Completed` status. Common issues:
 To remove the deployment:
 
 ```bash
-helm uninstall eidos-stack -n eidos-stack
-kubectl delete namespace eidos-stack
+helm uninstall aicr-stack -n aicr-stack
+kubectl delete namespace aicr-stack
 ```
 
 Note: Some cluster-scoped resources (CRDs, ClusterRoles, Webhooks) may need manual cleanup:
 
 ```bash
 # Delete leftover webhooks
-kubectl delete mutatingwebhookconfiguration,validatingwebhookconfiguration -l app.kubernetes.io/instance=eidos-stack
+kubectl delete mutatingwebhookconfiguration,validatingwebhookconfiguration -l app.kubernetes.io/instance=aicr-stack
 
 # Delete leftover cluster roles
-kubectl delete clusterrole,clusterrolebinding -l app.kubernetes.io/instance=eidos-stack
+kubectl delete clusterrole,clusterrolebinding -l app.kubernetes.io/instance=aicr-stack
 ```
 
 ### Documentation
@@ -345,7 +345,7 @@ The bundle command supports `--system-node-selector`, `--system-node-toleration`
 
 **Example CLI usage:**
 ```bash
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --system-node-selector nodeGroup=system-pool \
   --accelerated-node-selector nvidia.com/gpu.present=true \
   -o ./bundles
@@ -357,10 +357,10 @@ Override component values at bundle generation time:
 
 ```bash
 # Override GPU Operator driver version
-eidos bundle -r recipe.yaml --set gpuoperator:driver.version=580.82.07 -o ./bundles
+aicr bundle -r recipe.yaml --set gpuoperator:driver.version=580.82.07 -o ./bundles
 
 # Multiple overrides
-eidos bundle -r recipe.yaml \
+aicr bundle -r recipe.yaml \
   --set gpuoperator:driver.version=580.82.07 \
   --set gpuoperator:gds.enabled=true \
   -o ./bundles
@@ -439,10 +439,10 @@ The deployer is specified at bundle generation time:
 
 ```bash
 # Default: Helm per-component bundle
-eidos bundle -r recipe.yaml -o ./bundles
+aicr bundle -r recipe.yaml -o ./bundles
 
 # Generate bundles with ArgoCD deployer (use --repo to set Git repository URL)
-eidos bundle -r recipe.yaml -o ./bundles --deployer argocd \
+aicr bundle -r recipe.yaml -o ./bundles --deployer argocd \
   --repo https://github.com/my-org/my-gitops-repo.git
 ```
 

@@ -31,7 +31,7 @@ const (
 )
 
 // LogPrefixEnvVar is the environment variable name for customizing the log prefix.
-const LogPrefixEnvVar = "Eidos_LOG_PREFIX"
+const LogPrefixEnvVar = "AICR_LOG_PREFIX"
 
 // getLogPrefix returns the log prefix from env var or default "cli".
 func getLogPrefix() string {

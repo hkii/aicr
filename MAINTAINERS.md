@@ -1,10 +1,10 @@
 # Maintainers
 
-This document lists the maintainers of the NVIDIA Eidos project.
+This document lists the maintainers of the NVIDIA AICR project.
 
 ## Current Maintainers
 
-See https://github.com/orgs/NVIDIA/teams/eidos-maintainers
+See https://github.com/orgs/NVIDIA/teams/aicr-maintainers
 
 ## Maintainer Responsibilities
 

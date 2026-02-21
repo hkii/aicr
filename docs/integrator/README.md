@@ -1,14 +1,14 @@
 # Integrator Documentation
 
-Documentation for engineers integrating Eidos into CI/CD pipelines, GitOps workflows, or larger platforms.
+Documentation for engineers integrating AI Cluster Runtime (AICR) into CI/CD pipelines, GitOps workflows, or larger platforms.
 
 ## Audience
 
 This section is for integrators who:
-- Build automation pipelines using the Eidos API
-- Deploy and operate the Eidos API server in Kubernetes
+- Build automation pipelines using the AICR API
+- Deploy and operate the AICR API server in Kubernetes
 - Create custom recipes for their environments
-- Integrate Eidos into GitOps workflows (ArgoCD, Flux)
+- Integrate AICR into GitOps workflows (ArgoCD, Flux)
 
 ## Documents
 
@@ -25,10 +25,10 @@ This section is for integrators who:
 
 ```shell
 # Deploy API server to Kubernetes
-kubectl apply -k https://github.com/NVIDIA/eidos/deployments/eidosd
+kubectl apply -k https://github.com/NVIDIA/aicr/deployments/aicrd
 
 # Generate recipe via API
-curl "http://eidosd.eidos.svc/v1/recipe?service=eks&accelerator=h100"
+curl "http://aicrd.aicr.svc/v1/recipe?service=eks&accelerator=h100"
 ```
 
 ### CI/CD Integration
@@ -37,12 +37,12 @@ curl "http://eidosd.eidos.svc/v1/recipe?service=eks&accelerator=h100"
 # GitHub Actions example
 - name: Generate recipe
   run: |
-    curl -s "http://eidosd.eidos.svc/v1/recipe?service=eks&accelerator=h100" \
+    curl -s "http://aicrd.aicr.svc/v1/recipe?service=eks&accelerator=h100" \
       -o recipe.json
 
 - name: Generate bundles
   run: |
-    curl -X POST "http://eidosd.eidos.svc/v1/bundle?bundlers=gpu-operator" \
+    curl -X POST "http://aicrd.aicr.svc/v1/bundle?bundlers=gpu-operator" \
       -H "Content-Type: application/json" \
       -d @recipe.json \
       -o bundles.zip

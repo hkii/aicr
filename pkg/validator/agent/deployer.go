@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 // Deploy deploys the validation agent with all required resources (RBAC + Job).
@@ -33,12 +33,12 @@ func (d *Deployer) Deploy(ctx context.Context) error {
 
 	// Create RBAC
 	if err := d.EnsureRBAC(ctx); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "deploy failed during RBAC setup", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "deploy failed during RBAC setup", err)
 	}
 
 	// Deploy Job
 	if err := d.DeployJob(ctx); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "deploy failed during Job creation", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "deploy failed during Job creation", err)
 	}
 
 	slog.Info("validation agent deployed successfully",
@@ -58,28 +58,28 @@ func (d *Deployer) EnsureRBAC(ctx context.Context) error {
 
 	if err := d.ensureServiceAccount(ctx); err != nil {
 		slog.Error("Failed to create ServiceAccount", "error", err)
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create ServiceAccount", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create ServiceAccount", err)
 	}
 
 	if err := d.ensureRole(ctx); err != nil {
 		slog.Error("Failed to create Role", "error", err)
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create Role", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create Role", err)
 	}
 
 	if err := d.ensureRoleBinding(ctx); err != nil {
 		slog.Error("Failed to create RoleBinding", "error", err)
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create RoleBinding", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create RoleBinding", err)
 	}
 
 	// Create ClusterRole for cluster-wide read access (needed for deployment phase)
 	if err := d.ensureClusterRole(ctx); err != nil {
 		slog.Error("Failed to create ClusterRole", "error", err)
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create ClusterRole", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create ClusterRole", err)
 	}
 
 	if err := d.ensureClusterRoleBinding(ctx); err != nil {
 		slog.Error("Failed to create ClusterRoleBinding", "error", err)
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create ClusterRoleBinding", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create ClusterRoleBinding", err)
 	}
 
 	slog.Debug("RBAC resources created",
@@ -98,12 +98,12 @@ func (d *Deployer) DeployJob(ctx context.Context) error {
 
 	// Ensure ConfigMaps for snapshot and recipe inputs
 	if err := d.ensureInputConfigMaps(ctx); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to verify input ConfigMaps", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to verify input ConfigMaps", err)
 	}
 
 	// Ensure Job (delete existing + recreate)
 	if err := d.ensureJob(ctx); err != nil {
-		return eidoserrors.Wrap(eidoserrors.ErrCodeInternal, "failed to create Job", err)
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to create Job", err)
 	}
 
 	slog.Debug("validation Job deployed",
@@ -156,7 +156,7 @@ func (d *Deployer) Cleanup(ctx context.Context, opts CleanupOptions) error {
 	}
 
 	if len(errs) > 0 {
-		return eidoserrors.New(eidoserrors.ErrCodeInternal,
+		return aicrerrors.New(aicrerrors.ErrCodeInternal,
 			fmt.Sprintf("cleanup failed with %d error(s)", len(errs)))
 	}
 
@@ -189,7 +189,7 @@ func (d *Deployer) CleanupJob(ctx context.Context) error {
 
 	// Return combined error if any deletions failed
 	if len(errs) > 0 {
-		return eidoserrors.New(eidoserrors.ErrCodeInternal,
+		return aicrerrors.New(aicrerrors.ErrCodeInternal,
 			fmt.Sprintf("failed to delete %d resource(s):\n  - %s",
 				len(errs), strings.Join(errs, "\n  - ")))
 	}
@@ -249,7 +249,7 @@ func (d *Deployer) CleanupRBAC(ctx context.Context) error {
 
 	// Return combined error if any deletions failed
 	if len(errs) > 0 {
-		return eidoserrors.New(eidoserrors.ErrCodeInternal,
+		return aicrerrors.New(aicrerrors.ErrCodeInternal,
 			fmt.Sprintf("failed to delete %d resource(s):\n  - %s",
 				len(errs), strings.Join(errs, "\n  - ")))
 	}

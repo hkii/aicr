@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/collector/systemd"
+	"github.com/NVIDIA/aicr/pkg/collector/systemd"
 )
 
 func TestDefaultCollectorFactory_CreateSystemDCollector(t *testing.T) {

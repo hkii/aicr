@@ -19,13 +19,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/k8s"
+	"github.com/NVIDIA/aicr/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-const testName = "eidos-validator"
+const testName = "aicr-validator"
 
 // createDeployer is a helper function to create a test Deployer.
 func createDeployer() (*Deployer, *fake.Clientset) {
@@ -41,7 +41,7 @@ func createConfig() Config {
 		Namespace:          "test-namespace",
 		ServiceAccountName: testName,
 		JobName:            testName,
-		Image:              "ghcr.io/nvidia/eidos-validator:latest",
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
 		SnapshotConfigMap:  "test-snapshot",
 		RecipeConfigMap:    "test-recipe",
 		TestPackage:        "./pkg/validator/checks/readiness",
@@ -161,7 +161,7 @@ func TestDeployer_DeployJob(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"snapshot.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Snapshot",
+			"snapshot.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Snapshot",
 		},
 	}
 	recipeCM := &corev1.ConfigMap{
@@ -170,7 +170,7 @@ func TestDeployer_DeployJob(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"recipe.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Recipe",
+			"recipe.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Recipe",
 		},
 	}
 
@@ -260,7 +260,7 @@ func TestDeployer_DeployJob_MissingSnapshotConfigMap(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"recipe.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Recipe",
+			"recipe.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Recipe",
 		},
 	}
 
@@ -286,7 +286,7 @@ func TestDeployer_DeployJob_MissingRecipeConfigMap(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"snapshot.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Snapshot",
+			"snapshot.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Snapshot",
 		},
 	}
 
@@ -312,7 +312,7 @@ func TestDeployer_Deploy(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"snapshot.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Snapshot",
+			"snapshot.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Snapshot",
 		},
 	}
 	recipeCM := &corev1.ConfigMap{
@@ -321,7 +321,7 @@ func TestDeployer_Deploy(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"recipe.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Recipe",
+			"recipe.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Recipe",
 		},
 	}
 
@@ -423,7 +423,7 @@ func TestDeployer_CleanupJob(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"snapshot.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Snapshot",
+			"snapshot.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Snapshot",
 		},
 	}
 	recipeCM := &corev1.ConfigMap{
@@ -432,7 +432,7 @@ func TestDeployer_CleanupJob(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"recipe.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Recipe",
+			"recipe.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Recipe",
 		},
 	}
 	if _, err := clientset.CoreV1().ConfigMaps(deployer.config.Namespace).Create(ctx, snapshotCM, metav1.CreateOptions{}); err != nil {
@@ -473,7 +473,7 @@ func TestDeployer_Cleanup(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"snapshot.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Snapshot",
+			"snapshot.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Snapshot",
 		},
 	}
 	recipeCM := &corev1.ConfigMap{
@@ -482,7 +482,7 @@ func TestDeployer_Cleanup(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"recipe.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Recipe",
+			"recipe.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Recipe",
 		},
 	}
 
@@ -566,7 +566,7 @@ func TestDeployer_Cleanup_AttemptsAllDeletions(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"snapshot.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Snapshot",
+			"snapshot.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Snapshot",
 		},
 	}
 	recipeCM := &corev1.ConfigMap{
@@ -575,7 +575,7 @@ func TestDeployer_Cleanup_AttemptsAllDeletions(t *testing.T) {
 			Namespace: deployer.config.Namespace,
 		},
 		Data: map[string]string{
-			"recipe.yaml": "apiVersion: eidos.nvidia.com/v1alpha1\nkind: Recipe",
+			"recipe.yaml": "apiVersion: aicr.nvidia.com/v1alpha1\nkind: Recipe",
 		},
 	}
 

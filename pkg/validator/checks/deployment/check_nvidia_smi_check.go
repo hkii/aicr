@@ -19,11 +19,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	eidosErrors "github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/validator/checks"
-	"github.com/NVIDIA/eidos/pkg/validator/helper"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	aicrErrors "github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/validator/checks"
+	"github.com/NVIDIA/aicr/pkg/validator/helper"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -50,7 +50,7 @@ func validateCheckNvidiaSmi(ctx *checks.ValidationContext, t *testing.T) error {
 	// Find schedulable GPU nodes
 	gpuNodes, err := helper.FindSchedulableGpuNodes(ctx)
 	if err != nil {
-		return eidosErrors.Wrap(eidosErrors.ErrCodeInternal, "failed to query for GPU nodes", err)
+		return aicrErrors.Wrap(aicrErrors.ErrCodeInternal, "failed to query for GPU nodes", err)
 	}
 
 	if len(gpuNodes) == 0 {
@@ -128,7 +128,7 @@ func verifySingleNode(ctx *checks.ValidationContext, t *testing.T, nodeName stri
 	// Create verification pod
 	pod, err := podHelper.CreatePodFromTemplate(ctx.Context, podTemplateFile, templateData)
 	if err != nil {
-		return eidosErrors.Wrap(eidosErrors.ErrCodeInternal, "failed to create pod", err)
+		return aicrErrors.Wrap(aicrErrors.ErrCodeInternal, "failed to create pod", err)
 	}
 
 	// Ensure cleanup happens regardless of success/failure
@@ -151,7 +151,7 @@ func verifySingleNode(ctx *checks.ValidationContext, t *testing.T, nodeName stri
 	// Check if pod failed
 	if waitErr != nil {
 		logSnippet := getLogSnippet(podLogs, logContextLines)
-		return eidosErrors.Wrap(eidosErrors.ErrCodeInternal, fmt.Sprintf("pod failed on node %s\nFirst %d lines of logs:\n%s",
+		return aicrErrors.Wrap(aicrErrors.ErrCodeInternal, fmt.Sprintf("pod failed on node %s\nFirst %d lines of logs:\n%s",
 			nodeName, logContextLines, logSnippet), waitErr)
 	}
 
@@ -188,7 +188,7 @@ func verifyLogContent(t *testing.T, podLogs string, pod *v1.Pod) error {
 		// Log the failure for test output but don't use assert (which doesn't return bool reliably)
 		t.Errorf("Log verification failed for pod %s/%s: missing required strings: %v",
 			pod.Namespace, pod.Name, missing)
-		return eidosErrors.New(eidosErrors.ErrCodeInternal, fmt.Sprintf("log verification failed: missing %v", missing))
+		return aicrErrors.New(aicrErrors.ErrCodeInternal, fmt.Sprintf("log verification failed: missing %v", missing))
 	}
 
 	return nil
@@ -211,12 +211,12 @@ func reportResults(t *testing.T, results map[string]error, totalNodes int) error
 
 	if len(failedNodes) > 0 {
 		t.Logf("Failed verification on nodes: %v", failedNodes)
-		return eidosErrors.New(eidosErrors.ErrCodeInternal, fmt.Sprintf("GPU verification failed on %d/%d nodes: %v",
+		return aicrErrors.New(aicrErrors.ErrCodeInternal, fmt.Sprintf("GPU verification failed on %d/%d nodes: %v",
 			len(failedNodes), totalNodes, failedNodes))
 	}
 
 	if len(successfulNodes) != totalNodes {
-		return eidosErrors.New(eidosErrors.ErrCodeInternal, fmt.Sprintf("verification count mismatch: expected %d nodes, verified %d",
+		return aicrErrors.New(aicrErrors.ErrCodeInternal, fmt.Sprintf("verification count mismatch: expected %d nodes, verified %d",
 			totalNodes, len(successfulNodes)))
 	}
 

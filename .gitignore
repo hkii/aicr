@@ -25,8 +25,8 @@ coverage.txt
 
 # Binaries
 bin/
-/eidos
-/eidosd
+/aicr
+/aicrd
 
 # =============================================================================
 # Build & Release
@@ -130,4 +130,4 @@ pkg/validator/checks/**/*_recipe.yaml
 
 # KWOK
 kwok/logs/
-eidos-e2e.xml
+aicr-e2e.xml

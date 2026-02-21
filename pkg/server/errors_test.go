@@ -22,24 +22,24 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	eidoserrors "github.com/NVIDIA/eidos/pkg/errors"
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 )
 
 func TestHTTPStatusFromCode(t *testing.T) {
 	tests := []struct {
 		name string
-		code eidoserrors.ErrorCode
+		code aicrerrors.ErrorCode
 		want int
 	}{
-		{"invalid request", eidoserrors.ErrCodeInvalidRequest, http.StatusBadRequest},
-		{"unauthorized", eidoserrors.ErrCodeUnauthorized, http.StatusUnauthorized},
-		{"not found", eidoserrors.ErrCodeNotFound, http.StatusNotFound},
-		{"method not allowed", eidoserrors.ErrCodeMethodNotAllowed, http.StatusMethodNotAllowed},
-		{"rate limit", eidoserrors.ErrCodeRateLimitExceeded, http.StatusTooManyRequests},
-		{"unavailable", eidoserrors.ErrCodeUnavailable, http.StatusServiceUnavailable},
-		{"timeout", eidoserrors.ErrCodeTimeout, http.StatusGatewayTimeout},
-		{"internal", eidoserrors.ErrCodeInternal, http.StatusInternalServerError},
-		{"unknown defaults to internal", eidoserrors.ErrorCode("SOMETHING_ELSE"), http.StatusInternalServerError},
+		{"invalid request", aicrerrors.ErrCodeInvalidRequest, http.StatusBadRequest},
+		{"unauthorized", aicrerrors.ErrCodeUnauthorized, http.StatusUnauthorized},
+		{"not found", aicrerrors.ErrCodeNotFound, http.StatusNotFound},
+		{"method not allowed", aicrerrors.ErrCodeMethodNotAllowed, http.StatusMethodNotAllowed},
+		{"rate limit", aicrerrors.ErrCodeRateLimitExceeded, http.StatusTooManyRequests},
+		{"unavailable", aicrerrors.ErrCodeUnavailable, http.StatusServiceUnavailable},
+		{"timeout", aicrerrors.ErrCodeTimeout, http.StatusGatewayTimeout},
+		{"internal", aicrerrors.ErrCodeInternal, http.StatusInternalServerError},
+		{"unknown defaults to internal", aicrerrors.ErrorCode("SOMETHING_ELSE"), http.StatusInternalServerError},
 	}
 
 	for _, tt := range tests {
@@ -54,18 +54,18 @@ func TestHTTPStatusFromCode(t *testing.T) {
 func TestRetryableFromCode(t *testing.T) {
 	tests := []struct {
 		name string
-		code eidoserrors.ErrorCode
+		code aicrerrors.ErrorCode
 		want bool
 	}{
-		{"invalid request", eidoserrors.ErrCodeInvalidRequest, false},
-		{"unauthorized", eidoserrors.ErrCodeUnauthorized, false},
-		{"not found", eidoserrors.ErrCodeNotFound, false},
-		{"method not allowed", eidoserrors.ErrCodeMethodNotAllowed, false},
-		{"timeout", eidoserrors.ErrCodeTimeout, true},
-		{"unavailable", eidoserrors.ErrCodeUnavailable, true},
-		{"rate limit", eidoserrors.ErrCodeRateLimitExceeded, true},
-		{"internal", eidoserrors.ErrCodeInternal, true},
-		{"unknown defaults false", eidoserrors.ErrorCode("SOMETHING_ELSE"), false},
+		{"invalid request", aicrerrors.ErrCodeInvalidRequest, false},
+		{"unauthorized", aicrerrors.ErrCodeUnauthorized, false},
+		{"not found", aicrerrors.ErrCodeNotFound, false},
+		{"method not allowed", aicrerrors.ErrCodeMethodNotAllowed, false},
+		{"timeout", aicrerrors.ErrCodeTimeout, true},
+		{"unavailable", aicrerrors.ErrCodeUnavailable, true},
+		{"rate limit", aicrerrors.ErrCodeRateLimitExceeded, true},
+		{"internal", aicrerrors.ErrCodeInternal, true},
+		{"unknown defaults false", aicrerrors.ErrorCode("SOMETHING_ELSE"), false},
 	}
 
 	for _, tt := range tests {
@@ -112,7 +112,7 @@ func TestWriteError_WritesErrorResponse(t *testing.T) {
 	req = req.WithContext(context.WithValue(req.Context(), contextKeyRequestID, "req-123"))
 	w := httptest.NewRecorder()
 
-	WriteError(w, req, http.StatusBadRequest, eidoserrors.ErrCodeInvalidRequest, "bad request", false, map[string]any{"k": "v"})
+	WriteError(w, req, http.StatusBadRequest, aicrerrors.ErrCodeInvalidRequest, "bad request", false, map[string]any{"k": "v"})
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
@@ -123,8 +123,8 @@ func TestWriteError_WritesErrorResponse(t *testing.T) {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
-	if resp.Code != string(eidoserrors.ErrCodeInvalidRequest) {
-		t.Fatalf("expected code %q, got %q", eidoserrors.ErrCodeInvalidRequest, resp.Code)
+	if resp.Code != string(aicrerrors.ErrCodeInvalidRequest) {
+		t.Fatalf("expected code %q, got %q", aicrerrors.ErrCodeInvalidRequest, resp.Code)
 	}
 	if resp.Message != "bad request" {
 		t.Fatalf("expected message %q, got %q", "bad request", resp.Message)
@@ -145,7 +145,7 @@ func TestWriteErrorFromErr_StructuredErrorMapsStatusAndDetails(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	cause := errors.New("db is down")
-	err := eidoserrors.WrapWithContext(eidoserrors.ErrCodeUnavailable, "service unavailable", cause, map[string]any{"component": "db"})
+	err := aicrerrors.WrapWithContext(aicrerrors.ErrCodeUnavailable, "service unavailable", cause, map[string]any{"component": "db"})
 
 	WriteErrorFromErr(w, req, err, "fallback", map[string]any{"extra": "yes"})
 
@@ -158,8 +158,8 @@ func TestWriteErrorFromErr_StructuredErrorMapsStatusAndDetails(t *testing.T) {
 		t.Fatalf("failed to unmarshal response: %v", uerr)
 	}
 
-	if resp.Code != string(eidoserrors.ErrCodeUnavailable) {
-		t.Fatalf("expected code %q, got %q", eidoserrors.ErrCodeUnavailable, resp.Code)
+	if resp.Code != string(aicrerrors.ErrCodeUnavailable) {
+		t.Fatalf("expected code %q, got %q", aicrerrors.ErrCodeUnavailable, resp.Code)
 	}
 	if resp.Message != "service unavailable" {
 		t.Fatalf("expected message %q, got %q", "service unavailable", resp.Message)
@@ -204,7 +204,7 @@ func TestWriteErrorFromErr_StructuredErrorEmptyMessage(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
-	err := eidoserrors.New(eidoserrors.ErrCodeNotFound, "")
+	err := aicrerrors.New(aicrerrors.ErrCodeNotFound, "")
 	WriteErrorFromErr(w, req, err, "fallback", nil)
 
 	if w.Code != http.StatusNotFound {
@@ -235,8 +235,8 @@ func TestWriteErrorFromErr_NonStructuredFallsBackToInternal(t *testing.T) {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
-	if resp.Code != string(eidoserrors.ErrCodeInternal) {
-		t.Fatalf("expected code %q, got %q", eidoserrors.ErrCodeInternal, resp.Code)
+	if resp.Code != string(aicrerrors.ErrCodeInternal) {
+		t.Fatalf("expected code %q, got %q", aicrerrors.ErrCodeInternal, resp.Code)
 	}
 	if !resp.Retryable {
 		t.Fatalf("expected retryable=true")

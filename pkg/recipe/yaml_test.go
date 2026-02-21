@@ -41,7 +41,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -916,13 +916,13 @@ var standardK8sAPIVersions = func() map[string]bool {
 //
 //	metadata:
 //	  annotations:
-//	    eidos/skip-hook-validation: "true"
+//	    aicr/skip-hook-validation: "true"
 func TestManifestHelmHooksRequired(t *testing.T) {
 	// Patterns to extract apiVersion and check for annotations
 	// Using regex to avoid YAML parsing issues with Helm template syntax
 	apiVersionPattern := regexp.MustCompile(`(?m)^apiVersion:\s*(\S+)`)
 	helmHookPattern := regexp.MustCompile(`(?m)["']?helm\.sh/hook["']?:\s*`)
-	skipValidationPattern := regexp.MustCompile(`(?m)["']?eidos/skip-hook-validation["']?:\s*["']?true["']?`)
+	skipValidationPattern := regexp.MustCompile(`(?m)["']?aicr/skip-hook-validation["']?:\s*["']?true["']?`)
 
 	manifestFiles := collectManifestFiles(t)
 	if len(manifestFiles) == 0 {
@@ -956,7 +956,7 @@ func TestManifestHelmHooksRequired(t *testing.T) {
 
 			// Check for opt-out annotation
 			if skipValidationPattern.MatchString(contentStr) {
-				t.Logf("%s has eidos/skip-hook-validation annotation, skipping validation", path)
+				t.Logf("%s has aicr/skip-hook-validation annotation, skipping validation", path)
 				return
 			}
 
@@ -975,7 +975,7 @@ CRD-dependent resources must include these annotations to ensure proper deployme
 To skip this validation (not recommended), add:
   metadata:
     annotations:
-      eidos/skip-hook-validation: "true"
+      aicr/skip-hook-validation: "true"
 `, filepath.Base(path), apiVersion)
 			}
 		})
@@ -987,7 +987,7 @@ To skip this validation (not recommended), add:
 func TestManifestHelmHooksValidation(t *testing.T) {
 	apiVersionPattern := regexp.MustCompile(`(?m)^apiVersion:\s*(\S+)`)
 	helmHookPattern := regexp.MustCompile(`(?m)["']?helm\.sh/hook["']?:\s*`)
-	skipValidationPattern := regexp.MustCompile(`(?m)["']?eidos/skip-hook-validation["']?:\s*["']?true["']?`)
+	skipValidationPattern := regexp.MustCompile(`(?m)["']?aicr/skip-hook-validation["']?:\s*["']?true["']?`)
 
 	tests := []struct {
 		name        string
@@ -1024,7 +1024,7 @@ kind: Recipe
 metadata:
   name: test-recipe
   annotations:
-    eidos/skip-hook-validation: "true"
+    aicr/skip-hook-validation: "true"
 spec:
   template: {}`,
 			expectError: false,

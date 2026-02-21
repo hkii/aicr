@@ -19,10 +19,10 @@ metadata:
   name: cli-bundle-scheduling
 spec:
   description: |
-    Validates that eidos recipe + bundle CLI commands produce correct output
+    Validates that aicr recipe + bundle CLI commands produce correct output
     with scheduling options (system/accelerated node selectors and tolerations).
     No cluster needed -- purely CLI output validation.
-    Run with: EIDOS_BIN=$(pwd)/dist/e2e/eidos chainsaw test --no-cluster --test-dir tests/chainsaw/cli/bundle-scheduling
+    Run with: AICR_BIN=$(pwd)/dist/e2e/aicr chainsaw test --no-cluster --test-dir tests/chainsaw/cli/bundle-scheduling
   timeouts:
     exec: 30s
   steps:
@@ -31,10 +31,10 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-bundle-scheduling"
               rm -rf "${WORK}" && mkdir -p "${WORK}"
-              ${EIDOS_BIN} recipe \
+              ${AICR_BIN} recipe \
                 --service eks \
                 --accelerator h100 \
                 --os ubuntu \
@@ -56,9 +56,9 @@ spec:
       try:
         - script:
             content: |
-              EIDOS_BIN="${EIDOS_BIN:?Set EIDOS_BIN to the path of the eidos binary}"
+              AICR_BIN="${AICR_BIN:?Set AICR_BIN to the path of the aicr binary}"
               WORK="/tmp/chainsaw-bundle-scheduling"
-              ${EIDOS_BIN} bundle \
+              ${AICR_BIN} bundle \
                 --recipe "${WORK}/recipe.yaml" \
                 --output "${WORK}/bundle" \
                 --system-node-selector nodeGroup=system-pool \

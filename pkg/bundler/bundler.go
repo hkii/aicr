@@ -24,14 +24,14 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/eidos/pkg/bundler/config"
-	"github.com/NVIDIA/eidos/pkg/bundler/deployer/argocd"
-	"github.com/NVIDIA/eidos/pkg/bundler/deployer/helm"
-	"github.com/NVIDIA/eidos/pkg/bundler/result"
-	"github.com/NVIDIA/eidos/pkg/bundler/validations"
-	"github.com/NVIDIA/eidos/pkg/component"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/bundler/config"
+	"github.com/NVIDIA/aicr/pkg/bundler/deployer/argocd"
+	"github.com/NVIDIA/aicr/pkg/bundler/deployer/helm"
+	"github.com/NVIDIA/aicr/pkg/bundler/result"
+	"github.com/NVIDIA/aicr/pkg/bundler/validations"
+	"github.com/NVIDIA/aicr/pkg/component"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 )
 
 // DefaultBundler generates Helm per-component bundles from recipes.

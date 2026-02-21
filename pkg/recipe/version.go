@@ -16,7 +16,7 @@ package recipe
 
 const (
 	// APIDomain is the API domain for recipe resources
-	APIDomain = "eidos.nvidia.com"
+	APIDomain = "aicr.nvidia.com"
 
 	// APIVersion is the current API version for recipes
 	APIVersion = "v1alpha1"

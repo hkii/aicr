@@ -16,7 +16,7 @@
 apiVersion: chainsaw.kyverno.io/v1alpha2
 kind: Configuration
 metadata:
-  name: eidos-e2e
+  name: aicr-e2e
 spec:
   timeouts:
     apply: 30s
@@ -32,4 +32,4 @@ spec:
     skipDelete: false
   report:
     format: JUNIT-TEST
-    name: eidos-e2e
+    name: aicr-e2e

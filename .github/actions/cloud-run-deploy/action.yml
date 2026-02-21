@@ -32,15 +32,15 @@ inputs:
     description: 'Cloud Run service name'
     required: true
   source_image:
-    description: 'Source container image to copy (e.g., ghcr.io/nvidia/eidosd:v1.0.0)'
+    description: 'Source container image to copy (e.g., ghcr.io/nvidia/aicrd:v1.0.0)'
     required: true
   target_registry:
     description: 'Target Artifact Registry path (e.g., us-west1-docker.pkg.dev/project/repo)'
     required: true
   image_name:
-    description: 'Image name in target registry (e.g., eidosd)'
+    description: 'Image name in target registry (e.g., aicrd)'
     required: false
-    default: 'eidosd'
+    default: 'aicrd'
   ghcr_token:
     description: 'GitHub token for GHCR authentication (use github.token)'
     required: true

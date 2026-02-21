@@ -23,15 +23,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/header"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/snapshotter"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/header"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/snapshotter"
 )
 
 const (
 	// APIVersion is the API version for validation results.
-	APIVersion = "eidos.nvidia.com/v1alpha1"
+	APIVersion = "aicr.nvidia.com/v1alpha1"
 )
 
 // ConstraintEvalResult represents the result of evaluating a single constraint.
@@ -92,12 +92,12 @@ type Validator struct {
 	Version string
 
 	// Namespace is the Kubernetes namespace where validation jobs will run.
-	// Defaults to "eidos-validation" if not specified.
+	// Defaults to "aicr-validation" if not specified.
 	Namespace string
 
 	// Image is the container image to use for validation Jobs.
 	// Must include Go toolchain for running tests.
-	// Defaults to "ghcr.io/nvidia/eidos-validator:latest".
+	// Defaults to "ghcr.io/nvidia/aicr-validator:latest".
 	Image string
 
 	// RunID is a unique identifier for this validation run.
@@ -191,17 +191,17 @@ func generateRunID() string {
 
 // New creates a new Validator with the provided options.
 func New(opts ...Option) *Validator {
-	// Default validator image (can be overridden by EIDOS_VALIDATOR_IMAGE env var for CI)
-	defaultImage := "ghcr.io/nvidia/eidos-validator:latest"
-	if envImage := os.Getenv("EIDOS_VALIDATOR_IMAGE"); envImage != "" {
+	// Default validator image (can be overridden by AICR_VALIDATOR_IMAGE env var for CI)
+	defaultImage := "ghcr.io/nvidia/aicr-validator:latest"
+	if envImage := os.Getenv("AICR_VALIDATOR_IMAGE"); envImage != "" {
 		defaultImage = envImage
 	}
 
 	v := &Validator{
-		Namespace: "eidos-validation", // Default namespace for validation jobs
-		Image:     defaultImage,       // Default validator image
-		RunID:     generateRunID(),    // Generate unique RunID for this validation run
-		Cleanup:   true,               // Default to cleanup resources after validation
+		Namespace: "aicr-validation", // Default namespace for validation jobs
+		Image:     defaultImage,      // Default validator image
+		RunID:     generateRunID(),   // Generate unique RunID for this validation run
+		Cleanup:   true,              // Default to cleanup resources after validation
 	}
 	for _, opt := range opts {
 		opt(v)

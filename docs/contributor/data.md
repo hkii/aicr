@@ -60,13 +60,13 @@ recipes/
 
 1. **CLI Query Mode** - Direct recipe generation from criteria parameters:
    ```bash
-   eidos recipe --os ubuntu --accelerator h100 --service eks --intent training
+   aicr recipe --os ubuntu --accelerator h100 --service eks --intent training
    ```
 
 2. **CLI Snapshot Mode** - Analyze captured system state to infer criteria:
    ```bash
-   eidos snapshot --output system.yaml
-   eidos recipe --snapshot system.yaml --intent training
+   aicr snapshot --output system.yaml
+   aicr recipe --snapshot system.yaml --intent training
    ```
 
 3. **API Server** - HTTP endpoint (query mode only):
@@ -82,7 +82,7 @@ Each recipe file follows this structure:
 
 ```yaml
 kind: RecipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: <recipe-name>  # Unique identifier (e.g., "eks-training", "gb200-eks-ubuntu-training")
 
@@ -115,7 +115,7 @@ spec:
 | Field | Description |
 |-------|-------------|
 | `kind` | Always `recipeMetadata` |
-| `apiVersion` | Always `eidos.nvidia.com/v1alpha1` |
+| `apiVersion` | Always `aicr.nvidia.com/v1alpha1` |
 | `metadata.name` | Unique recipe identifier |
 | `spec.base` | Parent recipe to inherit from (empty = inherits from `overlays/base.yaml`) |
 | `spec.criteria` | Query parameters that select this recipe |
@@ -229,7 +229,7 @@ Each recipe can specify a parent recipe via `spec.base`:
 
 ```yaml
 kind: RecipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: gb200-eks-ubuntu-training
 
@@ -312,7 +312,7 @@ base → eks → eks-training → gb200-eks-training → gb200-eks-ubuntu-traini
 ```yaml
 # overlays/base.yaml - Foundation for all recipes
 kind: RecipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: base
 
@@ -340,7 +340,7 @@ spec:
 ```yaml
 # eks.yaml - EKS-specific settings
 kind: RecipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: eks
 
@@ -358,7 +358,7 @@ spec:
 ```yaml
 # eks-training.yaml - EKS training workloads
 kind: RecipeMetadata
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 metadata:
   name: eks-training
 
@@ -454,7 +454,7 @@ Base ValuesFile → Overlay ValuesFile → Overlay Overrides → CLI --set flags
 1. **Base ValuesFile**: Values from inherited recipes
 2. **Overlay ValuesFile**: Values file specified in the matching overlay
 3. **Overlay Overrides**: Inline `overrides` in the overlay's componentRef
-4. **CLI --set flags**: Runtime overrides from `eidos bundle --set`
+4. **CLI --set flags**: Runtime overrides from `aicr bundle --set`
 
 ### Component Values Files
 
@@ -704,7 +704,7 @@ deployOrder, err := mergedSpec.TopologicalSort()
 ```go
 return &RecipeResult{
     Kind:            "RecipeResult",
-    APIVersion:      "eidos.nvidia.com/v1alpha1",
+    APIVersion:      "aicr.nvidia.com/v1alpha1",
     Metadata:        metadata,
     Criteria:        criteria,
     Constraints:     mergedSpec.Constraints,
@@ -758,12 +758,12 @@ flowchart TD
 
 **Basic recipe generation (query mode):**
 ```bash
-eidos recipe --os ubuntu --service eks --accelerator h100 --intent training
+aicr recipe --os ubuntu --service eks --accelerator h100 --intent training
 ```
 
 **Full specification:**
 ```bash
-eidos recipe \
+aicr recipe \
   --os ubuntu \
   --service eks \
   --accelerator gb200 \
@@ -775,8 +775,8 @@ eidos recipe \
 
 **From snapshot (snapshot mode):**
 ```bash
-eidos snapshot --output snapshot.yaml
-eidos recipe --snapshot snapshot.yaml --intent training --output recipe.yaml
+aicr snapshot --output snapshot.yaml
+aicr recipe --snapshot snapshot.yaml --intent training --output recipe.yaml
 ```
 
 ### API Usage
@@ -796,7 +796,7 @@ curl "http://localhost:8080/v1/recipe?os=ubuntu&service=eks&accelerator=gb200&in
 ```json
 {
   "kind": "RecipeResult",
-  "apiVersion": "eidos.nvidia.com/v1alpha1",
+  "apiVersion": "aicr.nvidia.com/v1alpha1",
   "metadata": {
     "version": "v0.8.0",
     "appliedOverlays": [
@@ -885,7 +885,7 @@ curl "http://localhost:8080/v1/recipe?os=ubuntu&service=eks&accelerator=gb200&in
 1. **Create the recipe file** in `recipes/`:
    ```yaml
    kind: RecipeMetadata
-   apiVersion: eidos.nvidia.com/v1alpha1
+   apiVersion: aicr.nvidia.com/v1alpha1
    metadata:
      name: l40-gke-ubuntu-inference  # Unique name
    
@@ -1201,7 +1201,7 @@ my-data/
 **External registry.yaml (adds custom Helm component):**
 
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: my-custom-operator
@@ -1215,7 +1215,7 @@ components:
 **External registry.yaml (adds custom Kustomize component):**
 
 ```yaml
-apiVersion: eidos.nvidia.com/v1alpha1
+apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
   - name: my-kustomize-app
@@ -1234,10 +1234,10 @@ components:
 
 ```bash
 # Generate recipe with external data
-eidos recipe --service eks --accelerator h100 --data ./my-data
+aicr recipe --service eks --accelerator h100 --data ./my-data
 
 # Bundle with external data
-eidos bundle --recipe recipe.yaml --data ./my-data --output ./bundles
+aicr bundle --recipe recipe.yaml --data ./my-data --output ./bundles
 ```
 
 ### Debugging
@@ -1245,7 +1245,7 @@ eidos bundle --recipe recipe.yaml --data ./my-data --output ./bundles
 Use `--debug` flag to see detailed logging about external data loading:
 
 ```bash
-eidos --debug recipe --service eks --data ./my-data
+aicr --debug recipe --service eks --data ./my-data
 ```
 
 Debug logs include:
@@ -1292,5 +1292,5 @@ func initDataProvider(cmd *cli.Command) error {
 - [CLI Architecture](cli.md) - How the CLI uses recipe data
 - [CLI Reference](../user/cli-reference.md) - Complete CLI flag reference
 - [API Server Architecture](api-server.md) - How the API serves recipes
-- [OpenAPI Specification](../../api/eidos/v1/server.yaml) - Recipe API contract
+- [OpenAPI Specification](../../api/aicr/v1/server.yaml) - Recipe API contract
 - [Recipe Package Documentation](../../pkg/recipe/) - Go implementation details

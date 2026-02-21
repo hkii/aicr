@@ -19,21 +19,21 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/NVIDIA/eidos/pkg/bundler"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/logging"
-	"github.com/NVIDIA/eidos/pkg/recipe"
-	"github.com/NVIDIA/eidos/pkg/server"
+	"github.com/NVIDIA/aicr/pkg/bundler"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/logging"
+	"github.com/NVIDIA/aicr/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/server"
 )
 
 const (
-	name           = "eidosd"
+	name           = "aicrd"
 	versionDefault = "dev"
 )
 
 var (
 	// overridden during build with ldflags to reflect actual version info
-	// e.g., -X "github.com/NVIDIA/eidos/pkg/api.version=1.0.0"
+	// e.g., -X "github.com/NVIDIA/aicr/pkg/api.version=1.0.0"
 	version = versionDefault
 	commit  = "unknown"
 	date    = "unknown"

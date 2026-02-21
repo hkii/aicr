@@ -24,10 +24,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/NVIDIA/eidos/pkg/defaults"
-	"github.com/NVIDIA/eidos/pkg/errors"
-	"github.com/NVIDIA/eidos/pkg/manifest"
-	"github.com/NVIDIA/eidos/pkg/recipe"
+	"github.com/NVIDIA/aicr/pkg/defaults"
+	"github.com/NVIDIA/aicr/pkg/errors"
+	"github.com/NVIDIA/aicr/pkg/manifest"
+	"github.com/NVIDIA/aicr/pkg/recipe"
 	"sigs.k8s.io/yaml"
 )
 
@@ -75,7 +75,7 @@ func resolveExpectedResources(ctx context.Context, recipeResult *recipe.RecipeRe
 		}
 	}
 
-	var summaries []componentDiscovery
+	summaries := make([]componentDiscovery, 0, len(recipeResult.ComponentRefs))
 
 	for i := range recipeResult.ComponentRefs {
 		ref := &recipeResult.ComponentRefs[i]
@@ -135,7 +135,7 @@ func logDiscoverySummary(summaries []componentDiscovery) {
 	}
 
 	totalResources := 0
-	var lines []string
+	lines := make([]string, 0, len(summaries))
 	for _, s := range summaries {
 		totalResources += len(s.resources)
 		counts := countByKind(s.resources)
@@ -220,7 +220,7 @@ func writeValuesToTempFile(values map[string]any) (string, error) {
 		return "", errors.Wrap(errors.ErrCodeInternal, "failed to marshal values to YAML", err)
 	}
 
-	f, err := os.CreateTemp("", "eidos-values-*.yaml")
+	f, err := os.CreateTemp("", "aicr-values-*.yaml")
 	if err != nil {
 		return "", errors.Wrap(errors.ErrCodeInternal, "failed to create temp values file", err)
 	}

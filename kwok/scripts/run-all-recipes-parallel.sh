@@ -26,7 +26,7 @@ KWOK_DIR="${SCRIPT_DIR}/.."
 REPO_ROOT="${KWOK_DIR}/.."
 OVERLAYS_DIR="${REPO_ROOT}/recipes/overlays"
 
-CLUSTER_PREFIX="${KWOK_CLUSTER_PREFIX:-eidos-kwok-test}"
+CLUSTER_PREFIX="${KWOK_CLUSTER_PREFIX:-aicr-kwok-test}"
 KWOK_VERSION="${KWOK_VERSION:-$(yq -r '.testing_tools.kwok' "${REPO_ROOT}/.settings.yaml" 2>/dev/null || echo "v0.7.0")}"
 KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-$(yq -r '.testing.kind_node_image' "${REPO_ROOT}/.settings.yaml" 2>/dev/null || echo "kindest/node:v1.32.0")}"
 
@@ -153,7 +153,7 @@ EOF
     #       Once fixed, this extra taint can be removed.
     kubectl --context="$context" taint nodes -l node-role.kubernetes.io/control-plane \
         node-role.kubernetes.io/control-plane:NoSchedule \
-        eidos.nvidia.com/kwok-test=true:NoSchedule \
+        aicr.nvidia.com/kwok-test=true:NoSchedule \
         --overwrite >>"$log_file" 2>&1 || true
 
     log_info "[$cluster_name] Cluster ready"
@@ -186,8 +186,8 @@ run_test_on_cluster() {
     # Export environment for child scripts
     export KUBECONFIG="$test_kubeconfig"
     export KWOK_CLUSTER="${cluster_name}"
-    export KWOK_NAMESPACE="eidos-kwok-test-${recipe}"
-    export KWOK_RELEASE="eidos-test-${recipe}"
+    export KWOK_NAMESPACE="aicr-kwok-test-${recipe}"
+    export KWOK_RELEASE="aicr-test-${recipe}"
 
     # Create nodes
     if ! bash "${SCRIPT_DIR}/apply-nodes.sh" "${recipe}" >"$log_file" 2>&1; then

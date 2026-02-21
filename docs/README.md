@@ -1,13 +1,13 @@
-# Eidos: An Overview
+# AI Cluster Runtime (AICR): An Overview
 
-NVIDIA Eidos (Eidos) is a suite of tooling designed to automate the complexity of deploying GPU-accelerated Kubernetes infrastructure. By moving away from static documentation and toward automated configuration generation, Eidos ensures that AI/ML workloads run on infrastructure that is validated, optimized, and secure.
+NVIDIA AI Cluster Runtime (AICR) is a suite of tooling designed to automate the complexity of deploying GPU-accelerated Kubernetes infrastructure. By moving away from static documentation and toward automated configuration generation, AICR ensures that AI/ML workloads run on infrastructure that is validated, optimized, and secure.
 
 ## Glossary
 
 | Term | Description |
 |------|-------------|
-| **Snapshot** | A captured state of a system including OS, kernel, Kubernetes, GPU, and SystemD configuration. Created by `eidos snapshot` or the Kubernetes agent. |
-| **Recipe** | A generated configuration recommendation containing component references, constraints, and deployment order. Created by `eidos recipe` based on criteria or snapshot analysis. |
+| **Snapshot** | A captured state of a system including OS, kernel, Kubernetes, GPU, and SystemD configuration. Created by `aicr snapshot` or the Kubernetes agent. |
+| **Recipe** | A generated configuration recommendation containing component references, constraints, and deployment order. Created by `aicr recipe` based on criteria or snapshot analysis. |
 | **Criteria** | Query parameters that define the target environment: `service` (eks/gke/aks/oke), `accelerator` (h100/gb200/a100/l40), `intent` (training/inference), `os` (ubuntu/rhel/cos), `platform` (kubeflow), and `nodes`. |
 | **Overlay** | A recipe metadata file that extends the base recipe for specific environments. Overlays are matched against criteria using asymmetric matching. |
 | **Bundle** | Deployment artifacts generated from a recipe: Helm values files, Kubernetes manifests, installation scripts, and checksums. |
@@ -22,10 +22,10 @@ NVIDIA Eidos (Eidos) is a suite of tooling designed to automate the complexity o
 | **Specificity** | A score indicating how specific a recipe's criteria is (number of non-"any" fields). More specific recipes are applied later during merge. |
 | **Asymmetric Matching** | The criteria matching algorithm where recipe "any" = wildcard (matches any query), but query "any" ≠ specific recipe (prevents overly-specific matches). |
 | **ConfigMap URI** | A URI format (`cm://namespace/name`) for reading/writing snapshots and recipes directly to Kubernetes ConfigMaps. |
-| **SLSA** | Supply-chain Levels for Software Artifacts. Eidos releases achieve SLSA Build Level 3 with provenance attestations. |
+| **SLSA** | Supply-chain Levels for Software Artifacts. AICR releases achieve SLSA Build Level 3 with provenance attestations. |
 | **SBOM** | Software Bill of Materials. A complete inventory of dependencies provided for binaries (SPDX via GoReleaser) and containers (SPDX JSON via Syft). |
 
-## Why Eidos?
+## Why AICR?
 
 Deploying high-performance AI infrastructure is historically complex. Administrators must navigate a "matrix" of dependencies, ensuring compatibility between the Operating System, Kubernetes version, GPU drivers, and container runtimes.
 
@@ -37,36 +37,36 @@ Previously, administrators relied on static documentation and manual installatio
 *   **Lack of Optimization:** Generic installation guides rarely account for specific hardware differences (e.g., H100 vs. GB200) or workload intents (Training vs. Inference).
 
 ### The Solution: Automated Approach
-Eidos replaces manual interpretation of documentation with a **automated approach**. It treats infrastructure configuration as code, providing a deterministic engine that generates the exact artifacts needed for a specific environment.
+AICR replaces manual interpretation of documentation with a **automated approach**. It treats infrastructure configuration as code, providing a deterministic engine that generates the exact artifacts needed for a specific environment.
 
 **Key Benefits:**
 1.  **Deterministic & Validated:** The system guarantees that the inputs (your system state) always produce the same valid outputs, tested against NVIDIA hardware.
-2.  **Hardware-Aware Optimization:** Eidos detects the specific GPU type (e.g., H100, A100, GB200) and OS to apply hardware-specific tuning automatically.
+2.  **Hardware-Aware Optimization:** AICR detects the specific GPU type (e.g., H100, A100, GB200) and OS to apply hardware-specific tuning automatically.
 3.  **Speed:** Deployment preparation drops from hours of reading and configuration to minutes of automated generation.
 4.  **Supply Chain Security:** All artifacts are backed by SLSA Build Level 3 attestations and Software Bill of Materials (SBOMs), ensuring the software stack is secure and verifiable.
 
-## How Eidos Works
+## How AICR Works
 
-Eidos simplifies operations through a logical four-stage workflow handled by the `eidos` command-line tool. This workflow transforms a raw system state into a deployable package.
+AICR simplifies operations through a logical four-stage workflow handled by the `aicr` command-line tool. This workflow transforms a raw system state into a deployable package.
 
 ### Step 1: Snapshot (Capture Reality)
 
-Before configuring anything, Eidos needs to understand the environment.
+Before configuring anything, AICR needs to understand the environment.
 *   **What it does:** The system captures the state of the OS, SystemD services, Kubernetes version, and GPU hardware.
-*   **How it helps:** It eliminates guesswork. Instead of assuming what hardware is present, Eidos measures it directly using the CLI or a Kubernetes Agent.
+*   **How it helps:** It eliminates guesswork. Instead of assuming what hardware is present, AICR measures it directly using the CLI or a Kubernetes Agent.
 *   **Automation:** The agent can run as a Kubernetes Job, writing the snapshot directly to a ConfigMap, enabling fully automated auditing without manual intervention.
 
 ### Step 2: Recipe (Generate Recommendations)
 
-Once the system state is known, Eidos generates a "Recipe"—a set of configuration recommendations.
+Once the system state is known, AICR generates a "Recipe"—a set of configuration recommendations.
 *   **What it does:** It matches the snapshot against a database of validated rules (overlays). It selects the correct driver versions, kernel modules, and settings for that specific environment.
-*   **Intent-Based Tuning:** Users can specify an "Intent" (e.g., `training` or `inference`). Eidos adjusts the recipe to optimize for throughput (training) or latency (inference).
+*   **Intent-Based Tuning:** Users can specify an "Intent" (e.g., `training` or `inference`). AICR adjusts the recipe to optimize for throughput (training) or latency (inference).
 *   **Asymmetric Matching:** The criteria matching algorithm ensures generic queries (e.g., `--service eks --intent training`) only match generic recipes, not hardware-specific ones. Recipe "any" = wildcard, query "any" ≠ specific recipe.
 *   **How it helps:** It ensures version compatibility and applies expert-level optimizations automatically, acting as a dynamic compatibility matrix.
 
 ### Step 3: Validate (Check Compatibility)
 
-Before deploying, Eidos can validate that a target cluster meets the recipe requirements using multi-phase validation.
+Before deploying, AICR can validate that a target cluster meets the recipe requirements using multi-phase validation.
 *   **What it does:** It compares recipe constraints (version requirements, configuration settings) against actual measurements from a cluster snapshot across different validation phases.
 *   **Validation Phases:**
     - **Readiness**: Validates infrastructure prerequisites (K8s version, OS, kernel, GPU hardware)
@@ -78,7 +78,7 @@ Before deploying, Eidos can validate that a target cluster meets the recipe requ
 
 ### Step 4: Bundle (Create Artifacts)
 
-Finally, Eidos converts the abstract Recipe into concrete deployment files.
+Finally, AICR converts the abstract Recipe into concrete deployment files.
 *   **What it does:** It generates a "Bundle" containing Helm values, Kubernetes manifests, installation scripts, and a custom README.
 *   **Deployer Options:** Supports multiple deployment methods: `helm` (Helm per-component bundle, default), `argocd` (Applications with sync-wave ordering).
 *   **How it helps:** Users receive ready-to-run scripts and manifests. For example, it generates a custom `install.sh` script that pre-validates the environment before running Helm commands.
@@ -87,16 +87,16 @@ Finally, Eidos converts the abstract Recipe into concrete deployment files.
 ## Key Capabilities
 
 ### Kubernetes-Native Integration
-Eidos is designed to work natively within Kubernetes.
+AICR is designed to work natively within Kubernetes.
 *   **ConfigMap Support:** You don't need to manage local files. You can read and write Snapshots and Recipes directly to Kubernetes ConfigMaps using the URI format `cm://namespace/name`.
 *   **No Persistent Volumes:** The automated Agent writes data directly to the Kubernetes API, simplifying deployment in restricted environments.
 
 ### Integration & Automation
-*   **CI/CD Ready:** The `eidos` CLI and API server are built for pipelines. Teams can use Eidos to detect "Configuration Drift" by periodically taking snapshots and comparing them to a baseline.
-*   **API Server:** For programmatic access, Eidos provides a production-ready HTTP REST API to generate recipes dynamically.
+*   **CI/CD Ready:** The `aicr` CLI and API server are built for pipelines. Teams can use AICR to detect "Configuration Drift" by periodically taking snapshots and comparing them to a baseline.
+*   **API Server:** For programmatic access, AICR provides a production-ready HTTP REST API to generate recipes dynamically.
 
 ### Security
-Eidos prioritizes trust in the software supply chain.
+AICR prioritizes trust in the software supply chain.
 *   **Verifiable Builds:** Every release includes provenance data showing exactly how and where it was built (SLSA Level 3).
 *   **SBOMs:** Complete inventories of all dependencies are provided for both binaries and container images, enabling automated vulnerability scanning.
 
@@ -110,14 +110,14 @@ For platform operators deploying and operating GPU-accelerated Kubernetes cluste
 
 | Document | Description |
 |----------|-------------|
-| [Installation](user/installation.md) | Installing the `eidos` CLI |
+| [Installation](user/installation.md) | Installing the `aicr` CLI |
 | [CLI Reference](user/cli-reference.md) | Complete CLI command reference with examples |
 | [API Reference](user/api-reference.md) | Quick start for the REST API |
 | [Agent Deployment](user/agent-deployment.md) | Running the snapshot agent as a Kubernetes Job |
 
 ### Contributor Documentation
 
-For developers contributing code, extending functionality, or working on Eidos internals.
+For developers contributing code, extending functionality, or working on AICR internals.
 
 | Document | Description |
 |----------|-------------|
@@ -129,7 +129,7 @@ For developers contributing code, extending functionality, or working on Eidos i
 
 ### Integrator Documentation
 
-For engineers integrating Eidos into CI/CD pipelines, GitOps workflows, or larger platforms.
+For engineers integrating AICR into CI/CD pipelines, GitOps workflows, or larger platforms.
 
 | Document | Description |
 |----------|-------------|
@@ -147,7 +147,7 @@ For engineers integrating Eidos into CI/CD pipelines, GitOps workflows, or large
 
 ```shell
 curl -sfL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/NVIDIA/eidos/main/install | bash -s --
+  https://raw.githubusercontent.com/NVIDIA/aicr/main/install | bash -s --
 ```
 
 See [Installation Guide](user/installation.md) for manual installation, building from source, and container images.
@@ -156,27 +156,27 @@ See [Installation Guide](user/installation.md) for manual installation, building
 
 ```shell
 # Query mode: direct parameters
-eidos recipe --service eks --accelerator h100 --intent training --platform kubeflow
+aicr recipe --service eks --accelerator h100 --intent training --platform kubeflow
 
 # Snapshot mode: analyze captured state
-eidos snapshot -o snapshot.yaml
-eidos recipe --snapshot snapshot.yaml --intent training --platform kubeflow
+aicr snapshot -o snapshot.yaml
+aicr recipe --snapshot snapshot.yaml --intent training --platform kubeflow
 ```
 
 ### Validate Configuration
 
 ```shell
 # Validate readiness phase (default)
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml
 
 # Validate all phases
-eidos validate --recipe recipe.yaml --snapshot snapshot.yaml --phase all
+aicr validate --recipe recipe.yaml --snapshot snapshot.yaml --phase all
 ```
 
 ### Create Bundle
 
 ```shell
-eidos bundle --recipe recipe.yaml --output ./bundles
+aicr bundle --recipe recipe.yaml --output ./bundles
 ```
 
 ### Deploy
@@ -188,6 +188,6 @@ chmod +x deploy.sh && ./deploy.sh
 
 ## Links
 
-- **GitHub Repository:** [github.com/NVIDIA/eidos](https://github.com/NVIDIA/eidos)
+- **GitHub Repository:** [github.com/NVIDIA/aicr](https://github.com/NVIDIA/aicr)
 - **Contributing:** [CONTRIBUTING.md](../CONTRIBUTING.md)
 - **Security:** [SECURITY.md](../SECURITY.md)
