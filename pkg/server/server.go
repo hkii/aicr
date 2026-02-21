@@ -24,8 +24,8 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
+	"github.com/NVIDIA/aicr/pkg/defaults"
 	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 	"github.com/NVIDIA/aicr/pkg/serializer"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -112,13 +112,13 @@ func New(opts ...Option) *Server {
 	}
 
 	s.httpServer = &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", config.Address, config.Port),
+		Addr:              fmt.Sprintf("%s:%d", s.config.Address, s.config.Port),
 		Handler:           mux,
 		ReadTimeout:       config.ReadTimeout,
 		WriteTimeout:      config.WriteTimeout,
 		IdleTimeout:       config.IdleTimeout,
-		MaxHeaderBytes:    1 << 16,         // 64KB limit to prevent header-based attacks
-		ReadHeaderTimeout: 5 * time.Second, // Prevent slow header attacks
+		MaxHeaderBytes:    defaults.ServerMaxHeaderBytes,    // 64KB limit to prevent header-based attacks
+		ReadHeaderTimeout: defaults.ServerReadHeaderTimeout, // Prevent slow header attacks
 	}
 
 	return s
@@ -151,7 +151,7 @@ func (s *Server) Start(ctx context.Context) error {
 		// Use fresh context for shutdown - parent context is already canceled
 		return s.Shutdown(context.Background()) //nolint:contextcheck // intentional: need fresh context for graceful shutdown
 	case err := <-errChan:
-		return err
+		return aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "http server error", err)
 	}
 }
 
@@ -173,7 +173,6 @@ func (s *Server) Run(ctx context.Context) error {
 		slog.Int("port", s.config.Port),
 		slog.Any("rateLimit", s.config.RateLimit),
 		slog.Int("rateLimitBurst", s.config.RateLimitBurst),
-		slog.Int("maxBulkRequests", s.config.MaxBulkRequests),
 		slog.Duration("readTimeout", s.config.ReadTimeout),
 		slog.Duration("writeTimeout", s.config.WriteTimeout),
 		slog.Duration("idleTimeout", s.config.IdleTimeout),

@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"path/filepath"
 
+	"github.com/NVIDIA/aicr/pkg/defaults"
 	"github.com/NVIDIA/aicr/pkg/errors"
 	"github.com/NVIDIA/aicr/pkg/k8s"
 	batchv1 "k8s.io/api/batch/v1"
@@ -164,8 +165,8 @@ func (d *Deployer) buildJobSpec() *batchv1.Job {
 	}
 
 	// Build Job
-	backoffLimit := int32(0)               // No retries - validation should be deterministic
-	ttlSecondsAfterFinished := int32(3600) // Keep for 1 hour for debugging
+	backoffLimit := int32(0)                                                 // No retries - validation should be deterministic
+	ttlSecondsAfterFinished := int32(defaults.JobTTLAfterFinished.Seconds()) // Keep for 1 hour for debugging
 
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
