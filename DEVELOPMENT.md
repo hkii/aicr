@@ -317,13 +317,6 @@ make e2e
 # With local Kubernetes cluster (requires make dev-env first)
 make e2e-tilt
 
-# Run E2E tests exactly like CI (automated setup + teardown)
-./scripts/run-e2e-local.sh
-
-# Run with options
-./scripts/run-e2e-local.sh --skip-cleanup       # Keep cluster after tests
-./scripts/run-e2e-local.sh --collect-artifacts  # Collect artifacts even on success
-
 # KWOK simulated cluster tests (no GPU hardware required)
 make kwok-test-all                    # All recipes
 make kwok-e2e RECIPE=eks-training     # Single recipe
@@ -461,26 +454,12 @@ make dev-reset        # Full reset (tear down and recreate)
 ### Running E2E Tests with Tilt
 
 ```bash
-# Option 1: Automated (exactly like CI)
-./scripts/run-e2e-local.sh
-
-# Option 2: Manual setup (for development/debugging)
 # Start the dev environment
 make dev-env
 
 # In another terminal, run E2E tests against the Tilt cluster
 make e2e-tilt
 ```
-
-The automated script (`run-e2e-local.sh`) replicates the exact CI workflow:
-- Creates Kind cluster with local registry
-- Starts Tilt in CI mode
-- Builds and pushes both images (`aicr:local`, `aicr-validator:local`)
-- Injects fake nvidia-smi into worker nodes
-- Sets up port forwarding to aicrd
-- Runs E2E tests with proper environment variables
-- Collects debug artifacts on failure
-- Cleans up cluster and resources
 
 ### Testing the API Server Locally (without Kubernetes)
 
