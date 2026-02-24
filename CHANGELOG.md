@@ -12,6 +12,51 @@ All notable changes to this project will be documented in this file.
 - *(e2e)* Update deploy-agent test for current snapshot CLI  by [@mchmarny](https://github.com/mchmarny)
 - Prevent snapshot agent Job from nesting agent deployment  by [@mchmarny](https://github.com/mchmarny)
 
+### Build
+
+- Release v0.7.7 by [@mchmarny](https://github.com/mchmarny)
+
+### CI/CD
+
+- Harden workflows and reduce duplication  by [@mchmarny](https://github.com/mchmarny)
+
+### Features
+
+- *(ci)* Add metrics-driven cluster autoscaling validation with Karpenter + KWOK  by [@dims](https://github.com/dims)
+- *(validator)* Add Go-based CNCF AI conformance checks  by [@dims](https://github.com/dims)
+- *(validator)* Self-contained DRA conformance check with EKS overlays  by [@dims](https://github.com/dims)
+- *(validator)* Self-contained gang scheduling conformance check  by [@dims](https://github.com/dims)
+- *(validator)* Upgrade conformance checks from static to behavioral validation  by [@dims](https://github.com/dims)
+- Add conformance evidence renderer and fix check false-positives  by [@dims](https://github.com/dims)
+- *(validator)* Replace helm CLI subprocess with Helm Go SDK for chart rendering  by [@xdu31](https://github.com/xdu31)
+- Add HPA pod autoscaling evidence for CNCF AI Conformance  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(collector)* Add Helm release and ArgoCD Application collectors  by [@mchmarny](https://github.com/mchmarny)
+- Add cluster autoscaling evidence for CNCF AI Conformance  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(ci)* Binary attestation with SLSA Build Provenance v1  by [@lockwobr](https://github.com/lockwobr)
+
+### Other
+
+- *(recipe)* Add conformance recipe invariant tests  by [@dims](https://github.com/dims)
+
+### Refactor
+
+- *(validator)* Remove Job-based checks from readiness phase, keep constraint-only gate  by [@xdu31](https://github.com/xdu31)
+
+### Tasks
+
+- *(ci)* Remove redundant DRA test steps from inference workflow  by [@dims](https://github.com/dims)
+- Upgrade Go to 1.26.0  by [@mchmarny](https://github.com/mchmarny)
+
+## [0.7.7] - 2026-02-24
+
+### Bug Fixes
+
+- Resolve gosec lint issues and bump golangci-lint to v2.10.1 by [@mchmarny](https://github.com/mchmarny)
+- Guard against empty path in NewFileReader after filepath.Clean by [@mchmarny](https://github.com/mchmarny)
+- Pass cluster K8s version to Helm SDK chart rendering  by [@mchmarny](https://github.com/mchmarny)
+- *(e2e)* Update deploy-agent test for current snapshot CLI  by [@mchmarny](https://github.com/mchmarny)
+- Prevent snapshot agent Job from nesting agent deployment  by [@mchmarny](https://github.com/mchmarny)
+
 ### CI/CD
 
 - Harden workflows and reduce duplication  by [@mchmarny](https://github.com/mchmarny)
