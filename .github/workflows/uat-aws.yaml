@@ -1,0 +1,195 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: UAT - AWS
+
+on:
+  workflow_dispatch: {}  # allow manual runs for testing
+  schedule:
+    - cron: '0 4 * * *' # daily at midnight PST, runs on default branch only
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+jobs:
+  integration-test-aws:
+    if: github.repository == 'nvidia/aicr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      AWS_ACCOUNT_ID: "615299774277"
+      AWS_REGION: "us-east-1"
+      GITHUB_ACTIONS_ROLE_NAME: "github-actions-role-aicr"
+      DEPLOYMENT_ID: "aicr-uat-${{ github.run_id }}"
+      CLUSTER_CONFIG: tests/uat/aws/config.yaml
+
+      # Debug
+      SKIP_DELETE: "false"  # skip cluster deletion
+      TEST_TAG: "v0.7.7"    # use this to qualify a release
+
+    steps:
+      # Checkout
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      # Auth
+      - name: Configure AWS credentials
+        id: auth
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708  # v5.1.1
+        with:
+          role-to-assume: "arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE_NAME }}"
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-UAT-AICR
+
+      # Deps
+      - name: Ensure Deps
+        id: deps
+        run: |
+          set -euox pipefail
+
+          # Install kubectl if not present
+          if ! command -v kubectl >/dev/null 2>&1; then
+            echo "Installing kubectl..."
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+          fi
+          kubectl version --client
+
+          # Install yq if not present
+          if ! command -v yq >/dev/null 2>&1; then
+            echo "Installing yq..."
+            curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v4.52.4/yq_linux_amd64"
+            chmod +x /usr/local/bin/yq
+          fi
+          yq --version
+
+          # Install chainsaw
+          CHAINSAW_VERSION="0.2.14"
+          TAR="chainsaw_linux_amd64.tar.gz"
+          URL="https://github.com/kyverno/chainsaw/releases/download/v${CHAINSAW_VERSION}/${TAR}"
+          TMP="$(mktemp -d)"
+          curl -fsSL -o "${TMP}/${TAR}" "${URL}"
+          tar -xzf "${TMP}/${TAR}" -C "${TMP}"
+          sudo mv "${TMP}/chainsaw" /usr/local/bin/chainsaw
+          sudo chmod +x /usr/local/bin/chainsaw
+          rm -rf "${TMP}"
+          chainsaw version
+
+          # Download aicr release binary
+          TAG="${TEST_TAG#v}"
+          ARCHIVE="aicr_${TAG}_linux_amd64.tar.gz"
+          URL="https://github.com/NVIDIA/aicr/releases/download/${TEST_TAG}/${ARCHIVE}"
+          echo "Downloading aicr ${TEST_TAG} from ${URL}..."
+          TMP="$(mktemp -d)"
+          curl -fsSL -o "${TMP}/${ARCHIVE}" "${URL}"
+          tar -xzf "${TMP}/${ARCHIVE}" -C "${TMP}"
+          sudo mv "${TMP}/aicr" /usr/local/bin/aicr
+          sudo chmod +x /usr/local/bin/aicr
+          rm -rf "${TMP}"
+          aicr version
+
+      # Config
+      - name: Update Config
+        id: config
+        run: |
+          set -euox pipefail
+          yq -i '.deployment.id = strenv(DEPLOYMENT_ID)' "$CLUSTER_CONFIG"
+          yq -i '.cluster.name = strenv(DEPLOYMENT_ID)' "$CLUSTER_CONFIG"
+          cat "$CLUSTER_CONFIG"
+
+      # Bringup
+      - name: Bringup Infra
+        id: infra
+        run: |
+          set -euox pipefail
+          docker run \
+            -e CONFIG_CONTENT="$(base64 < $CLUSTER_CONFIG)" \
+            -e AUTO_APPROVE=true \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            -e AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN" \
+            ghcr.io/mchmarny/cluster/eks:latest apply
+
+      # Connect
+      - name: Connect to Cluster
+        id: client
+        if: steps.infra.outcome == 'success'
+        shell: bash
+        run: |
+          set -euox pipefail
+          echo "Updating kubeconfig..."
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.DEPLOYMENT_ID }}
+          echo "Verifying cluster connection..."
+          kubectl get nodes
+
+      # Test
+      - name: Run UAT Tests
+        id: tests
+        if: steps.client.outcome == 'success'
+        shell: bash
+        env:
+          AICR_BIN: /usr/local/bin/aicr
+        run: |
+          set -euxo pipefail
+          chainsaw test \
+            --config tests/uat/chainsaw-config.yaml \
+            --test-dir tests/uat/aws/tests/
+
+      # Teardown (retry up to 3 times)
+      - name: Destroy Cluster
+        if: always() && steps.infra.outcome != 'skipped' && env.SKIP_DELETE != 'true'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for attempt in 1 2 3; do
+            echo "Destroy attempt ${attempt}..."
+            if docker run \
+              -e CONFIG_CONTENT="$(base64 < $CLUSTER_CONFIG)" \
+              -e AUTO_APPROVE=true \
+              -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+              -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+              -e AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN" \
+              ghcr.io/mchmarny/cluster/eks:latest destroy; then
+              echo "Cluster destroyed successfully"
+              break
+            fi
+            echo "Destroy attempt ${attempt} failed, retrying..."
+            sleep 30
+          done
+
+      # Artifacts
+      - name: Upload Test Artifacts
+        if: always() && steps.tests.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: uat-aws-results
+          path: |
+            tests/uat/aws/tests/**/chainsaw-report*.xml
+          retention-days: 30
+
+      # Summary
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## UAT Results (AWS)" >> $GITHUB_STEP_SUMMARY
+          echo "| Phase | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies | ${{ steps.deps.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Config | ${{ steps.config.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cluster | ${{ steps.infra.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Connection | ${{ steps.client.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ steps.tests.outcome }} |" >> $GITHUB_STEP_SUMMARY
