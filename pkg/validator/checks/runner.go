@@ -76,6 +76,9 @@ func NewTestRunner(t *testing.T) (*TestRunner, error) {
 		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to load validation context", err)
 	}
 
+	// Initialize artifact collector for conformance evidence capture.
+	ctx.Artifacts = NewArtifactCollector()
+
 	return &TestRunner{
 		t:      t,
 		ctx:    ctx,
@@ -85,7 +88,21 @@ func NewTestRunner(t *testing.T) (*TestRunner, error) {
 
 // Cancel releases resources associated with the test runner.
 // Should be called via defer after NewTestRunner succeeds.
+// Drains any collected artifacts and emits them as structured test output
+// before canceling the context.
 func (r *TestRunner) Cancel() {
+	// Emit artifacts collected during check execution.
+	// Each artifact is a separate t.Logf call → separate go test -json output event.
+	if r.ctx != nil && r.ctx.Artifacts != nil {
+		for _, a := range r.ctx.Artifacts.Drain() {
+			encoded, err := a.Encode()
+			if err != nil {
+				continue // best-effort
+			}
+			r.t.Logf("ARTIFACT:%s", encoded)
+		}
+	}
+
 	if r.cancel != nil {
 		r.cancel()
 	}
@@ -205,7 +222,7 @@ func (r *TestRunner) HasCheck(phase, checkName string) bool {
 // IMPORTANT: The caller is responsible for calling the returned cancel function
 // when the validation context is no longer needed.
 func LoadValidationContext() (*ValidationContext, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), defaults.DiagnosticTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), defaults.CheckExecutionTimeout)
 
 	// Create in-cluster Kubernetes client
 	config, err := rest.InClusterConfig()

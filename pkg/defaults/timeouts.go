@@ -139,6 +139,12 @@ const (
 
 // Conformance test timeouts for DRA and gang scheduling validation.
 const (
+	// CheckExecutionTimeout is the parent context timeout for checks running
+	// inside a K8s Job. Must be long enough for behavioral checks (DRA pod
+	// creation + image pull + GPU allocation + isolation verification) and
+	// shorter than the Job-level ValidateConformanceTimeout.
+	CheckExecutionTimeout = 10 * time.Minute
+
 	// DRATestPodTimeout is the timeout for the DRA test pod to complete.
 	// The pod runs a simple CUDA device check but may need time for image pull.
 	DRATestPodTimeout = 5 * time.Minute
@@ -209,6 +215,17 @@ const (
 
 	// PodReadyTimeout is the timeout for waiting for pods to become ready.
 	PodReadyTimeout = 2 * time.Minute
+)
+
+// Artifact limits for conformance evidence capture.
+const (
+	// ArtifactMaxDataSize is the maximum size in bytes of a single artifact's Data field.
+	// Ensures each base64-encoded ARTIFACT: line stays well under the bufio.Scanner
+	// default 64KB limit (base64 expands ~4/3, so 8KB → ~11KB encoded).
+	ArtifactMaxDataSize = 8 * 1024
+
+	// ArtifactMaxPerCheck is the maximum number of artifacts a single check can record.
+	ArtifactMaxPerCheck = 20
 )
 
 // Job configuration constants.
