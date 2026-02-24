@@ -34,18 +34,12 @@ All notable changes to this project will be documented in this file.
 - Add cluster autoscaling evidence for CNCF AI Conformance  by [@yuanchen8911](https://github.com/yuanchen8911)
 - *(ci)* Binary attestation with SLSA Build Provenance v1  by [@lockwobr](https://github.com/lockwobr)
 
-### Other
-
-- *(recipe)* Add conformance recipe invariant tests  by [@dims](https://github.com/dims)
-
-### Refactor
-
-- *(validator)* Remove Job-based checks from readiness phase, keep constraint-only gate  by [@xdu31](https://github.com/xdu31)
-
 ### Tasks
 
 - *(ci)* Remove redundant DRA test steps from inference workflow  by [@dims](https://github.com/dims)
 - Upgrade Go to 1.26.0  by [@mchmarny](https://github.com/mchmarny)
+- *(validator)* Remove Job-based checks from readiness phase, keep constraint-only gate  by [@xdu31](https://github.com/xdu31)
+- *(recipe)* Add conformance recipe invariant tests  by [@dims](https://github.com/dims)
 
 ## [0.7.7] - 2026-02-24
 
@@ -74,27 +68,18 @@ All notable changes to this project will be documented in this file.
 - *(collector)* Add Helm release and ArgoCD Application collectors  by [@mchmarny](https://github.com/mchmarny)
 - Add cluster autoscaling evidence for CNCF AI Conformance  by [@yuanchen8911](https://github.com/yuanchen8911)
 
-### Other
-
-- *(recipe)* Add conformance recipe invariant tests  by [@dims](https://github.com/dims)
-
-### Refactor
-
-- *(validator)* Remove Job-based checks from readiness phase, keep constraint-only gate  by [@xdu31](https://github.com/xdu31)
-
 ### Tasks
 
+- *(recipe)* Add conformance recipe invariant tests  by [@dims](https://github.com/dims)
+- *(validator)* Remove Job-based checks from readiness phase, keep constraint-only gate  by [@xdu31](https://github.com/xdu31)
 - *(ci)* Remove redundant DRA test steps from inference workflow  by [@dims](https://github.com/dims)
 - Upgrade Go to 1.26.0  by [@mchmarny](https://github.com/mchmarny)
 
 ## [0.7.6] - 2026-02-21
 
-### Refactor
-
-- Codebase consistency fixes and test coverage  by [@mchmarny](https://github.com/mchmarny)
-
 ### Tasks
 
+- Codebase consistency fixes and test coverage  by [@mchmarny](https://github.com/mchmarny)
 - Rename cleanup by [@mchmarny](https://github.com/mchmarny)
 - Remove redundant local e2e script by [@mchmarny](https://github.com/mchmarny)
 - Remove flox environment support by [@mchmarny](https://github.com/mchmarny)
