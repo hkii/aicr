@@ -49,4 +49,4 @@ jobs:
       contents: read
       security-events: write
     with:
-      coverage_report: 'true'
+      coverage_report: true
