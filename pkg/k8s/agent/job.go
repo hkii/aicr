@@ -17,7 +17,6 @@ package agent
 import (
 	"context"
 	"strconv"
-	"strings"
 	"time"
 
 	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
@@ -282,14 +281,6 @@ func (d *Deployer) buildEnvVars() []corev1.EnvVar {
 		},
 	}
 
-	helmNS := d.helmNamespacesEnvValue()
-	if helmNS != "" {
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "AICR_HELM_NAMESPACES",
-			Value: helmNS,
-		})
-	}
-
 	if d.config.MaxNodesPerEntry > 0 {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "AICR_MAX_NODES_PER_ENTRY",
@@ -298,18 +289,6 @@ func (d *Deployer) buildEnvVars() []corev1.EnvVar {
 	}
 
 	return envVars
-}
-
-// helmNamespacesEnvValue returns the value for AICR_HELM_NAMESPACES env var.
-// Returns "*" for all-namespaces, comma-joined for scoped, or "" for none.
-func (d *Deployer) helmNamespacesEnvValue() string {
-	if d.config.HelmAllNamespaces {
-		return "*"
-	}
-	if len(d.config.HelmNamespaces) > 0 {
-		return strings.Join(d.config.HelmNamespaces, ",")
-	}
-	return ""
 }
 
 // deleteJob deletes the Job.

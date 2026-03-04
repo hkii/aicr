@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sort"
 	"time"
 
 	"github.com/urfave/cli/v3"
@@ -47,8 +46,6 @@ type validateAgentConfig struct {
 	cleanup            bool
 	debug              bool
 	requireGPU         bool
-	helmNamespaces     []string
-	helmAllNamespaces  bool
 }
 
 // parseValidateAgentConfig parses agent deployment flags from the command.
@@ -76,8 +73,6 @@ func parseValidateAgentConfig(cmd *cli.Command) (*validateAgentConfig, error) {
 		cleanup:            cmd.Bool("cleanup"),
 		debug:              cmd.Bool("debug"),
 		requireGPU:         cmd.Bool("require-gpu"),
-		helmNamespaces:     cmd.StringSlice("helm-namespaces"),
-		helmAllNamespaces:  cmd.Bool("helm-all-namespaces"),
 	}, nil
 }
 
@@ -135,8 +130,6 @@ func deployAgentForValidation(ctx context.Context, cfg *validateAgentConfig) (*s
 		Debug:              cfg.debug,
 		Privileged:         true,
 		RequireGPU:         cfg.requireGPU,
-		HelmNamespaces:     cfg.helmNamespaces,
-		HelmAllNamespaces:  cfg.helmAllNamespaces,
 	}
 
 	snap, err := snapshotter.DeployAndGetSnapshot(ctx, agentConfig)
@@ -268,25 +261,6 @@ func runValidation(
 	}
 
 	return nil
-}
-
-// helmNamespacesFromRecipe extracts unique namespaces from Helm ComponentRefs.
-func helmNamespacesFromRecipe(rec *recipe.RecipeResult) []string {
-	seen := make(map[string]bool)
-	for _, ref := range rec.ComponentRefs {
-		if ref.Type == recipe.ComponentTypeHelm && ref.Namespace != "" {
-			seen[ref.Namespace] = true
-		}
-	}
-	if len(seen) == 0 {
-		return nil
-	}
-	namespaces := make([]string, 0, len(seen))
-	for ns := range seen {
-		namespaces = append(namespaces, ns)
-	}
-	sort.Strings(namespaces)
-	return namespaces
 }
 
 // runCNCFSubmission handles --cncf-submission: validates feature names and
@@ -453,21 +427,6 @@ func validateCmdFlags() []cli.Flag {
 			Usage:    "Use a saved validation result file as the source for evidence rendering (live validation still runs). Note: saved results do not include diagnostic artifacts captured during live runs. Requires --phase conformance and --evidence-dir.",
 			Category: "Evidence & Conformance",
 		},
-		&cli.BoolFlag{
-			Name:     "skip-helm-check",
-			Usage:    "Skip Helm values deployment check and don't create secrets RBAC",
-			Category: "Helm Collection",
-		},
-		&cli.StringSliceFlag{
-			Name:     "helm-namespaces",
-			Usage:    "Override namespaces for Helm release collection (creates scoped RBAC). Mutually exclusive with --helm-all-namespaces.",
-			Category: "Helm Collection",
-		},
-		&cli.BoolFlag{
-			Name:     "helm-all-namespaces",
-			Usage:    "Grant cluster-wide secrets access for Helm release collection. Mutually exclusive with --helm-namespaces.",
-			Category: "Helm Collection",
-		},
 		dataFlag,
 		outputFlag,
 		formatFlag,
@@ -618,28 +577,6 @@ Use a saved result file for evidence instead of the live run:
 				return errors.Wrap(errors.ErrCodeInternal, fmt.Sprintf("failed to load recipe from %q", recipeFilePath), err)
 			}
 
-			// Resolve helm namespace config for agent RBAC
-			skipHelmCheck := cmd.Bool("skip-helm-check")
-			helmNamespaces := cmd.StringSlice("helm-namespaces")
-			helmAllNamespaces := cmd.Bool("helm-all-namespaces")
-
-			if len(helmNamespaces) > 0 && helmAllNamespaces {
-				return errors.New(errors.ErrCodeInvalidRequest, "--helm-namespaces and --helm-all-namespaces are mutually exclusive")
-			}
-
-			if !skipHelmCheck && !cmd.IsSet("helm-namespaces") && !helmAllNamespaces {
-				// Auto-derive from recipe ComponentRefs
-				helmNamespaces = helmNamespacesFromRecipe(rec)
-				if len(helmNamespaces) > 0 {
-					slog.Info("auto-derived helm namespaces from recipe", "namespaces", helmNamespaces)
-				}
-			}
-
-			if skipHelmCheck {
-				helmNamespaces = nil
-				helmAllNamespaces = false
-			}
-
 			// Get snapshot - either from file or by deploying an agent
 			var snap *snapshotter.Snapshot
 			var snapshotSource string
@@ -660,10 +597,6 @@ Use a saved result file for evidence instead of the live run:
 				if cfgErr != nil {
 					return cfgErr
 				}
-
-				// Apply resolved helm namespace config
-				agentCfg.helmNamespaces = helmNamespaces
-				agentCfg.helmAllNamespaces = helmAllNamespaces
 
 				var deployErr error
 				snap, snapshotSource, deployErr = deployAgentForValidation(ctx, agentCfg)

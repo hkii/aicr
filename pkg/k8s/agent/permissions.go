@@ -46,30 +46,21 @@ func (d *Deployer) CheckPermissions(ctx context.Context) ([]PermissionCheck, err
 	}
 
 	// Required permissions for deployment
-	requiredChecks := make([]permCheck, 0, 9+len(d.config.HelmNamespaces)*2)
-	requiredChecks = append(requiredChecks,
+	requiredChecks := []permCheck{
 		// Namespace-scoped resources
-		permCheck{"serviceaccounts", "create", d.config.Namespace},
-		permCheck{"roles", "create", d.config.Namespace},
-		permCheck{"rolebindings", "create", d.config.Namespace},
-		permCheck{"jobs", "create", d.config.Namespace},
-		permCheck{"configmaps", "get", d.config.Namespace},
-		permCheck{"configmaps", "list", d.config.Namespace},
+		{"serviceaccounts", "create", d.config.Namespace},
+		{"roles", "create", d.config.Namespace},
+		{"rolebindings", "create", d.config.Namespace},
+		{"jobs", "create", d.config.Namespace},
+		{"configmaps", "get", d.config.Namespace},
+		{"configmaps", "list", d.config.Namespace},
 
 		// Cluster-scoped resources
-		permCheck{"clusterroles", "create", ""},
-		permCheck{"clusterrolebindings", "create", ""},
+		{"clusterroles", "create", ""},
+		{"clusterrolebindings", "create", ""},
 
 		// Cleanup permissions
-		permCheck{"jobs", "delete", d.config.Namespace},
-	)
-
-	// Add per-namespace permission checks for Helm secrets RBAC
-	for _, ns := range d.config.HelmNamespaces {
-		requiredChecks = append(requiredChecks,
-			permCheck{"roles", "create", ns},
-			permCheck{"rolebindings", "create", ns},
-		)
+		{"jobs", "delete", d.config.Namespace},
 	}
 
 	var missingPermissions []string

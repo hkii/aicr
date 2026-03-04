@@ -90,12 +90,6 @@ type AgentConfig struct {
 	// When set, the snapshot output will be processed through this template.
 	TemplatePath string
 
-	// HelmNamespaces lists namespaces for scoped Helm release collection.
-	HelmNamespaces []string
-
-	// HelmAllNamespaces enables cluster-wide Helm secrets access.
-	HelmAllNamespaces bool
-
 	// MaxNodesPerEntry limits node names per topology entry (0 = unlimited).
 	MaxNodesPerEntry int
 }
@@ -139,8 +133,6 @@ func DeployAndGetSnapshot(ctx context.Context, config *AgentConfig) (*Snapshot, 
 		Debug:              config.Debug,
 		Privileged:         config.Privileged,
 		RequireGPU:         config.RequireGPU,
-		HelmNamespaces:     config.HelmNamespaces,
-		HelmAllNamespaces:  config.HelmAllNamespaces,
 		MaxNodesPerEntry:   config.MaxNodesPerEntry,
 	}
 
@@ -404,8 +396,6 @@ func (n *NodeSnapshotter) measureWithAgent(ctx context.Context) error {
 		Debug:              n.AgentConfig.Debug,
 		Privileged:         n.AgentConfig.Privileged,
 		RequireGPU:         n.AgentConfig.RequireGPU,
-		HelmNamespaces:     n.AgentConfig.HelmNamespaces,
-		HelmAllNamespaces:  n.AgentConfig.HelmAllNamespaces,
 		MaxNodesPerEntry:   n.AgentConfig.MaxNodesPerEntry,
 	}
 

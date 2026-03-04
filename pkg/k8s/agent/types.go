@@ -33,11 +33,9 @@ type Config struct {
 	Tolerations        []corev1.Toleration
 	Output             string
 	Debug              bool
-	Privileged         bool     // If true, run with privileged security context (required for GPU/SystemD collectors)
-	RequireGPU         bool     // If true, request nvidia.com/gpu resource (required for CDI environments)
-	HelmNamespaces     []string // Per-NS secrets access for Helm release collection
-	HelmAllNamespaces  bool     // Cluster-wide secrets access for Helm collection
-	MaxNodesPerEntry   int      // Max node names per topology entry (0 = unlimited)
+	Privileged         bool // If true, run with privileged security context (required for GPU/SystemD collectors)
+	RequireGPU         bool // If true, request nvidia.com/gpu resource (required for CDI environments)
+	MaxNodesPerEntry   int  // Max node names per topology entry (0 = unlimited)
 }
 
 // Deployer manages the deployment and lifecycle of the agent Job.

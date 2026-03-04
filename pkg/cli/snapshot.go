@@ -149,16 +149,6 @@ func snapshotCmdFlags() []cli.Flag {
 			Value:    0,
 			Category: "Output",
 		},
-		&cli.StringSliceFlag{
-			Name:     "helm-namespaces",
-			Usage:    "Namespaces for Helm release collection (creates scoped RBAC for secrets access). Mutually exclusive with --helm-all-namespaces.",
-			Category: "Helm Collection",
-		},
-		&cli.BoolFlag{
-			Name:     "helm-all-namespaces",
-			Usage:    "Grant cluster-wide secrets access for Helm release collection. Mutually exclusive with --helm-namespaces.",
-			Category: "Helm Collection",
-		},
 		outputFlag,
 		formatFlag,
 		kubeconfigFlag,
@@ -175,8 +165,6 @@ func snapshotCmd() *cli.Command {
   - CPU and GPU settings
   - GRUB boot parameters
   - Kubernetes cluster configuration (server, nodes, images, policies)
-  - Helm releases installed via helm install/upgrade
-  - ArgoCD Application CRDs (if ArgoCD is installed)
   - Loaded kernel modules
   - Sysctl kernel parameters
   - SystemD service configurations
@@ -281,17 +269,10 @@ See examples/templates/snapshot-template.md.tmpl for a sample template.
 				return errors.Wrap(errors.ErrCodeInvalidRequest, "invalid toleration", err)
 			}
 
-			// Validate mutual exclusivity of helm flags
-			helmNamespaces := cmd.StringSlice("helm-namespaces")
-			helmAllNamespaces := cmd.Bool("helm-all-namespaces")
-			if len(helmNamespaces) > 0 && helmAllNamespaces {
-				return errors.New(errors.ErrCodeInvalidRequest, "--helm-namespaces and --helm-all-namespaces are mutually exclusive")
-			}
-
 			// When running inside an agent Job, collect locally instead of
 			// deploying another agent (prevents infinite nesting).
 			// Clear pre-created factory so measure() rebuilds it from env vars
-			// (AICR_HELM_NAMESPACES, AICR_MAX_NODES_PER_ENTRY).
+			// (AICR_MAX_NODES_PER_ENTRY).
 			if os.Getenv("AICR_AGENT_MODE") == "true" {
 				ns.Factory = nil
 				return ns.Measure(ctx)
@@ -314,8 +295,6 @@ See examples/templates/snapshot-template.md.tmpl for a sample template.
 				Privileged:         cmd.Bool("privileged"),
 				RequireGPU:         cmd.Bool("require-gpu"),
 				TemplatePath:       tmplOpts.templatePath,
-				HelmNamespaces:     helmNamespaces,
-				HelmAllNamespaces:  helmAllNamespaces,
 				MaxNodesPerEntry:   cmd.Int("max-nodes-per-entry"),
 			}
 
