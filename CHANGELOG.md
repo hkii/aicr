@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.7] - 2026-03-04
+
+### Bug Fixes
+
+- *(kwok)* Disable cert-manager startupapicheck in KWOK tests by [@mchmarny](https://github.com/mchmarny)
+
+### New Features
+
+- *(skyhook)* Make autoTaintNewNodes configurable, add template tests, bump to v0.13.0  by [@lockwobr](https://github.com/lockwobr)
+
 ## [0.8.6] - 2026-03-04
 
 ### New Features
