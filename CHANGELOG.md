@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3] - 2026-03-04
+
+### Bug Fixes
+
+- *(agent)* Increase pod/collector timeouts and add ArgoCD RBAC by [@mchmarny](https://github.com/mchmarny)
+
+### Other Tasks
+
+- Consolidate changelog to 3 categories by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.8.2] - 2026-03-04
 
 ### New Features
