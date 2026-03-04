@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2] - 2026-03-04
+
+### Bug Fixes
+
+- *(validator)* Propagate tolerations and node selectors to validation phase Jobs  by [@nvidiajeff](https://github.com/nvidiajeff)
+- *(aws-efa)* Set the right affinity  by [@ayuskauskas](https://github.com/ayuskauskas)
+- *(evidence)* Performance improvement - replace fixed sleeps with polling and refresh evidence  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(skyhook/nvidia-setup)* Bump to 0.1.1 and force kernel to be what we want  by [@ayuskauskas](https://github.com/ayuskauskas)
+- *(ci)* Add missing performance.test binary and testdata to E2E validator image  by [@xdu31](https://github.com/xdu31)
+- *(validator)* Prefer CPU nodes for validation Jobs and decouple node-selector from phase Jobs  by [@xdu31](https://github.com/xdu31)
+- *(recipes)* Remove gdrcopy version pin from GPU Operator defaults  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(cli)* Remove --privileged from validate agent flags test by [@mchmarny](https://github.com/mchmarny)
+
+### Features
+
+- *(skyhook-customization)* Add nvidia-setup to install efa, raid, chrony, kernel  by [@ayuskauskas](https://github.com/ayuskauskas)
+- Add NodeTopology collector for cluster-wide taint/label capture  by [@mchmarny](https://github.com/mchmarny)
+
+### Other
+
+- Adding myself to .github/copy-pr-bot.yaml 
+
+Signed-off-by: Dr. Stefan Schimanski <stefan.schimanski@gmail.com> by [@sttts](https://github.com/sttts)
+
+### Refactor
+
+- Consolidate pod utilities, add HTTP client factory, split phases.go by [@mchmarny](https://github.com/mchmarny)
+- *(validator)* Lift RBAC and ConfigMap setup out of per-phase loop in ValidatePhases by [@mchmarny](https://github.com/mchmarny)
+
+### Tasks
+
+- Update readme by [@mchmarny](https://github.com/mchmarny)
+- Update copyright year to 2026 across all source files by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.8.1] - 2026-03-02
 
 ### Bug Fixes
