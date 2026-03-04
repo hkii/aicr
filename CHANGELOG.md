@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.10] - 2026-03-04
+
+### Bug Fixes
+
+- *(k8s)* Add fast-path check in WaitForJobCompletion for already-complete Jobs by [@mchmarny](https://github.com/mchmarny)
+- *(validator)* Correct health check resource names and stream logs during validation by [@mchmarny](https://github.com/mchmarny)
+
+### Other Tasks
+
+- *(validator)* Rename ConstraintValidator.Pattern to Name and remove legacy ConstraintTest type  by [@xdu31](https://github.com/xdu31)
+- Add xdu31 to copy-pr-bot trusted contributors  by [@xdu31](https://github.com/xdu31)
+
 ## [0.8.9] - 2026-03-04
 
 ### Bug Fixes
