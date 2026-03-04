@@ -197,7 +197,6 @@ func TestValidateCmd_AgentFlags(t *testing.T) {
 		"toleration",
 		"timeout",
 		"cleanup",
-		"privileged",
 	}
 
 	for _, flagName := range agentFlags {

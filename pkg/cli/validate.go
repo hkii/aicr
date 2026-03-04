@@ -132,9 +132,9 @@ func deployAgentForValidation(ctx context.Context, cfg *validateAgentConfig) (*s
 		Tolerations:        cfg.tolerations,
 		Timeout:            cfg.timeout,
 		Cleanup:            cfg.cleanup,
-		Debug:      cfg.debug,
-		Privileged: true,
-		RequireGPU: cfg.requireGPU,
+		Debug:              cfg.debug,
+		Privileged:         true,
+		RequireGPU:         cfg.requireGPU,
 		HelmNamespaces:     cfg.helmNamespaces,
 		HelmAllNamespaces:  cfg.helmAllNamespaces,
 	}
