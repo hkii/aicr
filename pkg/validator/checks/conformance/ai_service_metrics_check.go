@@ -21,9 +21,13 @@ import (
 
 	"github.com/NVIDIA/aicr/pkg/errors"
 	"github.com/NVIDIA/aicr/pkg/validator/checks"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const prometheusBaseURL = "http://kube-prometheus-prometheus.monitoring.svc:9090"
+const (
+	prometheusComponentName = "kube-prometheus-stack"
+	prometheusDefaultPort   = 9090
+)
 
 func init() {
 	checks.RegisterCheck(&checks.Check{
@@ -42,9 +46,59 @@ func init() {
 
 // CheckAIServiceMetrics validates CNCF requirement #5: AI Service Metrics.
 // Verifies that GPU metric time series exist in Prometheus and that the
-// custom metrics API is available.
+// custom metrics API is available. Prometheus URL is discovered from the
+// recipe's kube-prometheus-stack component namespace.
 func CheckAIServiceMetrics(ctx *checks.ValidationContext) error {
-	return checkAIServiceMetricsWithURL(ctx, prometheusBaseURL)
+	promURL, err := discoverPrometheusURL(ctx)
+	if err != nil {
+		return err
+	}
+	return checkAIServiceMetricsWithURL(ctx, promURL)
+}
+
+// discoverPrometheusURL finds the Prometheus service URL by looking up the
+// kube-prometheus-stack component in the recipe and discovering the Prometheus
+// service in that namespace via label selector.
+func discoverPrometheusURL(ctx *checks.ValidationContext) (string, error) {
+	if ctx.Recipe == nil {
+		return "", errors.New(errors.ErrCodeInvalidRequest, "recipe is not available")
+	}
+
+	// Find namespace from recipe component
+	var namespace string
+	for _, ref := range ctx.Recipe.ComponentRefs {
+		if ref.Name == prometheusComponentName {
+			namespace = ref.Namespace
+			break
+		}
+	}
+	if namespace == "" {
+		return "", errors.New(errors.ErrCodeNotFound,
+			fmt.Sprintf("component %q not found in recipe or has no namespace", prometheusComponentName))
+	}
+
+	// Discover the Prometheus service by label in the component namespace.
+	// The kube-prometheus-stack chart labels the Prometheus service with
+	// app.kubernetes.io/name=prometheus regardless of the Helm release name.
+	services, err := ctx.Clientset.CoreV1().Services(namespace).List(ctx.Context, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=prometheus",
+	})
+	if err != nil {
+		return "", errors.Wrap(errors.ErrCodeInternal, "failed to list Prometheus services", err)
+	}
+
+	// Find a service with port 9090
+	for i := range services.Items {
+		svc := &services.Items[i]
+		for _, port := range svc.Spec.Ports {
+			if port.Port == int32(prometheusDefaultPort) {
+				return fmt.Sprintf("http://%s.%s.svc:%d", svc.Name, namespace, prometheusDefaultPort), nil
+			}
+		}
+	}
+
+	return "", errors.New(errors.ErrCodeNotFound,
+		fmt.Sprintf("no Prometheus service with port %d found in namespace %q", prometheusDefaultPort, namespace))
 }
 
 // checkAIServiceMetricsWithURL is the testable implementation that accepts a configurable URL.
