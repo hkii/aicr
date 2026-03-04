@@ -373,7 +373,7 @@ kubectl get serviceaccount aicr -n gpu-operator
 ### RBAC Permissions
 
 The agent requires these permissions (created automatically by the CLI):
-- **ClusterRole** (`aicr-node-reader`): Read access to nodes, pods, secrets (Helm releases), services, ClusterPolicy CRDs (nvidia.com), and Application CRDs (argoproj.io)
+- **ClusterRole** (`aicr-node-reader`): Read access to nodes, pods, and ClusterPolicy CRDs (nvidia.com)
 - **Role** (`aicr`): Create/update ConfigMaps and list pods in the deployment namespace
 
 ### Pod Security Context

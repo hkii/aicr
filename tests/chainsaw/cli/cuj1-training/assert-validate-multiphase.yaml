@@ -22,11 +22,6 @@ phases:
   readiness:
     status: pass
   deployment:
-    status: pass
-    checks:
-      - name: expected-resources
-        status: skipped
-    (components[?name == 'gpu-operator'] | [0].status): pass
-    (components[?name == 'cert-manager'] | [0].status): pass
+    status: skipped
   conformance:
     status: pass
