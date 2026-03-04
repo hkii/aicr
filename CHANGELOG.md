@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.6] - 2026-03-04
+
+### New Features
+
+- *(validator)* Add per-component Chainsaw health checks by [@mchmarny](https://github.com/mchmarny)
+
+### Other Tasks
+
+- *(collector)* Remove Helm/ArgoCD collectors and materialization by [@mchmarny](https://github.com/mchmarny)
+- *(agent)* Remove HelmNamespaces plumbing from agent, snapshotter, and CLI by [@mchmarny](https://github.com/mchmarny)
+- Update docs and tests for Helm/ArgoCD collector removal by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.8.5] - 2026-03-04
 
 ### Bug Fixes
