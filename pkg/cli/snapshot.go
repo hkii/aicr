@@ -290,7 +290,10 @@ See examples/templates/snapshot-template.md.tmpl for a sample template.
 
 			// When running inside an agent Job, collect locally instead of
 			// deploying another agent (prevents infinite nesting).
+			// Clear pre-created factory so measure() rebuilds it from env vars
+			// (AICR_HELM_NAMESPACES, AICR_MAX_NODES_PER_ENTRY).
 			if os.Getenv("AICR_AGENT_MODE") == "true" {
+				ns.Factory = nil
 				return ns.Measure(ctx)
 			}
 

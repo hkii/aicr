@@ -151,11 +151,14 @@ func encodeTaints(taints map[taintID][]string, maxNodes int) map[string]measurem
 	data := make(map[string]measurement.Reading, len(taints))
 	for id, nodes := range taints {
 		mapKey := id.Key
-		if keyEffects[id.Key] > 1 {
-			mapKey = id.Key + "." + id.Effect
-		}
 		nodeStr := formatNodeList(nodes, maxNodes)
-		data[mapKey] = measurement.Str(fmt.Sprintf("%s|%s|%s", id.Effect, id.Value, nodeStr))
+		if keyEffects[id.Key] > 1 {
+			// Effect is encoded in the key suffix — omit from value
+			mapKey = id.Key + "." + id.Effect
+			data[mapKey] = measurement.Str(fmt.Sprintf("%s|%s", id.Value, nodeStr))
+		} else {
+			data[mapKey] = measurement.Str(fmt.Sprintf("%s|%s|%s", id.Effect, id.Value, nodeStr))
+		}
 	}
 	return data
 }

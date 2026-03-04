@@ -77,7 +77,11 @@ func (d *Deployer) CheckPermissions(ctx context.Context) ([]PermissionCheck, err
 	for _, check := range requiredChecks {
 		allowed, reason, err := d.checkPermission(ctx, check.resource, check.verb, check.namespace)
 		if err != nil {
-			return checks, errors.Wrap(errors.ErrCodeInternal, fmt.Sprintf("failed to check permission for %s %s", check.verb, check.resource), err)
+			code := errors.ErrCodeInternal
+			if errors.IsNetworkError(err) {
+				code = errors.ErrCodeUnavailable
+			}
+			return checks, errors.Wrap(code, fmt.Sprintf("failed to check permission for %s %s", check.verb, check.resource), err)
 		}
 
 		result := PermissionCheck{

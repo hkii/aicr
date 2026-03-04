@@ -30,6 +30,10 @@ func (d *Deployer) Deploy(ctx context.Context) error {
 	// Step 0: Check permissions before attempting deployment
 	_, err := d.CheckPermissions(ctx)
 	if err != nil {
+		if aicrerrors.IsNetworkError(err) {
+			return aicrerrors.Wrap(aicrerrors.ErrCodeUnavailable,
+				"cannot reach Kubernetes API server\n\nCheck your network connectivity:\n  - Is your VPN connected?\n  - Is the cluster endpoint correct in your kubeconfig?\n  - Are firewall rules allowing egress to the API server?", err)
+		}
 		return aicrerrors.Wrap(aicrerrors.ErrCodeUnauthorized, "insufficient permissions to deploy agent\n\nTo deploy the agent, you need cluster admin privileges.\nRun: aicr snapshot", err)
 	}
 

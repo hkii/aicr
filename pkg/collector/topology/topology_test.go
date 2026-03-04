@@ -149,8 +149,8 @@ func TestCollect(t *testing.T) {
 			nodes: []*corev1.Node{
 				makeNode("node-1",
 					[]corev1.Taint{
-						{Key: "nvidia.com/gpu", Effect: corev1.TaintEffectNoSchedule},
-						{Key: "nvidia.com/gpu", Effect: corev1.TaintEffectNoExecute},
+						{Key: "dedicated", Value: "system-workload", Effect: corev1.TaintEffectNoSchedule},
+						{Key: "dedicated", Value: "system-workload", Effect: corev1.TaintEffectNoExecute},
 					},
 					nil,
 				),
@@ -163,11 +163,27 @@ func TestCollect(t *testing.T) {
 				if taintSt == nil {
 					t.Fatal("missing taint subtype")
 				}
-				if !taintSt.Has("nvidia.com/gpu.NoSchedule") {
-					t.Error("expected disambiguated taint key nvidia.com/gpu.NoSchedule")
+				if !taintSt.Has("dedicated.NoSchedule") {
+					t.Error("expected disambiguated taint key dedicated.NoSchedule")
 				}
-				if !taintSt.Has("nvidia.com/gpu.NoExecute") {
-					t.Error("expected disambiguated taint key nvidia.com/gpu.NoExecute")
+				if !taintSt.Has("dedicated.NoExecute") {
+					t.Error("expected disambiguated taint key dedicated.NoExecute")
+				}
+
+				// Disambiguated keys: effect in key suffix, NOT in value
+				// Format: "value|node1,node2,..." (2 parts, no effect prefix)
+				for _, key := range []string{"dedicated.NoSchedule", "dedicated.NoExecute"} {
+					val, err := taintSt.GetString(key)
+					if err != nil {
+						t.Fatalf("missing key %s: %v", key, err)
+					}
+					parts := strings.SplitN(val, "|", 3)
+					if len(parts) != 2 {
+						t.Errorf("key %s: expected 2 pipe-separated parts (value|nodes), got %d: %q", key, len(parts), val)
+					}
+					if parts[0] != "system-workload" {
+						t.Errorf("key %s: expected value system-workload, got %q", key, parts[0])
+					}
 				}
 			},
 		},

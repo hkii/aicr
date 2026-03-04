@@ -17,9 +17,14 @@ package agent
 import (
 	"bytes"
 	"context"
+	"errors"
+	"net"
+	"strings"
+	"syscall"
 	"testing"
 	"time"
 
+	aicrerrors "github.com/NVIDIA/aicr/pkg/errors"
 	"github.com/NVIDIA/aicr/pkg/k8s/pod"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1113,6 +1118,55 @@ func TestBuildJob_HelmNamespacesEnvVar(t *testing.T) {
 				t.Errorf("AICR_HELM_NAMESPACES=%q, want=%q", gotValue, tt.wantEnvValue)
 			}
 		})
+	}
+}
+
+func TestDeployer_Deploy_NetworkError(t *testing.T) {
+	clientset := fake.NewClientset()
+
+	// Mock SelfSubjectAccessReview to return a network error (API server unreachable)
+	clientset.PrependReactor("create", "selfsubjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, &net.OpError{
+			Op:  "dial",
+			Net: "tcp",
+			Addr: &net.TCPAddr{
+				IP:   net.ParseIP("98.95.33.159"),
+				Port: 443,
+			},
+			Err: syscall.ECONNREFUSED,
+		}
+	})
+
+	config := Config{
+		Namespace:          "test-namespace",
+		ServiceAccountName: testName,
+		JobName:            testName,
+		Image:              "ghcr.io/nvidia/aicr-validator:latest",
+		Output:             "cm://test-namespace/aicr-snapshot",
+	}
+	deployer := NewDeployer(clientset, config)
+	ctx := context.Background()
+
+	err := deployer.Deploy(ctx)
+	if err == nil {
+		t.Fatal("Deploy() should fail with network error")
+	}
+
+	// Verify error code is ErrCodeUnavailable (not ErrCodeUnauthorized)
+	var structErr *aicrerrors.StructuredError
+	if !errors.As(err, &structErr) {
+		t.Fatalf("expected StructuredError, got %T: %v", err, err)
+	}
+	if structErr.Code != aicrerrors.ErrCodeUnavailable {
+		t.Errorf("expected error code %q, got %q", aicrerrors.ErrCodeUnavailable, structErr.Code)
+	}
+
+	// Verify actionable message
+	if !strings.Contains(err.Error(), "cannot reach Kubernetes API server") {
+		t.Errorf("expected actionable message about API server, got: %s", err.Error())
+	}
+	if !strings.Contains(err.Error(), "VPN") {
+		t.Errorf("expected VPN hint in message, got: %s", err.Error())
 	}
 }
 
