@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.14] - 2026-03-05
+
+### Bug Fixes
+
+- *(ci)* Align upload-artifact pin to v6.0.0 in uat-aws by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Dispatch site deploy on main to satisfy environment policy by [@mchmarny](https://github.com/mchmarny)
+
+### Other Tasks
+
+- *(ci)* Remove redundant permissions in qualification by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Deduplicate chainsaw install in cli-e2e by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Remove dead go-ci action by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Extract prep-kind-runner composite action by [@mchmarny](https://github.com/mchmarny)
+- *(ci)* Extract install-karpenter-kwok composite action by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.8.13] - 2026-03-05
 
 ### Bug Fixes
