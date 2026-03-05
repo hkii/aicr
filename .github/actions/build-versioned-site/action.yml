@@ -89,6 +89,7 @@ runs:
 
         LANDING_SITE="${LANDING_DIR}/site"
         yq eval -i '.baseURL = "https://aicr.dgxc.io/"' "${LANDING_SITE}/hugo.yaml"
+        yq eval -i '.enableGitInfo = false' "${LANDING_SITE}/hugo.yaml"
         yq eval -i ".params.versions = load(\"${VERSIONS_FILE}\")" "${LANDING_SITE}/hugo.yaml"
 
         (cd "${LANDING_SITE}" && npm ci --prefer-offline --no-audit 2>/dev/null)
@@ -141,6 +142,7 @@ runs:
 
           # Patch hugo config
           yq eval -i '.baseURL = "https://aicr.dgxc.io/"' "${SITE_DIR}/hugo.yaml"
+          yq eval -i '.enableGitInfo = false' "${SITE_DIR}/hugo.yaml"
           yq eval -i ".params.versions = load(\"${VERSIONS_FILE}\")" "${SITE_DIR}/hugo.yaml"
 
           (cd "${SITE_DIR}" && npm ci --prefer-offline --no-audit 2>/dev/null)
