@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.12] - 2026-03-05
+
+### Bug Fixes
+
+- *(site)* Restructure versioned build to keep landing page at root by [@mchmarny](https://github.com/mchmarny)
+- *(site)* Disable enableGitInfo for archived builds by [@mchmarny](https://github.com/mchmarny)
+- *(bundler)* Fix undeploy PVC ordering, harden deploy scripts, add deployment docs  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(health-check/skyhook)* Add rbac to validator agent to read skyhook  by [@ayuskauskas](https://github.com/ayuskauskas)
+
+### New Features
+
+- *(site)* Add build-versioned-site composite action by [@mchmarny](https://github.com/mchmarny)
+- *(site)* Remove hardcoded version list from hugo.yaml by [@mchmarny](https://github.com/mchmarny)
+- *(site)* Refactor gh-pages workflow for versioned builds by [@mchmarny](https://github.com/mchmarny)
+- *(release)* Deploy versioned site after release publish by [@mchmarny](https://github.com/mchmarny)
+
+### Other Tasks
+
+- Bump skyhook version  by [@lockwobr](https://github.com/lockwobr)
+- *(recipes)* Bump kube-prometheus-stack, prometheus-adapter, kai-scheduler, nvsentinel  by [@yuanchen8911](https://github.com/yuanchen8911)
+
 ## [0.8.11] - 2026-03-05
 
 ### Bug Fixes
