@@ -24,14 +24,14 @@
 apiVersion: aicr.nvidia.com/v1alpha1
 kind: ComponentRegistry
 components:
-  # DGXC Teleport - Kubernetes access via Teleport
+  # Teleport - Kubernetes access via Teleport
   # Uses Kustomize with helmCharts to deploy teleport-kube-agent
-  - name: dgxc-teleport
-    displayName: DGXC Teleport
+  - name: teleport
+    displayName: Teleport
     valueOverrideKeys:
       - dgxcteleport
       - teleport
     kustomize:
-      defaultSource: https://gitlab-master.nvidia.com/dgxcloud/mk8s/components/dgxc-teleport.git
-      defaultPath: templates/components/dgxc-teleport/kustomize/overlays/standalone
+      defaultSource: https://gitlab.nvidia.com/company/teleport.git
+      defaultPath: templates/components/teleport/kustomize/overlays/standalone
       defaultTag: "0.6.1"
