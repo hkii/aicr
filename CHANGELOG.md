@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-03-10
+
+### Bug Fixes
+
+- *(install)* Widen JSON scan window to find browser_download_url on linux  by [@lockwobr](https://github.com/lockwobr)
+- *(tools)* Fix Linux setup-tools for yq, chainsaw, helm, yamllint, grype, crane, goreleaser  by [@lockwobr](https://github.com/lockwobr)
+- *(recipes)* Add global tolerate-all for nvsentinel GPU-node daemonsets  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(recipes)* Override deprecated gcr.io kube-rbac-proxy image for dynamo  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(uat)* Remove dead VALIDATOR_IMAGE env vars from UAT workflow by [@mchmarny](https://github.com/mchmarny)
+- *(validator)* Correct NCCL bandwidth tolerance log from 90% to 10%  by [@xdu31](https://github.com/xdu31)
+- *(evidence)* Restore --cncf-submission behavioral evidence collection  by [@yuanchen8911](https://github.com/yuanchen8911)
+
+### Other Tasks
+
+- Update go version  by [@lockwobr](https://github.com/lockwobr)
+- Update install by [@mchmarny](https://github.com/mchmarny)
+- *(conformance)* Refresh evidence from EKS v1.35 cluster  by [@yuanchen8911](https://github.com/yuanchen8911)
+- *(cli)* Replace runValidation positional params with config struct  by [@mchmarny](https://github.com/mchmarny)
+- *(install)* Remove private-repo references now that repo is public by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.10.0] - 2026-03-09
 
 ## [0.9.0] - 2026-03-09
