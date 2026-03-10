@@ -160,3 +160,19 @@ changelog:
       order: 1
     - title: "Other Tasks"
       order: 999
+
+brews:
+  - ids:
+      - aicr
+    repository:
+      git:
+        url: "ssh://git@github.com/NVIDIA/homebrew-aicr.git"
+        private_key: "{{ .Env.HOMEBREW_DEPLOY_KEY }}"
+    commit_author:
+      name: github-actions
+      email: github-actions@github.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Formula
+    homepage: "https://github.com/NVIDIA/aicr"
+    description: "Tooling for deploying optimized, validated, and reproducible GPU-accelerated AI runtime in Kubernetes."
+    license: "Apache-2.0"
