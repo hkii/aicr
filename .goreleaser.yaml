@@ -170,6 +170,7 @@ brews:
       git:
         url: "ssh://git@github.com/NVIDIA/homebrew-aicr.git"
         private_key: "{{ .Env.HOMEBREW_DEPLOY_KEY }}"
+    skip_upload: "{{ if .Env.HOMEBREW_DEPLOY_KEY }}false{{ else }}true{{ end }}"
     commit_author:
       name: github-actions
       email: github-actions@github.com
