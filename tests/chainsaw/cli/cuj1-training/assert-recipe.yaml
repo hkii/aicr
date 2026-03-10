@@ -53,9 +53,9 @@ deploymentOrder:
   - aws-efa
   - cert-manager
   - kube-prometheus-stack
-  - skyhook-operator
   - k8s-ephemeral-storage-metrics
   - prometheus-adapter
+  - skyhook-operator
   - skyhook-customizations
   - gpu-operator
   - kai-scheduler
