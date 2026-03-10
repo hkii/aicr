@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.3] - 2026-03-10
+
+### Bug Fixes
+
+- *(ci)* Skip unnecessary checks on docs-only PRs  by [@mchmarny](https://github.com/mchmarny)
+- *(cli)* Replace --cleanup flag with --no-cleanup and warn on use  by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.10.2] - 2026-03-10
 
 ### New Features
