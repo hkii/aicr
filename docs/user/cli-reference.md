@@ -1483,31 +1483,18 @@ Debug logs include:
 
 The `examples/` directory contains reference files for testing and learning:
 
-### Snapshots (`examples/snapshots/`)
-
-| File | Description |
-|------|-------------|
-| `gb200.yaml` | GB200 NVL72 system snapshot (Ubuntu 24.04, EKS 1.33, NVLink) |
-| `h100.yaml` | H100 GPU cluster snapshot (Ubuntu 22.04, GKE 1.32) |
-| `gb200-h100-comp.md` | Configuration comparison between GB200 and H100 |
-
-**Usage:**
-```shell
-# Generate recipe from example snapshot
-aicr recipe --snapshot examples/snapshots/gb200.yaml --intent training --platform kubeflow
-```
-
 ### Recipes (`examples/recipes/`)
 
 | File | Description |
 |------|-------------|
-| `eks-gb200-training.yaml` | GB200 training workload recipe for EKS |
-| `eks-h100-training.yaml` | H100 training workload recipe for EKS |
+| `kind.yaml` | Recipe for local Kind cluster with fake GPU |
+| `eks-training.yaml` | EKS recipe optimized for training workloads |
+| `eks-gb200-ubuntu-training-with-validation.yaml` | GB200 on EKS with Ubuntu and multi-phase validation |
 
 **Usage:**
 ```shell
 # Generate bundle from example recipe
-aicr bundle --recipe examples/recipes/eks-gb200-training.yaml --output ./bundles
+aicr bundle --recipe examples/recipes/eks-training.yaml --output ./bundles
 ```
 
 ### Templates (`examples/templates/`)
