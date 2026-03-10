@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.7] - 2026-03-10
+
+### Bug Fixes
+
+- *(release)* Add owner/name to brew repository for goreleaser v2 by [@mchmarny](https://github.com/mchmarny)
+
 ## [0.10.6] - 2026-03-10
 
 ### Bug Fixes
