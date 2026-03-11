@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.10] - 2026-03-11
+
+### Bug Fixes
+
+- *(install)* Detect outdated cosign before attestation verification   by [@lockwobr](https://github.com/lockwobr)
+- *(install)* Replace post_install with caveats to avoid Homebrew sandbox error  by [@lockwobr](https://github.com/lockwobr)
+
 ## [0.10.9] - 2026-03-11
 
 ### New Features
