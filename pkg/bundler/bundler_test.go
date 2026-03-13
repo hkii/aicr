@@ -335,6 +335,150 @@ func TestMake_DisabledComponentsFiltered(t *testing.T) {
 	}
 }
 
+func TestMake_SetEnabledOverridesPrecedence(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		recipeEnabled  *bool // nil = no override, true/false = overrides.enabled
+		setEnabled     string
+		expectIncluded bool
+	}{
+		{
+			name:           "recipe disabled + --set enabled=true => included",
+			recipeEnabled:  boolPtr(false),
+			setEnabled:     "true",
+			expectIncluded: true,
+		},
+		{
+			name:           "recipe enabled + --set enabled=false => excluded",
+			recipeEnabled:  nil,
+			setEnabled:     "false",
+			expectIncluded: false,
+		},
+		{
+			name:           "recipe disabled + no --set => excluded",
+			recipeEnabled:  boolPtr(false),
+			setEnabled:     "",
+			expectIncluded: false,
+		},
+		{
+			name:           "recipe enabled (default) + no --set => included",
+			recipeEnabled:  nil,
+			setEnabled:     "",
+			expectIncluded: true,
+		},
+		{
+			name:           "invalid --set value ignored => falls back to recipe",
+			recipeEnabled:  boolPtr(false),
+			setEnabled:     "ture",
+			expectIncluded: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var bundlerOpts []Option
+			if tt.setEnabled != "" {
+				cfg := config.NewConfig(
+					config.WithValueOverrides(map[string]map[string]string{
+						"awsebscsidriver": {"enabled": tt.setEnabled},
+					}),
+				)
+				bundlerOpts = append(bundlerOpts, WithConfig(cfg))
+			}
+
+			bundler, err := New(bundlerOpts...)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			overrides := map[string]any{}
+			if tt.recipeEnabled != nil {
+				overrides["enabled"] = *tt.recipeEnabled
+			}
+
+			recipeResult := &recipe.RecipeResult{
+				APIVersion: "aicr.nvidia.com/v1alpha1",
+				Kind:       "Recipe",
+				Criteria:   &recipe.Criteria{Service: "eks", Accelerator: "h100", Intent: "training"},
+				ComponentRefs: []recipe.ComponentRef{
+					{Name: "gpu-operator", Version: "v25.3.3", Type: "helm", Source: "https://helm.ngc.nvidia.com/nvidia"},
+					{Name: "aws-ebs-csi-driver", Version: "2.55.0", Type: "helm", Source: "https://kubernetes-sigs.github.io/aws-ebs-csi-driver", Overrides: overrides},
+				},
+				DeploymentOrder: []string{"gpu-operator", "aws-ebs-csi-driver"},
+			}
+
+			ctx := context.Background()
+			tmpDir := t.TempDir()
+			_, makeErr := bundler.Make(ctx, recipeResult, tmpDir)
+			if makeErr != nil {
+				t.Fatalf("Make() error = %v", makeErr)
+			}
+
+			_, statErr := os.Stat(filepath.Join(tmpDir, "aws-ebs-csi-driver"))
+			included := !os.IsNotExist(statErr)
+
+			if included != tt.expectIncluded {
+				t.Errorf("aws-ebs-csi-driver included=%v, want %v", included, tt.expectIncluded)
+			}
+		})
+	}
+}
+
+func TestMake_SetEnabledNotLeakedToHelmValues(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.NewConfig(
+		config.WithValueOverrides(map[string]map[string]string{
+			"awsebscsidriver": {"enabled": "true", "controller.replicaCount": "2"},
+		}),
+	)
+	bundler, err := New(WithConfig(cfg))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	recipeResult := &recipe.RecipeResult{
+		APIVersion: "aicr.nvidia.com/v1alpha1",
+		Kind:       "Recipe",
+		Criteria:   &recipe.Criteria{Service: "eks", Accelerator: "h100", Intent: "training"},
+		ComponentRefs: []recipe.ComponentRef{
+			{Name: "gpu-operator", Version: "v25.3.3", Type: "helm", Source: "https://helm.ngc.nvidia.com/nvidia"},
+			{Name: "aws-ebs-csi-driver", Version: "2.55.0", Type: "helm", Source: "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"},
+		},
+		DeploymentOrder: []string{"gpu-operator", "aws-ebs-csi-driver"},
+	}
+
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+	_, makeErr := bundler.Make(ctx, recipeResult, tmpDir)
+	if makeErr != nil {
+		t.Fatalf("Make() error = %v", makeErr)
+	}
+
+	valuesPath := filepath.Join(tmpDir, "aws-ebs-csi-driver", "values.yaml")
+	valuesData, readErr := os.ReadFile(valuesPath)
+	if readErr != nil {
+		t.Fatalf("failed to read values.yaml: %v", readErr)
+	}
+
+	// "enabled" must not appear as a top-level key in the values file
+	valuesStr := string(valuesData)
+	if strings.Contains(valuesStr, "enabled: true") {
+		t.Errorf("enabled key leaked into Helm values:\n%s", valuesStr)
+	}
+
+	// Other overrides should still be applied
+	if !strings.Contains(valuesStr, "replicaCount") {
+		t.Errorf("expected controller.replicaCount override in values, got:\n%s", valuesStr)
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }
+
 func TestMake_WithValueOverrides(t *testing.T) {
 	cfg := config.NewConfig(
 		config.WithValueOverrides(map[string]map[string]string{
