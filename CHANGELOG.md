@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2026-03-21
+
+### Bug Fixes
+
+- *(validator)* Templatize EKS NCCL runtime for dynamic EFA and instance type discovery  by [@xdu31](https://github.com/xdu31)
+- *(api)* Add b200 accelerator to OpenAPI spec enum  by [@nvidiajeff](https://github.com/nvidiajeff)
+- *(cli)* Replace broken shell completion with full flag+alias support  by [@nvidiajeff](https://github.com/nvidiajeff)
+
+### New Features
+
+- *(recipes)* Bump kai-scheduler to v0.13.0, fix DRA gang scheduling  by [@yuanchen8911](https://github.com/yuanchen8911)
+
+### Other Tasks
+
+- *(validator)* Remove stale Helm values reference from phase table  by [@xdu31](https://github.com/xdu31)
+- *(skyhook)* Add integration documentation about skyhook  by [@ayuskauskas](https://github.com/ayuskauskas)
+
 ## [0.11.0] - 2026-03-20
 
 ### Bug Fixes
