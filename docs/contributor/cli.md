@@ -2764,7 +2764,7 @@ The bundle command integrates with GitOps tools through the **Deployer Framework
 | Type | Description | Output |
 |------|-------------|--------|
 | `helm` | (Default) Helm per-component bundle | `deploy.sh`, `<component>/values.yaml`, `<component>/README.md` |
-| `argocd` | ArgoCD Application manifests | `app-of-apps.yaml`, `<component>/application.yaml` |
+| `argocd` | Argo CD Application manifests | `app-of-apps.yaml`, `<component>/application.yaml` |
 
 **Key Feature: Deployment Order**
 
@@ -2785,7 +2785,7 @@ flowchart TD
     A[Bundle Command] --> B[Parse --deployer flag]
     B --> C{Deployer Type}
     C -->|helm| D[Helm Deployer]
-    C -->|argocd| E[ArgoCD Deployer]
+    C -->|argocd| E[Argo CD Deployer]
     
     D --> G[Generate Per-Component Bundle]
     E --> H[Generate Applications]
@@ -2797,9 +2797,9 @@ flowchart TD
     K --> M
 ```
 
-### ArgoCD Deployer
+### Argo CD Deployer
 
-Generates ArgoCD Application manifests with proper sync ordering using multi-source Applications.
+Generates Argo CD Application manifests with proper sync ordering using multi-source Applications.
 
 **Ordering Mechanism**: Uses `argocd.argoproj.io/sync-wave` annotation.
 
@@ -2862,7 +2862,7 @@ bundles/
 │   ├── values.yaml
 │   └── argocd/
 │       └── application.yaml       # sync-wave: 2
-└── README.md                      # ArgoCD deployment guide
+└── README.md                      # Argo CD deployment guide
 ```
 
 ### Helm Deployer (Default)
@@ -2915,10 +2915,10 @@ sequenceDiagram
 # Default: Helm per-component bundle
 aicr bundle -r recipe.yaml -o ./bundles
 
-# Generate bundle with ArgoCD Applications
+# Generate bundle with Argo CD Applications
 aicr bundle -r recipe.yaml --deployer argocd -o ./bundles
 
-# ArgoCD with Git repository URL (sets repoURL in app-of-apps.yaml)
+# Argo CD with Git repository URL (sets repoURL in app-of-apps.yaml)
 aicr bundle -r recipe.yaml --deployer argocd \
   --repo https://github.com/my-org/my-gitops-repo.git \
   -o ./bundles

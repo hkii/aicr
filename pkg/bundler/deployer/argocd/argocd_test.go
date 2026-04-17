@@ -793,7 +793,7 @@ func TestGenerate_MixedHelmAndKustomize(t *testing.T) {
 	}
 }
 
-// TestGenerate_Reproducible verifies that ArgoCD bundle generation is deterministic.
+// TestGenerate_Reproducible verifies that Argo CD bundle generation is deterministic.
 // Running Generate() twice with the same input should produce identical output files.
 func TestGenerate_Reproducible(t *testing.T) {
 	ctx := context.Background()
@@ -890,7 +890,7 @@ func TestGenerate_Reproducible(t *testing.T) {
 		}
 	}
 
-	t.Logf("ArgoCD reproducibility verified: both iterations produced %d identical files", len(fileContents[0]))
+	t.Logf("Argo CD reproducibility verified: both iterations produced %d identical files", len(fileContents[0]))
 }
 
 // assertValidYAML reads the file at path and fails the test if it is not valid YAML.
@@ -907,7 +907,7 @@ func assertValidYAML(t *testing.T, path string) {
 }
 
 // TestGenerate_ApplicationYAMLStructure verifies that generated application.yaml files
-// are valid YAML with the expected ArgoCD Application structure (issue #410).
+// are valid YAML with the expected Argo CD Application structure (issue #410).
 func TestGenerate_ApplicationYAMLStructure(t *testing.T) {
 	tests := []struct {
 		name       string
