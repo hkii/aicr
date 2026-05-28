@@ -55,6 +55,7 @@ make qualify  # Includes end to end tests before submitting
     - [Configuration Patterns](#configuration-patterns)
     - [Value Merge Precedence](#value-merge-precedence)
   - [File Naming Conventions](#file-naming-conventions)
+  - [Criteria Semantics](#criteria-semantics)
   - [Constraints and Validation](#constraints-and-validation)
     - [Constraints](#constraints)
     - [Validation Phases](#validation-phases)
@@ -243,6 +244,41 @@ File names are for human readability—matching uses `spec.criteria`, not file n
 | Mixin (OS) | `os-{os}.yaml` | `os-ubuntu.yaml` |
 | Mixin (platform) | `platform-{platform}.yaml` | `platform-kubeflow.yaml` |
 | Component values | `values-{service}-{intent}.yaml` | `values-eks-training.yaml` |
+
+## Criteria Semantics
+
+Overlay matching is field-by-field equality against the request's
+criteria. Two semantic rules are easy to get wrong:
+
+**An unspecified field on the request side cannot match an overlay
+that pins that field.** A criteria field that is omitted from the
+request is treated as "not provided" — it does not act as a wildcard
+on the overlay. If the overlay specifies `os: cos`, only requests
+that explicitly carry `os: cos` will match. A request like
+`service=gke,accelerator=gb200,intent=training` (no `os`) skips that
+overlay entirely.
+
+**Concrete example — `gb200-gke-cos-training`.** An early version of
+the `gb200-gke-cos-training` overlay pinned `os: cos` in its
+criteria. Client requests that did not specify an OS (a common shape
+for callers that did not yet know which node image would be used)
+never matched the overlay, so the resulting recipe fell back to a
+less specific parent and dropped the GB200/COS-specific overrides.
+The fix was to drop `os` from the overlay's criteria, leaving it
+unspecified and therefore matchable for both COS and OS-agnostic
+requests.
+
+**Author guidance.** Pin a criteria field on an overlay only when
+matching it is intentional — i.e., the overlay's content is
+genuinely incorrect on a different value of that field. For optional
+dimensions where the overlay is OS-, accelerator-, or
+platform-agnostic, leave the field unset rather than pinning a value
+"to be safe". Over-pinning shrinks the matchable request shape
+without buying any correctness.
+
+If the field really is significant but you want to accept an
+explicit "any" from the request side, use the literal value `any` on
+both ends — that is the wildcard, not omission.
 
 ## Constraints and Validation
 

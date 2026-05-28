@@ -130,6 +130,8 @@ Choose the path that matches how you'll use the project.
 - **[Automation Guide](docs/integrator/automation.md)** — CI/CD integration patterns
 - **[Kubernetes Deployment](docs/integrator/kubernetes-deployment.md)** — Self-hosted API server setup
 - **[Recipe Development](docs/integrator/recipe-development.md)** — Adding and modifying recipe metadata
+- **[Go Library Integration](docs/integrator/go-library.md)** — Embed AICR in a Go program (e.g., a Crossplane provider)
+- **[Public API Surface](docs/integrator/public-api.md)** — Per-package stability matrix for Go consumers
 </details>
 
 ## Resources

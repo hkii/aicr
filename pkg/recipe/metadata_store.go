@@ -31,11 +31,58 @@ import (
 
 const baseRecipeName = "base"
 
-var (
-	metadataStoreOnce   sync.Once
-	cachedMetadataStore *MetadataStore
-	cachedMetadataErr   error
-)
+// storeCache holds one cached MetadataStore per DataProvider so
+// concurrent Builders constructed from different sources (the
+// facade's per-Client case) don't clobber each other. Replaces an
+// earlier process-global sync.Once that caused multi-tenant
+// recipe-resolve to silently route through whichever DataProvider
+// happened to be SetDataProvider'd most recently.
+//
+// The cache key is the DataProvider interface value itself —
+// same instance ⇒ same cached store. CLI / API server uses (which
+// hold a single Builder) hit a single cache entry; the facade's
+// per-Client uses get one entry per Client.
+var storeCache sync.Map // map[DataProvider]*storeCacheEntry
+
+type storeCacheEntry struct {
+	once  sync.Once
+	store *MetadataStore
+	err   error
+}
+
+// EvictCachedStore drops the cached MetadataStore for the supplied
+// DataProvider. The next loadMetadataStore call for that provider
+// will rebuild from scratch.
+//
+// Long-running consumers (like a Crossplane provider's
+// controller-manager) that retire DataProvider instances over time
+// — e.g., when a ProviderConfig is deleted or its content changes —
+// should call this to keep the cache from growing unboundedly. See
+// the package godoc note about per-DataProvider caching for the
+// trade-off this resolves.
+//
+// No-op if no entry exists for the provider.
+func EvictCachedStore(dp DataProvider) {
+	if dp == nil {
+		return
+	}
+	storeCache.Delete(dp)
+}
+
+// CachedStoreCountForTesting returns the number of distinct
+// DataProvider entries currently held in the metadata-store cache.
+// Exposed for tests in the aicr facade that assert Client.Close
+// evicts the cached store — paired with
+// CachedRegistryCountForTesting in components.go so a single test
+// can verify both halves of the per-Client cache are released.
+func CachedStoreCountForTesting() int {
+	n := 0
+	storeCache.Range(func(_, _ any) bool {
+		n++
+		return true
+	})
+	return n
+}
 
 // MetadataStore holds the base recipe and all overlays.
 type MetadataStore struct {
@@ -50,11 +97,29 @@ type MetadataStore struct {
 
 	// ValuesFiles contains embedded values file contents indexed by filename.
 	ValuesFiles map[string][]byte
+
+	// dp is the DataProvider this store was loaded from. Carried so
+	// store-internal lookups (the component registry for default
+	// fill-in) use the same provider rather than reaching for the
+	// process-global one.
+	dp DataProvider
 }
 
-// loadMetadataStore loads and caches the metadata store from the data provider.
-func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
-	metadataStoreOnce.Do(func() {
+// loadMetadataStore loads and caches the metadata store from the
+// supplied DataProvider. A nil dp falls back to the package-level
+// GetDataProvider() for backward compatibility with the CLI and
+// API server, which both rely on the global SetDataProvider model.
+//
+// New consumers (notably the aicr.Client facade) should pass an
+// explicit DataProvider so each Client gets its own isolated cached
+// store rather than sharing the global one.
+func loadMetadataStore(_ context.Context, dp DataProvider) (*MetadataStore, error) {
+	if dp == nil {
+		dp = GetDataProvider()
+	}
+	v, _ := storeCache.LoadOrStore(dp, &storeCacheEntry{})
+	entry := v.(*storeCacheEntry)
+	entry.once.Do(func() {
 		// Record cache miss on first load
 		recipeCacheMisses.Inc()
 
@@ -62,9 +127,10 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 			Overlays:    make(map[string]*RecipeMetadata),
 			Mixins:      make(map[string]*RecipeMixin),
 			ValuesFiles: make(map[string][]byte),
+			dp:          dp,
 		}
 
-		provider := GetDataProvider()
+		provider := dp
 
 		// Load all YAML files from data directory
 		err := provider.WalkDir("", func(path string, d fs.DirEntry, err error) error {
@@ -160,31 +226,31 @@ func loadMetadataStore(_ context.Context) (*MetadataStore, error) {
 		})
 
 		if err != nil {
-			cachedMetadataErr = err
+			entry.err = err
 			return
 		}
 
 		if store.Base == nil {
-			cachedMetadataErr = aicrerrors.New(aicrerrors.ErrCodeInternal, "base.yaml not found")
+			entry.err = aicrerrors.New(aicrerrors.ErrCodeInternal, "base.yaml not found")
 			return
 		}
 
 		// Validate base recipe dependencies
 		if err := store.Base.Spec.ValidateDependencies(); err != nil {
-			cachedMetadataErr = aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "base recipe validation failed", err)
+			entry.err = aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "base recipe validation failed", err)
 			return
 		}
 
-		cachedMetadataStore = store
+		entry.store = store
 	})
 
-	if cachedMetadataErr != nil {
-		return nil, cachedMetadataErr
+	if entry.err != nil {
+		return nil, entry.err
 	}
-	if cachedMetadataStore == nil {
+	if entry.store == nil {
 		return nil, aicrerrors.New(aicrerrors.ErrCodeInternal, "metadata store not initialized")
 	}
-	return cachedMetadataStore, nil
+	return entry.store, nil
 }
 
 // GetValuesFile returns the content of a values file by filename.
@@ -558,11 +624,20 @@ func (s *MetadataStore) buildMixinConstraintCandidateIndex(candidateOverlays []s
 }
 
 // initBaseMergedSpec creates a copy of the base spec for overlay merging.
+//
+// Validation is a *ValidationConfig — a pointer. The cached
+// MetadataStore's base spec is shared across every concurrent
+// BuildRecipeResult, so a shallow copy of the outer struct (which
+// would still alias the inner *ValidationPhase pointers) leaks
+// mutation back into the cache. cloneValidationConfig walks the
+// whole tree (phases → constraints/checks slices, NodeSelection
+// pointer + Selector map) so the returned spec shares no mutable
+// state with s.Base.Spec.Validation.
 func (s *MetadataStore) initBaseMergedSpec() (RecipeMetadataSpec, []string) {
 	mergedSpec := RecipeMetadataSpec{
 		Constraints:   make([]Constraint, len(s.Base.Spec.Constraints)),
 		ComponentRefs: make([]ComponentRef, len(s.Base.Spec.ComponentRefs)),
-		Validation:    s.Base.Spec.Validation,
+		Validation:    cloneValidationConfig(s.Base.Spec.Validation),
 	}
 	copy(mergedSpec.Constraints, s.Base.Spec.Constraints)
 	copy(mergedSpec.ComponentRefs, s.Base.Spec.ComponentRefs)
@@ -602,7 +677,13 @@ func (s *MetadataStore) mergeOverlayChains(overlays []*RecipeMetadata, mergedSpe
 }
 
 // finalizeRecipeResult validates, sorts, and builds the final RecipeResult.
-func finalizeRecipeResult(criteria *Criteria, mergedSpec *RecipeMetadataSpec, appliedOverlays []string) (*RecipeResult, error) {
+//
+// dp is the DataProvider the calling MetadataStore was loaded from.
+// It's threaded through here so the component-registry default fill-in
+// in applyRegistryDefaults reads the same registry.yaml as the rest
+// of the resolve. nil falls back to the package-global, matching the
+// pre-refactor behavior for CLI / API server callers.
+func finalizeRecipeResult(criteria *Criteria, mergedSpec *RecipeMetadataSpec, appliedOverlays []string, dp DataProvider) (*RecipeResult, error) {
 	if err := mergedSpec.ValidateDependencies(); err != nil {
 		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInvalidRequest, "merged recipe validation failed", err)
 	}
@@ -612,7 +693,7 @@ func finalizeRecipeResult(criteria *Criteria, mergedSpec *RecipeMetadataSpec, ap
 		return nil, aicrerrors.Wrap(aicrerrors.ErrCodeInternal, "failed to compute deployment order", err)
 	}
 
-	applyRegistryDefaults(mergedSpec.ComponentRefs)
+	applyRegistryDefaults(mergedSpec.ComponentRefs, dp)
 
 	result := &RecipeResult{
 		Kind:            RecipeResultKind,
@@ -662,7 +743,7 @@ func (s *MetadataStore) BuildRecipeResult(ctx context.Context, criteria *Criteri
 			"hint", "recipe may not be optimized for your environment")
 	}
 
-	return finalizeRecipeResult(criteria, &mergedSpec, appliedOverlays)
+	return finalizeRecipeResult(criteria, &mergedSpec, appliedOverlays, s.dp)
 }
 
 // BuildRecipeResultWithEvaluator builds a RecipeResult by merging base with matching overlays,
@@ -772,7 +853,7 @@ func (s *MetadataStore) BuildRecipeResultWithEvaluator(ctx context.Context, crit
 		}
 	}
 
-	result, err := finalizeRecipeResult(criteria, &mergedSpec, appliedOverlays)
+	result, err := finalizeRecipeResult(criteria, &mergedSpec, appliedOverlays, s.dp)
 	if err != nil {
 		return nil, err
 	}
@@ -841,8 +922,13 @@ func (s *MetadataStore) evaluateOverlayConstraints(overlay *RecipeMetadata, eval
 // applyRegistryDefaults fills in ComponentRef fields from ComponentConfig defaults.
 // This allows registry.yaml to specify default values that are applied to components
 // that don't explicitly set them in recipes.
-func applyRegistryDefaults(refs []ComponentRef) {
-	registry, err := GetComponentRegistry()
+//
+// dp is the DataProvider to fetch registry.yaml from. nil falls back
+// to the process-global GetDataProvider() for backward compatibility
+// with CLI / API server callers; new consumers should pass an
+// explicit DataProvider so per-Builder isolation holds.
+func applyRegistryDefaults(refs []ComponentRef, dp DataProvider) {
+	registry, err := getComponentRegistryFor(dp)
 	if err != nil {
 		slog.Warn("failed to get component registry for defaults", "error", err)
 		return

@@ -82,6 +82,8 @@ export default withMermaid(
               { text: 'Automation', link: '/docs/integrator/automation' },
               { text: 'Data Flow', link: '/docs/integrator/data-flow' },
               { text: 'Kubernetes Deployment', link: '/docs/integrator/kubernetes-deployment' },
+              { text: 'Go Library', link: '/docs/integrator/go-library' },
+              { text: 'Public API Surface', link: '/docs/integrator/public-api' },
               { text: 'AKS GPU Setup', link: '/docs/integrator/aks-gpu-setup' },
               { text: 'EKS Dynamo Networking', link: '/docs/integrator/eks-dynamo-networking' },
               { text: 'GKE TCPXO Networking', link: '/docs/integrator/gke-tcpxo-networking' },
@@ -93,6 +95,8 @@ export default withMermaid(
             text: 'Contributor Guide',
             collapsed: false,
             items: [
+              { text: 'Architecture Deep Dive', link: '/docs/design/architecture' },
+              { text: 'Architecture Overview', link: '/docs/contributor/' },
               { text: 'CLI', link: '/docs/contributor/cli' },
               { text: 'API Server', link: '/docs/contributor/api-server' },
               { text: 'Data Architecture', link: '/docs/contributor/data' },
@@ -144,7 +148,7 @@ export default withMermaid(
       editLink: {
         // Synced docs come from docs/ in the repo, not site/docs/
         pattern: ({ filePath }) => {
-          const synced = filePath.match(/^docs\/(user|integrator|contributor)\/(.+)/)
+          const synced = filePath.match(/^docs\/(user|integrator|contributor|design)\/(.+)/)
           if (synced) {
             return `https://github.com/NVIDIA/aicr/edit/main/docs/${synced[1]}/${synced[2]}`
           }

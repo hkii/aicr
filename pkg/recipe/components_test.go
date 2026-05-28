@@ -383,7 +383,7 @@ func TestComponentRegistry_MatchesBaseRecipe(t *testing.T) {
 
 	// Load base recipe via metadata store
 	ctx := t.Context()
-	store, err := loadMetadataStore(ctx)
+	store, err := loadMetadataStore(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to load metadata store: %v", err)
 	}

@@ -63,6 +63,14 @@ type DefaultBundler struct {
 	// Attester signs bundle content. NoOpAttester is used when --attest is not set.
 	Attester attestation.Attester
 
+	// dp is the recipe DataProvider used for values-file and manifest reads.
+	// Nil falls back to the package-global recipe.GetDataProvider() — matching
+	// the long-standing CLI / API server behavior. The aicr.Client facade
+	// supplies its per-Client DataProvider via WithDataProvider so values and
+	// manifest reads stay bound to that Client's own recipe source even when
+	// multiple Clients run concurrently in the same process.
+	dp recipe.DataProvider
+
 	// warnings stores warning messages to be added to deployment notes.
 	warnings []string
 }
@@ -94,6 +102,23 @@ func WithAttester(a attestation.Attester) Option {
 func WithAllowLists(al *recipe.AllowLists) Option {
 	return func(db *DefaultBundler) {
 		db.AllowLists = al
+	}
+}
+
+// WithDataProvider binds the bundler to a specific recipe DataProvider for
+// values-file and manifest reads. When unset, the bundler falls back to the
+// package-global recipe.GetDataProvider() — the long-standing CLI / API
+// server behavior.
+//
+// Pass this from any caller that constructs more than one bundler per process
+// against distinct recipe sources (notably the aicr.Client facade — each
+// Client has its own DataProvider). Without it, two bundlers in the same
+// process would share whichever DataProvider was last installed on the
+// package-global, silently leaking values and manifest reads across recipe
+// sources.
+func WithDataProvider(dp recipe.DataProvider) Option {
+	return func(db *DefaultBundler) {
+		db.dp = dp
 	}
 }
 
@@ -434,8 +459,11 @@ func (b *DefaultBundler) extractComponentValues(ctx context.Context, recipeResul
 			return nil, errors.Wrap(errors.ErrCodeTimeout, "context cancelled during component value extraction", err)
 		}
 
-		// Get base values from recipe
-		values, err := recipeResult.GetValuesForComponent(ref.Name)
+		// Get base values from recipe. Use the per-bundler DataProvider when
+		// set (the aicr.Client facade supplies one via WithDataProvider so
+		// values-file reads stay bound to that Client's own recipe source);
+		// nil falls back to the package-global, matching CLI / API behavior.
+		values, err := recipeResult.GetValuesForComponentWithProvider(b.dp, ref.Name)
 		if err != nil {
 			slog.Warn("failed to get values for component, using empty map",
 				"component", ref.Name,
@@ -491,8 +519,10 @@ func (b *DefaultBundler) getValueOverridesForComponent(componentName string) map
 		return overrides
 	}
 
-	// Use component registry to find component by any override key
-	registry, err := recipe.GetComponentRegistry()
+	// Use component registry to find component by any override key.
+	// Route through the per-bundler DataProvider so multi-source
+	// processes (aicr.Client + WithDataProvider) get the right registry.
+	registry, err := recipe.GetComponentRegistryWithProvider(b.dp)
 	if err != nil {
 		// Fall back to non-hyphenated check if registry fails
 		nonHyphenated := removeHyphens(componentName)
@@ -548,8 +578,11 @@ func (b *DefaultBundler) applyNodeSchedulingOverrides(componentName string, valu
 		return
 	}
 
-	// Get component configuration from registry
-	registry, err := recipe.GetComponentRegistry()
+	// Get component configuration from registry. Route through the
+	// per-bundler DataProvider so node-scheduling overrides resolve
+	// against the same recipe source as values + manifests when
+	// the bundler is constructed via aicr.Client + WithDataProvider.
+	registry, err := recipe.GetComponentRegistryWithProvider(b.dp)
 	if err != nil {
 		slog.Debug("failed to load component registry for node scheduling",
 			"error", err,
@@ -642,8 +675,11 @@ func (b *DefaultBundler) runComponentValidations(ctx context.Context, recipeResu
 		return nil
 	}
 
-	// Get component registry
-	registry, err := recipe.GetComponentRegistry()
+	// Get component registry. Per-bundler DataProvider routing so
+	// component validations match the recipe source the rest of the
+	// bundle is being built against (relevant when multiple aicr.Clients
+	// share a process via WithDataProvider).
+	registry, err := recipe.GetComponentRegistryWithProvider(b.dp)
 	if err != nil {
 		slog.Debug("failed to load component registry for validations",
 			"error", err,
@@ -699,7 +735,14 @@ func (b *DefaultBundler) runComponentValidations(ctx context.Context, recipeResu
 // copyDataFiles copies external data files from the --data directory into the bundle.
 // Returns a list of relative paths to the copied files (e.g., "data/overrides.yaml").
 func (b *DefaultBundler) copyDataFiles(dir string) ([]string, error) {
-	provider := recipe.GetDataProvider()
+	// Prefer the per-bundler DataProvider when set (aicr.Client +
+	// WithDataProvider). Falls back to the package-global so CLI / API
+	// callers that haven't passed WithDataProvider keep their existing
+	// behavior. The cast below is the same shape either way.
+	provider := b.dp
+	if provider == nil {
+		provider = recipe.GetDataProvider()
+	}
 
 	// Check if the provider is a LayeredDataProvider with external files
 	layered, ok := provider.(*recipe.LayeredDataProvider)
@@ -943,7 +986,10 @@ func (b *DefaultBundler) buildDynamicValuesMap() (map[string][]string, error) {
 		return make(map[string][]string), nil
 	}
 
-	registry, err := recipe.GetComponentRegistry()
+	// Per-bundler DataProvider routing so --dynamic key resolution
+	// looks up overrideKeys in the same registry the rest of the
+	// bundler uses for this run.
+	registry, err := recipe.GetComponentRegistryWithProvider(b.dp)
 	if err != nil {
 		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to load component registry for --dynamic resolution", err)
 	}
@@ -983,7 +1029,10 @@ func (b *DefaultBundler) collectComponentManifests(ctx context.Context, recipeRe
 
 		componentManifests := make(map[string][]byte, len(ref.ManifestFiles))
 		for _, manifestPath := range ref.ManifestFiles {
-			content, err := recipe.GetManifestContent(manifestPath)
+			// Use the per-bundler DataProvider when set (aicr.Client facade
+			// supplies its own via WithDataProvider); nil falls back to the
+			// package-global, matching CLI / API behavior.
+			content, err := recipe.GetManifestContentWithProvider(b.dp, manifestPath)
 			if err != nil {
 				return nil, errors.Wrap(errors.ErrCodeInternal, fmt.Sprintf("failed to load manifest %s for component %s", manifestPath, ref.Name), err)
 			}

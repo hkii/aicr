@@ -513,7 +513,7 @@ func TestMetadataStore_FindMatchingOverlays_MaximalLeafSelection(t *testing.T) {
 // This is a characterization test for the maximal leaf candidate selection change.
 func TestBothBuildPathsProduceIdenticalContent(t *testing.T) {
 	ctx := context.Background()
-	store, err := loadMetadataStore(ctx)
+	store, err := loadMetadataStore(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to load metadata store: %v", err)
 	}
@@ -618,7 +618,7 @@ func TestBothBuildPathsProduceIdenticalContent(t *testing.T) {
 // (like monitoring-hpa) remain applied.
 func TestEvaluatorFailingLeafExcludesCandidate(t *testing.T) {
 	ctx := context.Background()
-	store, err := loadMetadataStore(ctx)
+	store, err := loadMetadataStore(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to load metadata store: %v", err)
 	}
@@ -695,7 +695,7 @@ func TestEvaluatorFailingLeafExcludesCandidate(t *testing.T) {
 // evaluateMixinConstraints.
 func TestMixinConstraintFailureExcludesCandidate(t *testing.T) {
 	ctx := context.Background()
-	store, err := loadMetadataStore(ctx)
+	store, err := loadMetadataStore(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to load metadata store: %v", err)
 	}

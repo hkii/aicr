@@ -3,6 +3,10 @@
 
 This directory contains architecture documentation for the AI Cluster Runtime (AICR) tooling.
 
+For a component-by-component architecture deep dive, diagrams, sequence flows,
+the `provider-nvidia` relationship, and tradeoffs, see
+[Architecture Deep Dive](../design/architecture.md).
+
 ## First Principles
 
 ### Metadata Is Separate from How it is Consumed

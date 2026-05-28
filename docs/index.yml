@@ -39,6 +39,10 @@ navigation:
         path: integrator/data-flow.md
       - page: Kubernetes Deployment
         path: integrator/kubernetes-deployment.md
+      - page: Go Library
+        path: integrator/go-library.md
+      - page: Public API Surface
+        path: integrator/public-api.md
       - page: AKS GPU Setup
         path: integrator/aks-gpu-setup.md
       - page: EKS Dynamo Networking
@@ -56,6 +60,8 @@ navigation:
 
   - section: Contributor Guide
     contents:
+      - page: Architecture Deep Dive
+        path: design/architecture.md
       - page: Architecture Overview
         path: contributor/index.md
       - page: CLI

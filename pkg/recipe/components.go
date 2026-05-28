@@ -158,35 +158,104 @@ type ComponentValidationConfig struct {
 	Message string `yaml:"message,omitempty"`
 }
 
-// Global component registry (loaded once, thread-safe access)
-var (
-	globalRegistry     *ComponentRegistry
-	globalRegistryOnce sync.Once
-	globalRegistryErr  error
-)
+// registryCache holds one cached ComponentRegistry per DataProvider.
+// Mirrors the storeCache pattern in metadata_store.go: same DataProvider
+// instance ⇒ same cached registry, so concurrent Builders constructed
+// from different sources don't share registry state. Replaces an
+// earlier process-global sync.Once that caused the same multi-tenant
+// hazard the metadata store had.
+var registryCache sync.Map // map[DataProvider]*registryCacheEntry
 
-// GetComponentRegistry returns the global component registry.
-// The registry is loaded once from embedded data and cached.
-// Returns an error if the registry file cannot be loaded or parsed.
+type registryCacheEntry struct {
+	once     sync.Once
+	registry *ComponentRegistry
+	err      error
+}
+
+// GetComponentRegistry returns the component registry loaded from the
+// process-global DataProvider. Kept for backward compatibility with
+// the CLI and API server, which expect a parameterless accessor; new
+// consumers (the aicr.Client facade, applyRegistryDefaults inside
+// the per-Builder resolve path) should call getComponentRegistryFor
+// with an explicit DataProvider so they hit a per-provider cache
+// entry rather than the global.
 func GetComponentRegistry() (*ComponentRegistry, error) {
-	globalRegistryOnce.Do(func() {
-		globalRegistry, globalRegistryErr = loadComponentRegistry()
+	return getComponentRegistryFor(GetDataProvider())
+}
+
+// GetComponentRegistryWithProvider is the per-DataProvider form of
+// GetComponentRegistry. A nil dp falls back to the package-global
+// GetDataProvider(); new callers (notably pkg/bundler.DefaultBundler
+// when constructed with bundler.WithDataProvider) should always pass
+// the per-Client DataProvider so registry lookups stay bound to the
+// caller's own recipe source.
+//
+// Cache identity is the DataProvider pointer; two callers passing
+// distinct providers get distinct cached registries that evict
+// independently via EvictCachedRegistry. This matters when multiple
+// aicr.Client instances run in the same process — each Client's
+// per-bundler registry reads must not contaminate the others'.
+func GetComponentRegistryWithProvider(dp DataProvider) (*ComponentRegistry, error) {
+	return getComponentRegistryFor(dp)
+}
+
+// getComponentRegistryFor returns the cached ComponentRegistry for
+// the supplied DataProvider, loading it on first use. nil falls back
+// to the package-global GetDataProvider() — same backward-compat
+// shape as loadMetadataStore.
+func getComponentRegistryFor(dp DataProvider) (*ComponentRegistry, error) {
+	if dp == nil {
+		dp = GetDataProvider()
+	}
+	v, _ := registryCache.LoadOrStore(dp, &registryCacheEntry{})
+	entry := v.(*registryCacheEntry)
+	entry.once.Do(func() {
+		entry.registry, entry.err = loadComponentRegistry(dp)
 	})
-	return globalRegistry, globalRegistryErr
+	return entry.registry, entry.err
 }
 
-// ResetComponentRegistryForTesting resets the singleton registry so it will be
-// reloaded from the current DataProvider on the next call to GetComponentRegistry.
-// This must only be called from tests.
+// ResetComponentRegistryForTesting resets every cached registry so
+// the next call to GetComponentRegistry / getComponentRegistryFor
+// reloads from each DataProvider. This must only be called from tests.
 func ResetComponentRegistryForTesting() {
-	globalRegistry = nil
-	globalRegistryErr = nil
-	globalRegistryOnce = sync.Once{}
+	registryCache = sync.Map{}
 }
 
-// loadComponentRegistry loads the component registry from the data provider.
-func loadComponentRegistry() (*ComponentRegistry, error) {
-	provider := GetDataProvider()
+// CachedRegistryCountForTesting returns the number of distinct
+// DataProvider entries currently held in the registry cache. Exposed
+// for tests in the aicr facade that assert Client.Close evicts the
+// cached registry — without this, the only way to observe eviction
+// from outside the recipe package would be to reach into unexported
+// state via reflection.
+func CachedRegistryCountForTesting() int {
+	n := 0
+	registryCache.Range(func(_, _ any) bool {
+		n++
+		return true
+	})
+	return n
+}
+
+// EvictCachedRegistry drops the cached ComponentRegistry for the
+// supplied DataProvider. The next getComponentRegistryFor call for
+// that provider will rebuild from scratch.
+//
+// Pairs with EvictCachedStore in metadata_store.go — the aicr.Client
+// facade's Close method calls both so a consumer evicting a Client
+// drops both halves of its cached state.
+//
+// No-op if no entry exists for the provider.
+func EvictCachedRegistry(dp DataProvider) {
+	if dp == nil {
+		return
+	}
+	registryCache.Delete(dp)
+}
+
+// loadComponentRegistry loads the component registry from the
+// supplied data provider.
+func loadComponentRegistry(provider DataProvider) (*ComponentRegistry, error) {
 	data, err := provider.ReadFile("registry.yaml")
 	if err != nil {
 		return nil, errors.Wrap(errors.ErrCodeInternal, "failed to read registry.yaml", err)

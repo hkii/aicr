@@ -731,7 +731,10 @@ metadata:
 func TestExtractSkyhookNamesFromManifest_TuningGke(t *testing.T) {
 	t.Parallel()
 
-	content, err := recipe.GetManifestContent("components/skyhook-customizations/manifests/tuning-gke.yaml")
+	// nil dp routes through the WithProvider form's package-global fallback —
+	// this test exercises the validator's single-provider read path, mirroring
+	// production validator behavior (see expected_resources.go).
+	content, err := recipe.GetManifestContentWithProvider(nil, "components/skyhook-customizations/manifests/tuning-gke.yaml")
 	if err != nil {
 		t.Fatalf("failed to load tuning-gke manifest: %v", err)
 	}

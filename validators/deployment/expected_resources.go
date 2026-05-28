@@ -305,7 +305,13 @@ func expectedSkyhookNames(ref recipe.ComponentRef) ([]string, error) {
 	seen := make(map[string]bool)
 	var names []string
 	for _, path := range ref.ManifestFiles {
-		content, err := recipe.GetManifestContent(path)
+		// Validators run in their own container (see validators.LoadContext)
+		// with one DataProvider per process — the recipe is mounted as a
+		// ConfigMap and there's no in-process facade caller to thread a
+		// DataProvider in from. Passing nil routes through the WithProvider
+		// form's package-global fallback, documenting the single-provider
+		// intent at the call site.
+		content, err := recipe.GetManifestContentWithProvider(nil, path)
 		if err != nil {
 			return nil, errors.Wrap(errors.ErrCodeInternal,
 				fmt.Sprintf("failed to load manifest %s for component %s", path, ref.Name), err)

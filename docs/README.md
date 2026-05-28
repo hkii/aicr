@@ -138,6 +138,7 @@ For developers contributing code, extending functionality, or working on AICR in
 
 | Document | Description |
 |----------|-------------|
+| Architecture Deep Dive | Component-by-component architecture, diagrams, sequences, use cases, and `provider-nvidia` relationship |
 | Architecture Overview | System design, patterns, and deployment topologies |
 | CLI Architecture | Detailed CLI implementation and workflow diagrams |
 | API Server Architecture | HTTP server design, middleware, and endpoints |
@@ -150,6 +151,8 @@ For engineers integrating AICR into CI/CD pipelines, GitOps workflows, or larger
 
 | Document | Description |
 |----------|-------------|
+| Go Library | Stable Go facade for external consumers such as `provider-nvidia` |
+| Public API Surface | Stability tiers for Go packages and recommended import boundaries |
 | API Reference | Complete REST API specification with examples |
 | Automation | CI/CD integration patterns |
 | Data Flow | Understanding recipe data architecture |

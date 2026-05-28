@@ -862,6 +862,73 @@ X-RateLimit-Reset: 1735650000
 - No network calls (except Kubernetes API for snapshots)
 - Fully self-contained binaries
 
+### External Data and Overlay Discovery
+
+The recipe loader walks both the embedded directory tree and any
+external directory passed via `--data` (or supplied programmatically
+via `LayeredDataProvider`). Both sources are merged at load time;
+the loader does **not** require external callers to enumerate every
+overlay file.
+
+**Implication for ConfigMap-mounted recipes.** When a host process
+(e.g., `provider-nvidia`'s controller) mounts a ConfigMap to extend
+the recipe data, only the files that the integrator wants to *override*
+need to appear in the ConfigMap. Every recipe overlay shipped with
+the AICR library is already available via `go:embed` and is loaded
+unconditionally — mounting a partial ConfigMap does not hide the
+embedded overlays.
+
+**Precedence rule.** For a given relative path (e.g.,
+`overlays/h100-eks-training.yaml`), the external file takes precedence
+over the embedded one. If the external source omits a path, the
+embedded copy is used as-is.
+
+**Example — overriding a single overlay via ConfigMap:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aicr-recipes
+  namespace: provider-nvidia-system
+data:
+  # Override just one file. Every other overlay continues to come
+  # from the embedded copy inside the AICR binary — they do not need
+  # to be listed here.
+  overlays/h100-eks-training.yaml: |
+    apiVersion: aicr.nvidia.com/v1alpha1
+    kind: RecipeMetadata
+    metadata:
+      name: h100-eks-training
+    spec:
+      base: eks-training
+      criteria:
+        service: eks
+        accelerator: h100
+        intent: training
+      componentRefs:
+        - name: gpu-operator
+          version: v25.3.5         # Local pin
+          overrides:
+            driver:
+              version: "580.95.05" # Local pin
+```
+
+**Adding a brand-new overlay.** Two paths exist:
+
+1. **Rebuild AICR** with the new overlay file added under
+   `recipes/overlays/`. The file ships inside the binary via
+   `go:embed` and is available everywhere AICR runs.
+2. **Mount it externally.** Add the file under the same relative path
+   in an external directory (or as a ConfigMap key matching the
+   relative path) and point the consumer at it via `--data` or its
+   equivalent volume mount. No rebuild required.
+
+The first path is appropriate for overlays that should ship with
+every consumer of the library; the second is appropriate for
+site-local pins or for iterating on an overlay before upstreaming
+it.
+
 ## Performance Characteristics
 
 ### Snapshot Collection

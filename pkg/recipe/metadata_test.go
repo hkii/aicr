@@ -611,6 +611,134 @@ func TestMergeValidationConfig(t *testing.T) {
 			t.Fatal("validation should be preserved from base when overlay has nil")
 		}
 	})
+
+	// Pre-fix the merge path aliased the overlay's nested
+	// *ValidationPhase pointers (Readiness, Deployment, Performance,
+	// Conformance) instead of cloning them. A consumer mutating
+	// result.Validation.Deployment.Checks[i] would then poison the
+	// cached overlay used by every concurrent BuildRecipeResult call.
+	//
+	// This subtest pins down the deep-clone contract by:
+	//   1. Seeding all four phases in the overlay with every nested
+	//      field type (string, slice, map, struct pointer with its
+	//      own slice/map fields).
+	//   2. Merging into both a nil base (cloneValidationConfig path)
+	//      and a populated base (per-phase clone path).
+	//   3. Mutating every reachable field on the merged result.
+	//   4. Asserting the overlay source is byte-equal to its initial
+	//      shape — a single missed clone-step in the helper anywhere
+	//      surfaces as a test failure here.
+	//
+	// Skipping ANY phase here would let a future regression in the
+	// per-phase branch ship silently — that's exactly how the
+	// original ExcludeNodes drop got past the first review.
+	t.Run("merge result is independent of overlay source", func(t *testing.T) {
+		newPhase := func(prefix string) *ValidationPhase {
+			return &ValidationPhase{
+				Timeout:        prefix + "-5m",
+				Constraints:    []Constraint{{Name: prefix + ".version", Value: ">= 1.30"}},
+				Checks:         []string{prefix + "-c1", prefix + "-c2"},
+				Infrastructure: prefix + "-infra",
+				NodeSelection: &NodeSelection{
+					Selector:     map[string]string{"role": prefix + "-role"},
+					MaxNodes:     3,
+					ExcludeNodes: []string{prefix + "-skip-a", prefix + "-skip-b"},
+				},
+			}
+		}
+		overlay := RecipeMetadataSpec{
+			Validation: &ValidationConfig{
+				Readiness:   newPhase("ready"),
+				Deployment:  newPhase("deploy"),
+				Performance: newPhase("perf"),
+				Conformance: newPhase("conf"),
+			},
+		}
+
+		// Path 1: merge into nil base (cloneValidationConfig branch).
+		// Path 2: merge into a populated base (per-phase clone branch).
+		paths := map[string]func() RecipeMetadataSpec{
+			"nil-base": func() RecipeMetadataSpec {
+				b := RecipeMetadataSpec{}
+				b.Merge(&overlay)
+				return b
+			},
+			"populated-base": func() RecipeMetadataSpec {
+				b := RecipeMetadataSpec{
+					Validation: &ValidationConfig{Readiness: &ValidationPhase{Timeout: "stale"}},
+				}
+				b.Merge(&overlay)
+				return b
+			},
+		}
+
+		// Per-phase accessor: each phase has identical shape so we can
+		// table-drive across all four. Returns the phase pointer in
+		// the merged result given the result root and a phase name.
+		phasePtr := func(v *ValidationConfig, name string) *ValidationPhase {
+			switch name {
+			case "Readiness":
+				return v.Readiness
+			case "Deployment":
+				return v.Deployment
+			case "Performance":
+				return v.Performance
+			case "Conformance":
+				return v.Conformance
+			}
+			t.Fatalf("unknown phase %q", name)
+			return nil
+		}
+		phaseNames := []string{"Readiness", "Deployment", "Performance", "Conformance"}
+
+		for pathName, mkBase := range paths {
+			for _, phaseName := range phaseNames {
+				t.Run(pathName+"/"+phaseName, func(t *testing.T) {
+					base := mkBase()
+					mergedPhase := phasePtr(base.Validation, phaseName)
+					sourcePhase := phasePtr(overlay.Validation, phaseName)
+					prefix := map[string]string{
+						"Readiness":   "ready",
+						"Deployment":  "deploy",
+						"Performance": "perf",
+						"Conformance": "conf",
+					}[phaseName]
+
+					// Mutate every reachable field on the merged result.
+					mergedPhase.Timeout = "MUTATED"
+					mergedPhase.Infrastructure = "MUTATED"
+					mergedPhase.Constraints[0].Value = "MUTATED"
+					mergedPhase.Checks[0] = "MUTATED"
+					mergedPhase.NodeSelection.Selector["role"] = "MUTATED"
+					mergedPhase.NodeSelection.MaxNodes = 999
+					mergedPhase.NodeSelection.ExcludeNodes[0] = "MUTATED"
+
+					// Assert the overlay phase is untouched.
+					if sourcePhase.Timeout != prefix+"-5m" {
+						t.Errorf("Timeout mutated: got %q", sourcePhase.Timeout)
+					}
+					if sourcePhase.Infrastructure != prefix+"-infra" {
+						t.Errorf("Infrastructure mutated: got %q", sourcePhase.Infrastructure)
+					}
+					if sourcePhase.Constraints[0].Value != ">= 1.30" {
+						t.Errorf("Constraints[0].Value mutated: got %q", sourcePhase.Constraints[0].Value)
+					}
+					if sourcePhase.Checks[0] != prefix+"-c1" {
+						t.Errorf("Checks[0] mutated: got %q", sourcePhase.Checks[0])
+					}
+					if sourcePhase.NodeSelection.Selector["role"] != prefix+"-role" {
+						t.Errorf("NodeSelection.Selector mutated: got %q", sourcePhase.NodeSelection.Selector["role"])
+					}
+					if sourcePhase.NodeSelection.MaxNodes != 3 {
+						t.Errorf("NodeSelection.MaxNodes mutated: got %d", sourcePhase.NodeSelection.MaxNodes)
+					}
+					if sourcePhase.NodeSelection.ExcludeNodes[0] != prefix+"-skip-a" {
+						t.Errorf("NodeSelection.ExcludeNodes[0] mutated: got %q", sourcePhase.NodeSelection.ExcludeNodes[0])
+					}
+				})
+			}
+		}
+	})
 }
 
 func TestFinalizeRecipeResultIncludesValidation(t *testing.T) {
@@ -625,7 +753,7 @@ func TestFinalizeRecipeResultIncludesValidation(t *testing.T) {
 		},
 	}
 	criteria := NewCriteria()
-	result, err := finalizeRecipeResult(criteria, &spec, []string{"base"})
+	result, err := finalizeRecipeResult(criteria, &spec, []string{"base"}, nil)
 	if err != nil {
 		t.Fatalf("finalizeRecipeResult() error: %v", err)
 	}

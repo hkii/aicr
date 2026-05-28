@@ -490,22 +490,31 @@ func (s *RecipeMetadataSpec) Merge(other *RecipeMetadataSpec) {
 		return s.ComponentRefs[i].Name < s.ComponentRefs[j].Name
 	})
 
-	// Merge validation config - overlay phases take precedence
+	// Merge validation config - overlay phases take precedence.
+	//
+	// Both branches MUST clone phases out of `other` rather than
+	// aliasing the pointer. `other.Validation` lives in the cached
+	// MetadataStore and may be merged into many concurrent
+	// BuildRecipeResult calls. If we aliased phases, a downstream
+	// caller mutating result.Validation.Readiness.Constraints (or
+	// any nested slice/map under a phase) would corrupt the cached
+	// overlay for every other goroutine. Clone forces ownership end
+	// to end.
 	if other.Validation != nil {
 		if s.Validation == nil {
-			s.Validation = other.Validation
+			s.Validation = cloneValidationConfig(other.Validation)
 		} else {
 			if other.Validation.Readiness != nil {
-				s.Validation.Readiness = other.Validation.Readiness
+				s.Validation.Readiness = cloneValidationPhase(other.Validation.Readiness)
 			}
 			if other.Validation.Deployment != nil {
-				s.Validation.Deployment = other.Validation.Deployment
+				s.Validation.Deployment = cloneValidationPhase(other.Validation.Deployment)
 			}
 			if other.Validation.Performance != nil {
-				s.Validation.Performance = other.Validation.Performance
+				s.Validation.Performance = cloneValidationPhase(other.Validation.Performance)
 			}
 			if other.Validation.Conformance != nil {
-				s.Validation.Conformance = other.Validation.Conformance
+				s.Validation.Conformance = cloneValidationPhase(other.Validation.Conformance)
 			}
 		}
 	}
@@ -754,4 +763,74 @@ func (s *RecipeMetadataSpec) TopologicalSort() ([]string, error) {
 	}
 
 	return result, nil
+}
+
+// cloneValidationConfig deep-copies a *ValidationConfig so the result
+// shares no slices, maps, or sub-pointers with the input. Used by the
+// merge path and the cached-base seed path to keep the cached
+// MetadataStore's Validation immutable from the caller's perspective.
+//
+// Callers may mutate any field on the returned value — including
+// nested phase fields like Validation.Readiness.Constraints[i] or
+// Validation.Performance.NodeSelection.Selector — without affecting
+// the cached overlay or other concurrent merges. Returns nil when in
+// is nil so the helper can stand in directly for `*in` initialisation.
+func cloneValidationConfig(in *ValidationConfig) *ValidationConfig {
+	if in == nil {
+		return nil
+	}
+	return &ValidationConfig{
+		Readiness:   cloneValidationPhase(in.Readiness),
+		Deployment:  cloneValidationPhase(in.Deployment),
+		Performance: cloneValidationPhase(in.Performance),
+		Conformance: cloneValidationPhase(in.Conformance),
+	}
+}
+
+// cloneValidationPhase deep-copies a *ValidationPhase, including its
+// Constraints/Checks slices and the nested NodeSelection (which has
+// its own map). See cloneValidationConfig for why this matters.
+func cloneValidationPhase(in *ValidationPhase) *ValidationPhase {
+	if in == nil {
+		return nil
+	}
+	out := &ValidationPhase{
+		Timeout:        in.Timeout,
+		Infrastructure: in.Infrastructure,
+	}
+	if in.Constraints != nil {
+		out.Constraints = make([]Constraint, len(in.Constraints))
+		copy(out.Constraints, in.Constraints)
+	}
+	if in.Checks != nil {
+		out.Checks = make([]string, len(in.Checks))
+		copy(out.Checks, in.Checks)
+	}
+	out.NodeSelection = cloneNodeSelection(in.NodeSelection)
+	return out
+}
+
+// cloneNodeSelection deep-copies a *NodeSelection so its Selector map
+// AND ExcludeNodes slice are not shared with the input. Skipping
+// ExcludeNodes here would silently drop it from the cloned result —
+// a data-loss bug that the merge path's contract forbids. Update
+// alongside any future field added to NodeSelection.
+func cloneNodeSelection(in *NodeSelection) *NodeSelection {
+	if in == nil {
+		return nil
+	}
+	out := &NodeSelection{
+		MaxNodes: in.MaxNodes,
+	}
+	if in.Selector != nil {
+		out.Selector = make(map[string]string, len(in.Selector))
+		for k, v := range in.Selector {
+			out.Selector[k] = v
+		}
+	}
+	if in.ExcludeNodes != nil {
+		out.ExcludeNodes = make([]string, len(in.ExcludeNodes))
+		copy(out.ExcludeNodes, in.ExcludeNodes)
+	}
+	return out
 }

@@ -18,6 +18,8 @@ This section is for integrators who:
 | [Automation](automation.md) | CI/CD integration patterns for GitHub Actions, GitLab CI, Jenkins, and Terraform |
 | [Data Flow](data-flow.md) | Understanding snapshots, recipes, validation, and bundles data transformations |
 | [Kubernetes Deployment](kubernetes-deployment.md) | Self-hosted API server deployment with Kubernetes manifests |
+| [Go Library](go-library.md) | Stable facade for external Go consumers such as `provider-nvidia` |
+| [Public API Surface](public-api.md) | Stability tiers for Go packages and recommended import boundaries |
 | [EKS Dynamo Networking](eks-dynamo-networking.md) | Security group prerequisites for Dynamo overlays on EKS |
 | [AKS GPU Setup](aks-gpu-setup.md) | AKS prerequisites: Kubernetes 1.34+ (DRA GA), GPU driver setup, DRA configuration |
 | [Recipe Development](recipe-development.md) | Creating and modifying recipe metadata for custom environments |

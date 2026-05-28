@@ -71,6 +71,10 @@ func TestTimeoutConstants(t *testing.T) {
 		{"ValidatorWaitBuffer", ValidatorWaitBuffer, 10 * time.Second, 60 * time.Second},
 		{"ValidatorDefaultTimeout", ValidatorDefaultTimeout, 1 * time.Minute, 15 * time.Minute},
 		{"ValidatorTerminationGracePeriod", ValidatorTerminationGracePeriod, 10 * time.Second, 60 * time.Second},
+
+		// Library facade caps for snapshot + validation entry points.
+		{"SnapshotOperationTimeout", SnapshotOperationTimeout, 1 * time.Minute, 30 * time.Minute},
+		{"ValidationOperationTimeout", ValidationOperationTimeout, 30 * time.Minute, 2 * time.Hour},
 	}
 
 	for _, tt := range tests {
@@ -105,6 +109,19 @@ func TestServerTimeoutRelationships(t *testing.T) {
 	if ServerIdleTimeout < ServerWriteTimeout {
 		t.Errorf("ServerIdleTimeout (%v) should be at least ServerWriteTimeout (%v)",
 			ServerIdleTimeout, ServerWriteTimeout)
+	}
+}
+
+// TestValidationOperationTimeoutWrapsCheckExecution locks in the
+// ordering relationship the facade godoc relies on: the library-level
+// cap on Client.ValidateState must sit ABOVE the inner per-check Job
+// CheckExecutionTimeout so a stuck check fires its own per-check
+// timeout first and surfaces as a structured check failure — not as
+// the wrapping deadline-exceeded that loses the per-check signal.
+func TestValidationOperationTimeoutWrapsCheckExecution(t *testing.T) {
+	if ValidationOperationTimeout <= CheckExecutionTimeout {
+		t.Errorf("ValidationOperationTimeout (%v) must exceed CheckExecutionTimeout (%v) so per-check timeouts fire before the facade cap",
+			ValidationOperationTimeout, CheckExecutionTimeout)
 	}
 }
 

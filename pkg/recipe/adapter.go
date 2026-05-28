@@ -30,11 +30,39 @@ func GetEmbeddedFS() embed.FS {
 	return recipes.FS
 }
 
-// GetManifestContent retrieves a manifest file from the data provider.
-// Path should be relative to data directory (e.g., "components/gpu-operator/manifests/dcgm-exporter.yaml").
+// GetManifestContent retrieves a manifest file from the
+// process-global DataProvider. Path should be relative to the data
+// directory (e.g., "components/gpu-operator/manifests/dcgm-exporter.yaml").
+//
+// Deprecated: callers operating multiple DataProviders in the same
+// process (notably the aicr.Client facade) should use
+// GetManifestContentWithProvider so each call hits the caller's own
+// provider rather than the package-level singleton. The
+// parameter-less form is retained as a back-compat shim for the CLI
+// and API server, which still rely on the global SetDataProvider
+// model.
 func GetManifestContent(path string) ([]byte, error) {
-	provider := GetDataProvider()
-	return provider.ReadFile(path)
+	return GetManifestContentWithProvider(nil, path)
+}
+
+// GetManifestContentWithProvider retrieves a manifest file from the
+// supplied DataProvider. A nil dp falls back to the package-global
+// GetDataProvider() — same shape as loadMetadataStore /
+// getComponentRegistryFor. Path should be relative to the data
+// directory.
+//
+// New consumers (the aicr.Client facade) should always pass an
+// explicit DataProvider so manifest reads stay bound to the caller's
+// own recipe source. Pre-v0.12 the parameter-less form short-
+// circuited through the global DataProvider — with two Clients
+// pointing at different sources, manifest reads silently leaked
+// across Client boundaries when the global was last set by the
+// other Client. See aicr.go BundleComponents godoc for the history.
+func GetManifestContentWithProvider(dp DataProvider, path string) ([]byte, error) {
+	if dp == nil {
+		dp = GetDataProvider()
+	}
+	return dp.ReadFile(path)
 }
 
 // RecipeInput is an interface that both Recipe and RecipeResult implement.
@@ -116,7 +144,29 @@ func (r *RecipeResult) GetComponentRef(name string) *ComponentRef {
 //  1. ValuesFile only: Traditional separate file approach
 //  2. Overrides only: Fully self-contained recipe with inline overrides
 //  3. ValuesFile + Overrides: Hybrid - reusable base with recipe-specific tweaks
+//
+// Deprecated: this form short-circuits values-file reads through the
+// process-global GetDataProvider(). Callers operating multiple
+// DataProviders concurrently (the aicr.Client facade — one Client
+// per ProviderConfig) should use GetValuesForComponentWithProvider
+// instead so reads stay bound to the caller's own recipe source.
+// Retained as a back-compat shim for the CLI, API server, and any
+// consumer that still relies on the global SetDataProvider model.
 func (r *RecipeResult) GetValuesForComponent(name string) (map[string]any, error) {
+	return r.GetValuesForComponentWithProvider(nil, name)
+}
+
+// GetValuesForComponentWithProvider is the per-DataProvider form of
+// GetValuesForComponent. A nil dp falls back to the package-global
+// GetDataProvider(); new callers (notably aicr.Client.BundleComponents)
+// should always pass the per-Client DataProvider so values-file
+// reads don't leak across Client boundaries when one Client's cache
+// is evicted+repopulated after another Client has run.
+//
+// Merge semantics match GetValuesForComponent exactly:
+//
+//	base values → ValuesFile → Overrides (highest precedence).
+func (r *RecipeResult) GetValuesForComponentWithProvider(dp DataProvider, name string) (map[string]any, error) {
 	ref := r.GetComponentRef(name)
 	if ref == nil {
 		return nil, errors.New(errors.ErrCodeNotFound, fmt.Sprintf("component %q not found in recipe", name))
@@ -132,7 +182,10 @@ func (r *RecipeResult) GetValuesForComponent(name string) (map[string]any, error
 
 	// Step 1: Load base and/or overlay values from files (if ValuesFile specified)
 	if ref.ValuesFile != "" {
-		provider := GetDataProvider()
+		provider := dp
+		if provider == nil {
+			provider = GetDataProvider()
+		}
 
 		// Determine if this is an overlay values file (not the base values.yaml)
 		baseValuesFile := fmt.Sprintf("components/%s/values.yaml", name)
