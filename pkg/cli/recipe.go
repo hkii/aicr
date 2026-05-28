@@ -197,7 +197,7 @@ Override snapshot-detected criteria:
 			}
 
 			output := recipeOutputPath(cmd, cfg)
-			ser, err := serializer.NewFileWriterOrStdout(outFormat, output)
+			ser, err := serializer.NewFileWriterOrStdoutWithKubeconfig(outFormat, output, cmd.String("kubeconfig"))
 			if err != nil {
 				return errors.Wrap(errors.ErrCodeInternal, "failed to create output writer", err)
 			}

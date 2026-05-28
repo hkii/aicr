@@ -154,12 +154,32 @@ func TestSnapshotTemplateFlagCombinations(t *testing.T) {
 			output:       "",
 			wantErr:      false,
 		},
+		// Template + ConfigMap URI output must be rejected: the template
+		// writer only emits to local files, so a cm:// path would silently
+		// create a file literally named "cm:..." instead of writing to K8s.
+		{
+			name:         "template with ConfigMap URI output is rejected",
+			templatePath: templatePath,
+			format:       "yaml",
+			formatSet:    false,
+			output:       "cm://aicr/snap",
+			wantErr:      true,
+			errContains:  "ConfigMap",
+		},
+		{
+			name:         "no template with ConfigMap URI output is allowed",
+			templatePath: "",
+			format:       "yaml",
+			formatSet:    false,
+			output:       "cm://aicr/snap",
+			wantErr:      false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Validate the combination
-			err := validateTemplateFlagCombination(tt.templatePath, tt.format, tt.formatSet)
+			err := validateTemplateFlagCombination(tt.templatePath, tt.format, tt.formatSet, tt.output)
 
 			if tt.wantErr {
 				if err == nil {
@@ -176,9 +196,9 @@ func TestSnapshotTemplateFlagCombinations(t *testing.T) {
 	}
 }
 
-// validateTemplateFlagCombination validates the template + format combination.
-// This mirrors the validation logic in snapshotCmd.Action.
-func validateTemplateFlagCombination(templatePath, format string, formatSet bool) error {
+// validateTemplateFlagCombination validates the template + format + output
+// combination. This mirrors the validation logic in parseSnapshotTemplateOptions.
+func validateTemplateFlagCombination(templatePath, format string, formatSet bool, output string) error {
 	if templatePath == "" {
 		return nil // No template, no validation needed
 	}
@@ -186,6 +206,12 @@ func validateTemplateFlagCombination(templatePath, format string, formatSet bool
 	// Validate format is YAML when using template
 	if formatSet && format != string(serializer.FormatYAML) {
 		return &validationError{msg: "--template requires YAML format; --format must be \"yaml\" or omitted"}
+	}
+
+	// Templates only emit local files; a ConfigMap URI here would be taken
+	// literally as a filename.
+	if strings.HasPrefix(strings.TrimSpace(output), serializer.ConfigMapURIScheme) {
+		return &validationError{msg: "--template does not support ConfigMap output (cm://...); render to a file or stdout instead"}
 	}
 
 	// Validate template file exists
