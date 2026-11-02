@@ -22,12 +22,13 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"sync/atomic"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	pkitypes "github.com/sigstore/rekor/pkg/pki/pkitypes"
+	"github.com/sigstore/rekor/pkg/util/jcs"
 )
 
 // EntryImpl specifies the behavior of a versioned type
@@ -60,6 +61,33 @@ type ProposedEntryIterator interface {
 // EntryFactory describes a factory function that can generate structs for a specific versioned type
 type EntryFactory func() EntryImpl
 
+// allowedKindsForSubmission restricts the set of kinds that CreateVersionedEntry
+// will accept.
+// This restriction only applies to the insertion path. Read paths are unaffected
+// so that entries written to the log under a previous configuration are still readable.
+var allowedKindsForSubmission atomic.Pointer[map[string]struct{}]
+
+// SetAllowedKindsForSubmission configures the set of kinds that CreateVersionedEntry
+// will accept.
+func SetAllowedKindsForSubmission(kinds []string) {
+	m := make(map[string]struct{}, len(kinds))
+	for _, k := range kinds {
+		m[k] = struct{}{}
+	}
+	allowedKindsForSubmission.Store(&m)
+}
+
+// isKindAllowedForSubmission reports whether the given kind may be inserted
+// into the log via CreateVersionedEntry.
+func isKindAllowedForSubmission(kind string) bool {
+	m := allowedKindsForSubmission.Load()
+	if m == nil {
+		return true
+	}
+	_, ok := (*m)[kind]
+	return ok
+}
+
 func NewProposedEntry(ctx context.Context, kind, version string, props ArtifactProperties) (models.ProposedEntry, error) {
 	if tf, found := TypeMap.Load(kind); found {
 		t := tf.(func() TypeImpl)()
@@ -80,6 +108,9 @@ func CreateVersionedEntry(pe models.ProposedEntry) (EntryImpl, error) {
 		return nil, err
 	}
 	kind := pe.Kind()
+	if !isKindAllowedForSubmission(kind) {
+		return nil, fmt.Errorf("entry kind '%v' is not enabled for submission on this server", kind)
+	}
 	if tf, found := TypeMap.Load(kind); found {
 		if !tf.(func() TypeImpl)().IsSupportedVersion(ei.APIVersion()) {
 			return nil, fmt.Errorf("entry kind '%v' does not support inserting entries of version '%v'", kind, ei.APIVersion())
@@ -118,10 +149,10 @@ func UnmarshalEntry(pe models.ProposedEntry) (EntryImpl, error) {
 // while doing so, it detects the case where we need to convert from string to []byte and does
 // the base64 decoding required to make that happen.
 // This also detects converting from string to strfmt.DateTime
-func DecodeEntry(input, output interface{}) error {
+func DecodeEntry(input, output any) error {
 	cfg := mapstructure.DecoderConfig{
-		DecodeHook: func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
-			if f.Kind() != reflect.String || t.Kind() != reflect.Slice && t != reflect.TypeOf(strfmt.DateTime{}) {
+		DecodeHook: func(f reflect.Type, t reflect.Type, data any) (any, error) {
+			if f.Kind() != reflect.String || t.Kind() != reflect.Slice && t != reflect.TypeFor[strfmt.DateTime]() {
 				return data, nil
 			}
 
@@ -129,7 +160,7 @@ func DecodeEntry(input, output interface{}) error {
 				return nil, errors.New("attempted to decode nil data")
 			}
 
-			if t == reflect.TypeOf(strfmt.DateTime{}) {
+			if t == reflect.TypeFor[strfmt.DateTime]() {
 				return strfmt.ParseDateTime(data.(string))
 			}
 
@@ -158,7 +189,7 @@ func CanonicalizeEntry(ctx context.Context, entry EntryImpl) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return jsoncanonicalizer.Transform(canonicalEntry)
+	return jcs.Canonicalize(canonicalEntry)
 }
 
 // ArtifactProperties provide a consistent struct for passing values from
