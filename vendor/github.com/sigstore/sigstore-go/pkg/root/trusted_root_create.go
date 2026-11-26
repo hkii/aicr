@@ -19,6 +19,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
@@ -211,10 +212,6 @@ func hashAlgorithmToProtobufHashAlgorithm(hashAlgorithm crypto.Hash) (protocommo
 		return protocommon.HashAlgorithm_SHA2_384, nil
 	case crypto.SHA512:
 		return protocommon.HashAlgorithm_SHA2_512, nil
-	case crypto.SHA3_256:
-		return protocommon.HashAlgorithm_SHA3_256, nil
-	case crypto.SHA3_384:
-		return protocommon.HashAlgorithm_SHA3_384, nil
 	default:
 		return 0, fmt.Errorf("unsupported hash algorithm for Merkle tree: %v", hashAlgorithm)
 	}
@@ -262,6 +259,11 @@ func publicKeyToProtobufPublicKey(publicKey crypto.PublicKey, start time.Time, e
 		}
 	case ed25519.PublicKey:
 		pkd.KeyDetails = protocommon.PublicKeyDetails_PKIX_ED25519
+	case *mldsa.PublicKey:
+		if p.Parameters() != mldsa.MLDSA44() {
+			return nil, fmt.Errorf("unsupported parameters for ML-DSA key: %v", p.Parameters())
+		}
+		pkd.KeyDetails = protocommon.PublicKeyDetails_ML_DSA_44
 	default:
 		return nil, fmt.Errorf("unknown public key type: %T", p)
 	}
